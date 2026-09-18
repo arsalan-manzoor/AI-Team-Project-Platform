@@ -5,6 +5,7 @@ const teamRoutes = require("./routes/teamRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const subtaskRoutes = require("./routes/subtaskRoutes");
 const milestoneRoutes = require("./routes/milestoneRoutes");
+const commentRoutes = require("./routes/commentRoutes");
 const express = require("express");
 
 const app = express();
@@ -22,4 +23,5 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/milestones", milestoneRoutes);
+app.use("/api/comments", commentRoutes);
 module.exports = app;

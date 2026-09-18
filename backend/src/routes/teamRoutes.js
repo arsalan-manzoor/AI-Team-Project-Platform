@@ -59,30 +59,34 @@ router.get("/", authMiddleware, async (req, res) => {
         });
     }
 });
-
-// Get one team
-router.get("/:teamId", authMiddleware, async (req, res) => {
+// Get team members
+router.get("/:teamId/members", authMiddleware, async (req, res) => {
     try {
-        const result = await pool.query(
-            `SELECT teams.id, teams.name, teams.description,
-                    teams.created_by, teams.created_at
-             FROM teams
-             JOIN team_members
-                ON teams.id = team_members.team_id
-             WHERE teams.id = $1
+        const teamResult = await pool.query(
+            `SELECT team_members.team_id
+             FROM team_members
+             WHERE team_members.team_id = $1
                AND team_members.user_id = $2`,
             [req.params.teamId, req.user.id]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Team not found"
+        if (teamResult.rows.length === 0) {
+            return res.status(403).json({
+                error: "You are not a member of this team"
             });
         }
 
-        res.json(result.rows[0]);
+        const result = await pool.query(
+            `SELECT users.id, users.name, users.email, team_members.joined_at
+             FROM team_members
+             JOIN users ON team_members.user_id = users.id
+             WHERE team_members.team_id = $1`,
+            [req.params.teamId]
+        );
+
+        res.json(result.rows);
     } catch (error) {
-        console.error("Team fetch error:", error.message);
+        console.error("Team members fetch error:", error.message);
 
         res.status(500).json({
             error: "Database error"

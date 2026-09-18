@@ -6,6 +6,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const subtaskRoutes = require("./routes/subtaskRoutes");
 const milestoneRoutes = require("./routes/milestoneRoutes");
 const commentRoutes = require("./routes/commentRoutes");
+const resourceRoutes = require("./routes/resourceRoutes");
 const express = require("express");
 
 const app = express();
@@ -24,4 +25,5 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/resources", resourceRoutes);
 module.exports = app;

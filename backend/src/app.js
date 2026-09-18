@@ -4,6 +4,7 @@ const authRoutes = require("./routes/authRoutes");
 const teamRoutes = require("./routes/teamRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const subtaskRoutes = require("./routes/subtaskRoutes");
+const milestoneRoutes = require("./routes/milestoneRoutes");
 const express = require("express");
 
 const app = express();
@@ -20,4 +21,5 @@ app.use("/api/teams", teamRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/subtasks", subtaskRoutes);
+app.use("/api/milestones", milestoneRoutes);
 module.exports = app;

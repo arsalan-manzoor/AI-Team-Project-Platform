@@ -14,12 +14,26 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     try {
-        const result = await pool.query(
-            `INSERT INTO projects (name, description, team_id, created_by)
-             VALUES ($1, $2, $3, $4)
-             RETURNING *`,
-            [name, description || null, teamId, req.user.id]
-        );
+    const teamResult = await pool.query(
+        `SELECT team_members.team_id
+         FROM team_members
+         WHERE team_members.team_id = $1
+           AND team_members.user_id = $2`,
+        [teamId, req.user.id]
+    );
+
+    if (teamResult.rows.length === 0) {
+        return res.status(403).json({
+            error: "You are not a member of this team"
+        });
+    }
+
+    const result = await pool.query(
+        `INSERT INTO projects (name, description, team_id, created_by)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`,
+        [name, description || null, teamId, req.user.id]
+    );
 
         res.status(201).json(result.rows[0]);
     } catch (error) {

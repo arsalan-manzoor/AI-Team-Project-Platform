@@ -35,9 +35,10 @@ function Projects() {
           <div className="project-summary-icon">
             <FolderKanban size={19} />
           </div>
+
           <div>
             <span>Total Projects</span>
-            <strong>0</strong>
+            <strong>1</strong>
           </div>
         </div>
 
@@ -45,9 +46,10 @@ function Projects() {
           <div className="project-summary-icon">
             <CalendarDays size={19} />
           </div>
+
           <div>
             <span>Active Projects</span>
-            <strong>0</strong>
+            <strong>1</strong>
           </div>
         </div>
 
@@ -55,6 +57,7 @@ function Projects() {
           <div className="project-summary-icon">
             <Users size={19} />
           </div>
+
           <div>
             <span>Collaborators</span>
             <strong>0</strong>
@@ -70,25 +73,42 @@ function Projects() {
           </div>
         </div>
 
-        <div className="projects-empty">
-          <div className="projects-empty-icon">
-            <FolderKanban size={28} />
+        <div className="project-list">
+          <div className="project-card">
+            <div className="project-card-main">
+              <div className="project-card-icon">
+                <FolderKanban size={22} />
+              </div>
+
+              <div className="project-card-info">
+                <h3>ZYRA — Intelligent Project Workspace</h3>
+
+                <p>
+                  A collaborative project workspace that progressively evolves
+                  into an AI-powered project assistant.
+                </p>
+
+                <div className="project-card-meta">
+                  <span>
+                    <CalendarDays size={13} />
+                    Active Project
+                  </span>
+
+                  <span>
+                    <Users size={13} />2 Members
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              className="project-open-btn"
+              onClick={() => navigate("/projects/zyra-project")}
+            >
+              Open Project
+              <ArrowRight size={15} />
+            </button>
           </div>
-
-          <h3>No projects yet</h3>
-
-          <p>
-            Create your first project and start organizing your team's work with
-            ZYRA.
-          </p>
-
-          <button
-            className="projects-empty-btn"
-            onClick={() => navigate("/projects/create")}
-          >
-            <Plus size={16} />
-            Create Your First Project
-          </button>
         </div>
       </section>
     </div>

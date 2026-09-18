@@ -6,14 +6,17 @@ import {
   CircleCheck,
   AlertCircle,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-
+import { useNavigate, useParams } from "react-router-dom";
 function ProjectTasks() {
   const navigate = useNavigate();
+  const { projectId } = useParams();
 
   return (
     <div className="zyra-project-tasks">
-      <button className="back-page-btn" onClick={() => navigate("/projects")}>
+      <button
+        className="back-page-btn"
+        onClick={() => navigate(`/projects/${projectId}`)}
+      >
         <ArrowLeft size={16} />
         Back to Projects
       </button>
@@ -29,7 +32,7 @@ function ProjectTasks() {
 
         <button
           className="project-tasks-create-btn"
-          onClick={() => navigate("/projects/tasks/create")}
+          onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
         >
           <Plus size={17} />
           Create New Task
@@ -104,7 +107,7 @@ function ProjectTasks() {
 
           <button
             className="project-tasks-empty-btn"
-            onClick={() => navigate("/projects/tasks/create")}
+            onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
           >
             <Plus size={16} />
             Create Your First Task

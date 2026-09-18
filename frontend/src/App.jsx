@@ -24,10 +24,13 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/tasks" element={<ProjectTasks />} />
-          <Route path="/projects/tasks/create" element={<CreateTask />} />
-          <Route path="/projects/overview" element={<ProjectOverview />} />
+          <Route
+            path="/projects/:projectId/tasks/create"
+            element={<CreateTask />}
+          />
           <Route path="/projects/create" element={<CreateProject />} />
+          <Route path="/projects/:projectId" element={<ProjectOverview />} />
+          <Route path="/projects/:projectId/tasks" element={<ProjectTasks />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/teams/create" element={<CreateTeam />} />

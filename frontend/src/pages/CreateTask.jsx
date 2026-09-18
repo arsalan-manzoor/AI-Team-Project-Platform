@@ -6,10 +6,11 @@ import {
   Flag,
   CircleDot,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 function CreateTask() {
   const navigate = useNavigate();
+  const { projectId } = useParams();
 
   const [task, setTask] = useState({
     name: "",

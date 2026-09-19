@@ -59,6 +59,35 @@ router.get("/", authMiddleware, async (req, res) => {
         });
     }
 });
+// Get a single team
+router.get("/:teamId", authMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT teams.id, teams.name, teams.description,
+                    teams.created_by, teams.created_at
+             FROM teams
+             JOIN team_members
+                ON teams.id = team_members.team_id
+             WHERE teams.id = $1
+               AND team_members.user_id = $2`,
+            [req.params.teamId, req.user.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                error: "Team not found"
+            });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Team fetch error:", error.message);
+
+        res.status(500).json({
+            error: "Database error"
+        });
+    }
+});
 // Get team members
 router.get("/:teamId/members", authMiddleware, async (req, res) => {
     try {

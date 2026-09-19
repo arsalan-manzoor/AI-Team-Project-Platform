@@ -1,3 +1,4 @@
+const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -11,8 +12,8 @@ const express = require("express");
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
-
 app.get("/", (req, res) => {
     res.send("Backend is working");
 });

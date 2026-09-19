@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CheckSquare,
   ArrowLeft,
@@ -8,9 +8,14 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { createTask } from "../services/taskService";
+import { getCurrentUser } from "../services/authService";
+
 function CreateTask() {
   const navigate = useNavigate();
   const { projectId } = useParams();
+
+  const [user, setUser] = useState(null);
 
   const [task, setTask] = useState({
     name: "",
@@ -20,27 +25,73 @@ function CreateTask() {
     status: "todo",
   });
 
-  function handleSubmit(event) {
+  const [loading, setLoading] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+
+        setError(error.message || "Failed to load your account information.");
+      } finally {
+        setLoadingUser(false);
+      }
+    }
+
+    loadUser();
+  }, []);
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    console.log("Task Created:", task);
+    setError("");
 
-    alert("Task created successfully!");
+    if (!projectId) {
+      setError("Project ID is missing.");
+      return;
+    }
 
-    setTask({
-      name: "",
-      description: "",
-      priority: "medium",
-      deadline: "",
-      status: "todo",
-    });
+    if (!user?.id) {
+      setError("Unable to identify the current user.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await createTask({
+        title: task.name.trim(),
+        description: task.description.trim(),
+        projectId: Number(projectId),
+        assignedTo: Number(user.id),
+        status: task.status,
+        priority: task.priority,
+        deadline: task.deadline,
+      });
+
+      alert("Task created successfully!");
+
+      navigate(`/projects/${projectId}/tasks`);
+    } catch (error) {
+      console.error("Task creation error:", error);
+
+      setError(error.message || "Failed to create task.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="zyra-create-page">
       <button
         className="back-page-btn"
-        onClick={() => navigate("/projects/tasks")}
+        onClick={() => navigate(`/projects/${projectId}/tasks`)}
+        disabled={loading}
       >
         <ArrowLeft size={16} />
         Back to Project Tasks
@@ -53,7 +104,9 @@ function CreateTask() {
 
         <div>
           <p className="create-page-eyebrow">TASK WORKSPACE</p>
+
           <h2>Create New Task</h2>
+
           <p>
             Create a task and define its priority, deadline, and progress
             status.
@@ -65,6 +118,7 @@ function CreateTask() {
         <div className="form-section">
           <div className="form-section-header">
             <h3>Task Information</h3>
+
             <p>Describe what needs to be completed.</p>
           </div>
 
@@ -82,6 +136,7 @@ function CreateTask() {
                 })
               }
               required
+              disabled={loading}
             />
           </div>
 
@@ -99,6 +154,7 @@ function CreateTask() {
                 })
               }
               required
+              disabled={loading}
             ></textarea>
           </div>
         </div>
@@ -106,6 +162,7 @@ function CreateTask() {
         <div className="form-section">
           <div className="form-section-header">
             <h3>Task Details</h3>
+
             <p>Set the priority, deadline, and current status.</p>
           </div>
 
@@ -124,6 +181,7 @@ function CreateTask() {
                     priority: event.target.value,
                   })
                 }
+                disabled={loading}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -145,9 +203,10 @@ function CreateTask() {
                     status: event.target.value,
                   })
                 }
+                disabled={loading}
               >
                 <option value="todo">To Do</option>
-                <option value="in-progress">In Progress</option>
+                <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
               </select>
             </div>
@@ -169,22 +228,31 @@ function CreateTask() {
                 })
               }
               required
+              disabled={loading}
             />
           </div>
+
+          {error && <p className="login-error">{error}</p>}
         </div>
 
         <div className="create-form-actions">
           <button
             type="button"
             className="cancel-form-btn"
-            onClick={() => navigate("/projects/tasks")}
+            onClick={() => navigate(`/projects/${projectId}/tasks`)}
+            disabled={loading}
           >
             Cancel
           </button>
 
-          <button type="submit" className="submit-project-btn">
+          <button
+            type="submit"
+            className="submit-project-btn"
+            disabled={loading || loadingUser}
+          >
             <CheckSquare size={16} />
-            Create Task
+
+            {loading ? "Creating Task..." : "Create Task"}
           </button>
         </div>
       </form>

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Users, ArrowLeft, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { createTeam } from "../services/teamService";
+
 function CreateTeam() {
   const navigate = useNavigate();
 
@@ -11,23 +13,40 @@ function CreateTeam() {
     objective: "",
   });
 
-  function handleSubmit(event) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    console.log("Team Created:", team);
+    setError("");
 
-    alert("Team created successfully!");
+    try {
+      setLoading(true);
 
-    setTeam({
-      name: "",
-      description: "",
-      objective: "",
-    });
+      await createTeam({
+        name: team.name.trim(),
+        description: team.description.trim(),
+      });
+
+      alert("Team created successfully!");
+
+      navigate("/teams");
+    } catch (error) {
+      console.error("Team creation error:", error);
+      setError(error.message || "Failed to create team.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="zyra-create-page">
-      <button className="back-page-btn" onClick={() => navigate("/teams")}>
+      <button
+        className="back-page-btn"
+        onClick={() => navigate("/teams")}
+        disabled={loading}
+      >
         <ArrowLeft size={16} />
         Back to Teams
       </button>
@@ -39,7 +58,9 @@ function CreateTeam() {
 
         <div>
           <p className="create-page-eyebrow">TEAM WORKSPACE</p>
+
           <h2>Create New Team</h2>
+
           <p>
             Set up your team and define what you want to accomplish together.
           </p>
@@ -50,6 +71,7 @@ function CreateTeam() {
         <div className="form-section">
           <div className="form-section-header">
             <h3>Team Information</h3>
+
             <p>Basic information about your team.</p>
           </div>
 
@@ -67,6 +89,7 @@ function CreateTeam() {
                 })
               }
               required
+              disabled={loading}
             />
           </div>
 
@@ -84,6 +107,7 @@ function CreateTeam() {
                 })
               }
               required
+              disabled={loading}
             ></textarea>
           </div>
 
@@ -104,8 +128,11 @@ function CreateTeam() {
                 })
               }
               required
+              disabled={loading}
             ></textarea>
           </div>
+
+          {error && <p className="login-error">{error}</p>}
         </div>
 
         <div className="create-form-actions">
@@ -113,13 +140,18 @@ function CreateTeam() {
             type="button"
             className="cancel-form-btn"
             onClick={() => navigate("/teams")}
+            disabled={loading}
           >
             Cancel
           </button>
 
-          <button type="submit" className="submit-project-btn">
+          <button
+            type="submit"
+            className="submit-project-btn"
+            disabled={loading}
+          >
             <Users size={16} />
-            Create Team
+            {loading ? "Creating Team..." : "Create Team"}
           </button>
         </div>
       </form>

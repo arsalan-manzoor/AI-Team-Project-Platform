@@ -255,24 +255,6 @@ router.delete("/:teamId/members/:userId", authMiddleware, async (req, res) => {
 });
 
 // Get team members
-router.get("/:teamId/members", authMiddleware, async (req, res) => {
-    try {
-        const result = await pool.query(
-            `SELECT users.id, users.name, users.email, team_members.joined_at
-             FROM team_members
-             JOIN users ON team_members.user_id = users.id
-             WHERE team_members.team_id = $1`,
-            [req.params.teamId]
-        );
 
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Team members fetch error:", error.message);
-
-        res.status(500).json({
-            error: "Database error"
-        });
-    }
-});
 
 module.exports = router;

@@ -4,12 +4,13 @@ import {
   FolderKanban,
   ArrowLeft,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-import { getTeams, getTeamMembers } from "../services/teamService";
+import { getTeams, getTeamMembers, deleteTeam } from "../services/teamService";
 import { getProjects } from "../services/ProjectService";
 
 function Teams() {
@@ -20,52 +21,87 @@ function Teams() {
   const [memberCounts, setMemberCounts] = useState({});
 
   const [loading, setLoading] = useState(true);
+  const [deletingTeamId, setDeletingTeamId] = useState(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function loadTeams() {
-      try {
-        setLoading(true);
-        setError("");
+  async function loadTeams() {
+    try {
+      setLoading(true);
+      setError("");
 
-        const [teamsData, projectsData] = await Promise.all([
-          getTeams(),
-          getProjects(),
-        ]);
+      const [teamsData, projectsData] = await Promise.all([
+        getTeams(),
+        getProjects(),
+      ]);
 
-        const loadedTeams = Array.isArray(teamsData) ? teamsData : [];
+      const loadedTeams = Array.isArray(teamsData) ? teamsData : [];
+      const loadedProjects = Array.isArray(projectsData) ? projectsData : [];
 
-        const loadedProjects = Array.isArray(projectsData) ? projectsData : [];
+      setTeams(loadedTeams);
+      setProjects(loadedProjects);
 
-        setTeams(loadedTeams);
-        setProjects(loadedProjects);
+      const counts = {};
 
-        const counts = {};
+      await Promise.all(
+        loadedTeams.map(async (team) => {
+          try {
+            const members = await getTeamMembers(team.id);
 
-        await Promise.all(
-          loadedTeams.map(async (team) => {
-            try {
-              const members = await getTeamMembers(team.id);
+            counts[team.id] = Array.isArray(members) ? members.length : 0;
+          } catch {
+            counts[team.id] = 0;
+          }
+        }),
+      );
 
-              counts[team.id] = Array.isArray(members) ? members.length : 0;
-            } catch {
-              counts[team.id] = 0;
-            }
-          }),
-        );
+      setMemberCounts(counts);
+    } catch (error) {
+      console.error("Teams loading error:", error);
 
-        setMemberCounts(counts);
-      } catch (error) {
-        console.error("Teams loading error:", error);
-
-        setError(error.message || "Failed to load teams.");
-      } finally {
-        setLoading(false);
-      }
+      setError(error.message || "Failed to load teams.");
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     loadTeams();
   }, []);
+
+  async function handleDeleteTeam(team) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${team.name}"? This action cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingTeamId(team.id);
+      setError("");
+
+      await deleteTeam(team.id);
+
+      setTeams((currentTeams) =>
+        currentTeams.filter((currentTeam) => currentTeam.id !== team.id),
+      );
+
+      setMemberCounts((currentCounts) => {
+        const updatedCounts = { ...currentCounts };
+
+        delete updatedCounts[team.id];
+
+        return updatedCounts;
+      });
+    } catch (error) {
+      console.error("Team deletion error:", error);
+
+      setError(error.message || "Failed to delete team.");
+    } finally {
+      setDeletingTeamId(null);
+    }
+  }
 
   const totalTeams = teams.length;
 
@@ -78,7 +114,11 @@ function Teams() {
 
   return (
     <div className="zyra-teams">
-      <button className="back-page-btn" onClick={() => navigate("/dashboard")}>
+      <button
+        className="back-page-btn"
+        onClick={() => navigate("/dashboard")}
+        disabled={deletingTeamId !== null}
+      >
         <ArrowLeft size={15} />
         Back to Dashboard
       </button>
@@ -97,6 +137,7 @@ function Teams() {
         <button
           className="teams-create-btn"
           onClick={() => navigate("/teams/create")}
+          disabled={deletingTeamId !== null}
         >
           <UserPlus size={17} />
           Create Team
@@ -190,6 +231,8 @@ function Teams() {
                 (project) => project.team_id === team.id,
               );
 
+              const isDeleting = deletingTeamId === team.id;
+
               return (
                 <div className="team-card" key={team.id}>
                   <div className="team-card-main">
@@ -213,9 +256,22 @@ function Teams() {
                       type="button"
                       className="team-view-btn"
                       onClick={() => navigate(`/teams/${team.id}`)}
+                      disabled={isDeleting}
                     >
                       View Team
                       <ArrowRight size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="team-view-btn"
+                      onClick={() => handleDeleteTeam(team)}
+                      disabled={isDeleting}
+                      title="Delete team"
+                    >
+                      <Trash2 size={15} />
+
+                      {isDeleting ? "Deleting..." : "Delete"}
                     </button>
                   </div>
                 </div>

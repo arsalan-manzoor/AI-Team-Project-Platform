@@ -6,106 +6,106 @@ const router = express.Router();
 
 // Create a milestone
 router.post("/", authMiddleware, async (req, res) => {
-    const { name, description, projectId, deadline, status } = req.body;
+  const { name, description, projectId, deadline, status } = req.body;
 
-    if (!name || !projectId) {
-        return res.status(400).json({
-            error: "Milestone name and project ID are required"
-        });
-    }
+  if (!name || !projectId) {
+    return res.status(400).json({
+      error: "Milestone name and project ID are required",
+    });
+  }
 
-    try {
-        const projectResult = await pool.query(
-            `SELECT projects.id
+  try {
+    const projectResult = await pool.query(
+      `SELECT projects.id
              FROM projects
              JOIN team_members
                 ON projects.team_id = team_members.team_id
              WHERE projects.id = $1
                AND team_members.user_id = $2`,
-            [projectId, req.user.id]
-        );
+      [projectId, req.user.id],
+    );
 
-        if (projectResult.rows.length === 0) {
-            return res.status(404).json({
-                error: "Project not found or you are not a team member"
-            });
-        }
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Project not found or you are not a team member",
+      });
+    }
 
-        const result = await pool.query(
-            `INSERT INTO milestones
+    const result = await pool.query(
+      `INSERT INTO milestones
              (name, description, project_id, deadline, status)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [
-                name,
-                description || null,
-                projectId,
-                deadline || null,
-                status || "pending"
-            ]
-        );
+      [
+        name,
+        description || null,
+        projectId,
+        deadline || null,
+        status || "pending",
+      ],
+    );
 
-        res.status(201).json(result.rows[0]);
-    } catch (error) {
-        console.error("Milestone creation error:", error.message);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Milestone creation error:", error.message);
 
-        res.status(500).json({
-            error: "Database error"
-        });
-    }
+    res.status(500).json({
+      error: "Database error",
+    });
+  }
 });
 
 // Get milestones for a project
 router.get("/project/:projectId", authMiddleware, async (req, res) => {
-    try {
-        const projectResult = await pool.query(
-            `SELECT projects.id
+  try {
+    const projectResult = await pool.query(
+      `SELECT projects.id
              FROM projects
              JOIN team_members
                 ON projects.team_id = team_members.team_id
              WHERE projects.id = $1
                AND team_members.user_id = $2`,
-            [req.params.projectId, req.user.id]
-        );
+      [req.params.projectId, req.user.id],
+    );
 
-        if (projectResult.rows.length === 0) {
-            return res.status(404).json({
-                error: "Project not found or you are not a team member"
-            });
-        }
+    if (projectResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Project not found or you are not a team member",
+      });
+    }
 
-        const result = await pool.query(
-            `SELECT id, name, description, project_id,
+    const result = await pool.query(
+      `SELECT id, name, description, project_id,
                     deadline, status, created_at
              FROM milestones
              WHERE project_id = $1
              ORDER BY id`,
-            [req.params.projectId]
-        );
+      [req.params.projectId],
+    );
 
-        res.json(result.rows);
-    } catch (error) {
-        console.error("Milestone fetch error:", error.message);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Milestone fetch error:", error.message);
 
-        res.status(500).json({
-            error: "Database error"
-        });
-    }
+    res.status(500).json({
+      error: "Database error",
+    });
+  }
 });
 
 // Update a milestone
 router.put("/:id", authMiddleware, async (req, res) => {
-    const { name, description, deadline, status } = req.body;
+  const { name, description, deadline, status } = req.body;
 
-    if (!name) {
-        return res.status(400).json({
-            error: "Milestone name is required"
-        });
-    }
+  if (!name) {
+    return res.status(400).json({
+      error: "Milestone name is required",
+    });
+  }
 
-    try {
-        const result = await pool.query(
-            `UPDATE milestones
+  try {
+    const result = await pool.query(
+      `UPDATE milestones
              SET name = $1,
                  description = $2,
                  deadline = $3,
@@ -119,37 +119,37 @@ router.put("/:id", authMiddleware, async (req, res) => {
                    WHERE team_members.user_id = $6
                )
              RETURNING *`,
-            [
-                name,
-                description || null,
-                deadline || null,
-                status || "pending",
-                req.params.id,
-                req.user.id
-            ]
-        );
+      [
+        name,
+        description || null,
+        deadline || null,
+        status || "pending",
+        req.params.id,
+        req.user.id,
+      ],
+    );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Milestone not found"
-            });
-        }
-
-        res.json(result.rows[0]);
-    } catch (error) {
-        console.error("Milestone update error:", error.message);
-
-        res.status(500).json({
-            error: "Database error"
-        });
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Milestone not found",
+      });
     }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Milestone update error:", error.message);
+
+    res.status(500).json({
+      error: "Database error",
+    });
+  }
 });
 
 // Delete a milestone
 router.delete("/:id", authMiddleware, async (req, res) => {
-    try {
-        const result = await pool.query(
-            `DELETE FROM milestones
+  try {
+    const result = await pool.query(
+      `DELETE FROM milestones
              WHERE id = $1
                AND project_id IN (
                    SELECT projects.id
@@ -159,26 +159,26 @@ router.delete("/:id", authMiddleware, async (req, res) => {
                    WHERE team_members.user_id = $2
                )
              RETURNING *`,
-            [req.params.id, req.user.id]
-        );
+      [req.params.id, req.user.id],
+    );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: "Milestone not found"
-            });
-        }
-
-        res.json({
-            message: "Milestone deleted successfully",
-            milestone: result.rows[0]
-        });
-    } catch (error) {
-        console.error("Milestone deletion error:", error.message);
-
-        res.status(500).json({
-            error: "Database error"
-        });
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Milestone not found",
+      });
     }
+
+    res.json({
+      message: "Milestone deleted successfully",
+      milestone: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Milestone deletion error:", error.message);
+
+    res.status(500).json({
+      error: "Database error",
+    });
+  }
 });
 
 module.exports = router;

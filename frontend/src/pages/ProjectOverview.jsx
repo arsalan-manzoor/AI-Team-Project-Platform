@@ -10,6 +10,9 @@ import {
   Plus,
   X,
   Paperclip,
+  Pencil,
+  Trash2,
+  Save,
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
@@ -22,12 +25,18 @@ import { getTeamById, getTeamMembers } from "../services/teamService";
 import {
   getProjectMilestones,
   createMilestone,
+  updateMilestone,
+  deleteMilestone,
 } from "../services/milestoneService";
 
 import {
   getProjectResources,
   createResource,
+  updateResource,
+  deleteResource,
 } from "../services/resourceService";
+
+import { getCurrentUser } from "../services/authService";
 
 function ProjectOverview() {
   const navigate = useNavigate();
@@ -38,10 +47,12 @@ function ProjectOverview() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [resources, setResources] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Milestone creation
   const [showMilestoneForm, setShowMilestoneForm] = useState(false);
   const [creatingMilestone, setCreatingMilestone] = useState(false);
 
@@ -50,12 +61,30 @@ function ProjectOverview() {
   const [milestoneDeadline, setMilestoneDeadline] = useState("");
   const [milestoneStatus, setMilestoneStatus] = useState("pending");
 
+  // Milestone editing
+  const [editingMilestoneId, setEditingMilestoneId] = useState(null);
+  const [updatingMilestoneId, setUpdatingMilestoneId] = useState(null);
+
+  const [editMilestoneName, setEditMilestoneName] = useState("");
+  const [editMilestoneDescription, setEditMilestoneDescription] = useState("");
+  const [editMilestoneDeadline, setEditMilestoneDeadline] = useState("");
+  const [editMilestoneStatus, setEditMilestoneStatus] = useState("pending");
+
+  // Resource creation
   const [showResourceForm, setShowResourceForm] = useState(false);
   const [creatingResource, setCreatingResource] = useState(false);
 
   const [resourceName, setResourceName] = useState("");
   const [resourceDescription, setResourceDescription] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
+
+  // Resource editing
+  const [editingResourceId, setEditingResourceId] = useState(null);
+  const [updatingResourceId, setUpdatingResourceId] = useState(null);
+
+  const [editResourceName, setEditResourceName] = useState("");
+  const [editResourceDescription, setEditResourceDescription] = useState("");
+  const [editResourceUrl, setEditResourceUrl] = useState("");
 
   useEffect(() => {
     async function loadProjectOverview() {
@@ -78,6 +107,14 @@ function ProjectOverview() {
         const loadedResources = await getProjectResources(projectId);
 
         setResources(Array.isArray(loadedResources) ? loadedResources : []);
+
+        try {
+          const userData = await getCurrentUser();
+          setCurrentUser(userData);
+        } catch (userError) {
+          console.error("Current user loading error:", userError);
+          setCurrentUser(null);
+        }
 
         if (projectData?.team_id) {
           try {
@@ -116,6 +153,10 @@ function ProjectOverview() {
   const pendingTasks = tasks.filter(
     (task) => task.status === "pending" || task.status === "todo",
   ).length;
+
+  // -----------------------------
+  // CREATE MILESTONE
+  // -----------------------------
 
   async function handleCreateMilestone(event) {
     event.preventDefault();
@@ -159,6 +200,104 @@ function ProjectOverview() {
     }
   }
 
+  // -----------------------------
+  // EDIT MILESTONE
+  // -----------------------------
+
+  function startEditingMilestone(milestone) {
+    setError("");
+
+    setEditingMilestoneId(milestone.id);
+
+    setEditMilestoneName(milestone.name || "");
+    setEditMilestoneDescription(milestone.description || "");
+    setEditMilestoneDeadline(
+      milestone.deadline ? String(milestone.deadline).slice(0, 10) : "",
+    );
+    setEditMilestoneStatus(milestone.status || "pending");
+  }
+
+  function cancelEditingMilestone() {
+    setEditingMilestoneId(null);
+    setEditMilestoneName("");
+    setEditMilestoneDescription("");
+    setEditMilestoneDeadline("");
+    setEditMilestoneStatus("pending");
+  }
+
+  async function handleUpdateMilestone(event, milestoneId) {
+    event.preventDefault();
+
+    const name = editMilestoneName.trim();
+    const description = editMilestoneDescription.trim();
+
+    if (!name) {
+      setError("Please enter a milestone name.");
+      return;
+    }
+
+    try {
+      setUpdatingMilestoneId(milestoneId);
+      setError("");
+
+      const updatedMilestone = await updateMilestone(milestoneId, {
+        name,
+        description,
+        deadline: editMilestoneDeadline || null,
+        status: editMilestoneStatus,
+      });
+
+      setMilestones((currentMilestones) =>
+        currentMilestones.map((milestone) =>
+          milestone.id === milestoneId ? updatedMilestone : milestone,
+        ),
+      );
+
+      cancelEditingMilestone();
+    } catch (error) {
+      console.error("Milestone update error:", error);
+
+      setError(error.message || "Failed to update milestone.");
+    } finally {
+      setUpdatingMilestoneId(null);
+    }
+  }
+
+  // -----------------------------
+  // DELETE MILESTONE
+  // -----------------------------
+
+  async function handleDeleteMilestone(milestoneId) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this milestone?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setUpdatingMilestoneId(milestoneId);
+
+      await deleteMilestone(milestoneId);
+
+      setMilestones((currentMilestones) =>
+        currentMilestones.filter((milestone) => milestone.id !== milestoneId),
+      );
+    } catch (error) {
+      console.error("Milestone deletion error:", error);
+
+      setError(error.message || "Failed to delete milestone.");
+    } finally {
+      setUpdatingMilestoneId(null);
+    }
+  }
+
+  // -----------------------------
+  // CREATE RESOURCE
+  // -----------------------------
+
   async function handleCreateResource(event) {
     event.preventDefault();
 
@@ -199,6 +338,113 @@ function ProjectOverview() {
       setError(error.message || "Failed to create resource.");
     } finally {
       setCreatingResource(false);
+    }
+  }
+
+  // -----------------------------
+  // RESOURCE OWNERSHIP
+  // -----------------------------
+
+  function canEditResource(resource) {
+    if (!currentUser?.id || !resource?.uploaded_by) {
+      return false;
+    }
+
+    return Number(resource.uploaded_by) === Number(currentUser.id);
+  }
+
+  // -----------------------------
+  // EDIT RESOURCE
+  // -----------------------------
+
+  function startEditingResource(resource) {
+    setError("");
+
+    setEditingResourceId(resource.id);
+
+    setEditResourceName(resource.name || "");
+    setEditResourceDescription(resource.description || "");
+    setEditResourceUrl(resource.url || "");
+  }
+
+  function cancelEditingResource() {
+    setEditingResourceId(null);
+    setEditResourceName("");
+    setEditResourceDescription("");
+    setEditResourceUrl("");
+  }
+
+  async function handleUpdateResource(event, resourceId) {
+    event.preventDefault();
+
+    const name = editResourceName.trim();
+    const description = editResourceDescription.trim();
+    const url = editResourceUrl.trim();
+
+    if (!name) {
+      setError("Please enter a resource name.");
+      return;
+    }
+
+    if (!url) {
+      setError("Please enter a resource URL.");
+      return;
+    }
+
+    try {
+      setUpdatingResourceId(resourceId);
+      setError("");
+
+      const updatedResource = await updateResource(resourceId, {
+        name,
+        description,
+        url,
+      });
+
+      setResources((currentResources) =>
+        currentResources.map((resource) =>
+          resource.id === resourceId ? updatedResource : resource,
+        ),
+      );
+
+      cancelEditingResource();
+    } catch (error) {
+      console.error("Resource update error:", error);
+
+      setError(error.message || "Failed to update resource.");
+    } finally {
+      setUpdatingResourceId(null);
+    }
+  }
+
+  // -----------------------------
+  // DELETE RESOURCE
+  // -----------------------------
+
+  async function handleDeleteResource(resourceId) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this resource?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setUpdatingResourceId(resourceId);
+
+      await deleteResource(resourceId);
+
+      setResources((currentResources) =>
+        currentResources.filter((resource) => resource.id !== resourceId),
+      );
+    } catch (error) {
+      console.error("Resource deletion error:", error);
+
+      setError(error.message || "Failed to delete resource.");
+    } finally {
+      setUpdatingResourceId(null);
     }
   }
 
@@ -461,9 +707,7 @@ function ProjectOverview() {
                 disabled={creatingMilestone}
               >
                 <option value="pending">Pending</option>
-
                 <option value="in_progress">In Progress</option>
-
                 <option value="completed">Completed</option>
               </select>
             </div>
@@ -510,25 +754,154 @@ function ProjectOverview() {
           </div>
         ) : (
           <div className="project-details-grid">
-            {milestones.map((milestone) => (
-              <div className="project-detail-card" key={milestone.id}>
-                <CircleCheck size={18} />
+            {milestones.map((milestone) =>
+              editingMilestoneId === milestone.id ? (
+                <form
+                  className="project-detail-card"
+                  key={milestone.id}
+                  onSubmit={(event) =>
+                    handleUpdateMilestone(event, milestone.id)
+                  }
+                >
+                  <CircleCheck size={18} />
 
-                <div>
-                  <span>{milestone.name}</span>
+                  <div>
+                    <div className="form-group">
+                      <label>Milestone Name</label>
 
-                  <strong>{milestone.status || "Pending"}</strong>
+                      <input
+                        type="text"
+                        value={editMilestoneName}
+                        onChange={(event) =>
+                          setEditMilestoneName(event.target.value)
+                        }
+                        disabled={updatingMilestoneId === milestone.id}
+                      />
+                    </div>
 
-                  {milestone.description && (
-                    <small>{milestone.description}</small>
-                  )}
+                    <div className="form-group">
+                      <label>Description</label>
 
-                  {milestone.deadline && (
-                    <small>Deadline: {milestone.deadline}</small>
-                  )}
+                      <textarea
+                        rows="3"
+                        value={editMilestoneDescription}
+                        onChange={(event) =>
+                          setEditMilestoneDescription(event.target.value)
+                        }
+                        disabled={updatingMilestoneId === milestone.id}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Deadline</label>
+
+                      <input
+                        type="date"
+                        value={editMilestoneDeadline}
+                        onChange={(event) =>
+                          setEditMilestoneDeadline(event.target.value)
+                        }
+                        disabled={updatingMilestoneId === milestone.id}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Status</label>
+
+                      <select
+                        value={editMilestoneStatus}
+                        onChange={(event) =>
+                          setEditMilestoneStatus(event.target.value)
+                        }
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <option value="pending">Pending</option>
+
+                        <option value="in_progress">In Progress</option>
+
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+
+                    <div className="task-subtask-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-form-btn"
+                        onClick={cancelEditingMilestone}
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <X size={15} />
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="submit-project-btn"
+                        disabled={
+                          updatingMilestoneId === milestone.id ||
+                          !editMilestoneName.trim()
+                        }
+                      >
+                        <Save size={15} />
+
+                        {updatingMilestoneId === milestone.id
+                          ? "Saving..."
+                          : "Save Changes"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="project-detail-card" key={milestone.id}>
+                  <CircleCheck size={18} />
+
+                  <div>
+                    <span>{milestone.name}</span>
+
+                    <strong>{milestone.status || "Pending"}</strong>
+
+                    {milestone.description && (
+                      <small>{milestone.description}</small>
+                    )}
+
+                    {milestone.deadline && (
+                      <small>
+                        Deadline: {String(milestone.deadline).slice(0, 10)}
+                      </small>
+                    )}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginTop: "10px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="cancel-form-btn"
+                        onClick={() => startEditingMilestone(milestone)}
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <Pencil size={14} />
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="cancel-form-btn"
+                        onClick={() => handleDeleteMilestone(milestone.id)}
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         )}
       </section>
@@ -642,23 +1015,133 @@ function ProjectOverview() {
           </div>
         ) : (
           <div className="project-details-grid">
-            {resources.map((resource) => (
-              <div className="project-detail-card" key={resource.id}>
-                <Paperclip size={18} />
+            {resources.map((resource) =>
+              editingResourceId === resource.id ? (
+                <form
+                  className="project-detail-card"
+                  key={resource.id}
+                  onSubmit={(event) => handleUpdateResource(event, resource.id)}
+                >
+                  <Paperclip size={18} />
 
-                <div>
-                  <span>{resource.name}</span>
+                  <div>
+                    <div className="form-group">
+                      <label>Resource Name</label>
 
-                  {resource.description && (
-                    <small>{resource.description}</small>
-                  )}
+                      <input
+                        type="text"
+                        value={editResourceName}
+                        onChange={(event) =>
+                          setEditResourceName(event.target.value)
+                        }
+                        disabled={updatingResourceId === resource.id}
+                      />
+                    </div>
 
-                  <a href={resource.url} target="_blank" rel="noreferrer">
-                    Open Resource
-                  </a>
+                    <div className="form-group">
+                      <label>Description</label>
+
+                      <textarea
+                        rows="3"
+                        value={editResourceDescription}
+                        onChange={(event) =>
+                          setEditResourceDescription(event.target.value)
+                        }
+                        disabled={updatingResourceId === resource.id}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Resource URL</label>
+
+                      <input
+                        type="url"
+                        value={editResourceUrl}
+                        onChange={(event) =>
+                          setEditResourceUrl(event.target.value)
+                        }
+                        disabled={updatingResourceId === resource.id}
+                      />
+                    </div>
+
+                    <div className="task-subtask-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-form-btn"
+                        onClick={cancelEditingResource}
+                        disabled={updatingResourceId === resource.id}
+                      >
+                        <X size={15} />
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="submit-project-btn"
+                        disabled={
+                          updatingResourceId === resource.id ||
+                          !editResourceName.trim() ||
+                          !editResourceUrl.trim()
+                        }
+                      >
+                        <Save size={15} />
+
+                        {updatingResourceId === resource.id
+                          ? "Saving..."
+                          : "Save Changes"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="project-detail-card" key={resource.id}>
+                  <Paperclip size={18} />
+
+                  <div>
+                    <span>{resource.name}</span>
+
+                    {resource.description && (
+                      <small>{resource.description}</small>
+                    )}
+
+                    <a href={resource.url} target="_blank" rel="noreferrer">
+                      Open Resource
+                    </a>
+
+                    {canEditResource(resource) && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          marginTop: "10px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="cancel-form-btn"
+                          onClick={() => startEditingResource(resource)}
+                          disabled={updatingResourceId === resource.id}
+                        >
+                          <Pencil size={14} />
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="cancel-form-btn"
+                          onClick={() => handleDeleteResource(resource.id)}
+                          disabled={updatingResourceId === resource.id}
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         )}
       </section>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, ArrowLeft, Target } from "lucide-react";
+import { Users, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { createTeam } from "../services/teamService";
@@ -10,7 +10,6 @@ function CreateTeam() {
   const [team, setTeam] = useState({
     name: "",
     description: "",
-    objective: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -104,27 +103,6 @@ function CreateTeam() {
                 setTeam({
                   ...team,
                   description: event.target.value,
-                })
-              }
-              required
-              disabled={loading}
-            ></textarea>
-          </div>
-
-          <div className="form-group">
-            <label>
-              <Target size={14} />
-              Team Objective
-            </label>
-
-            <textarea
-              placeholder="What does your team want to achieve?"
-              rows="4"
-              value={team.objective}
-              onChange={(event) =>
-                setTeam({
-                  ...team,
-                  objective: event.target.value,
                 })
               }
               required

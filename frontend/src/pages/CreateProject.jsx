@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FolderKanban, ArrowLeft, CalendarDays } from "lucide-react";
+import { FolderKanban, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { createProject } from "../services/ProjectService";
@@ -11,9 +11,6 @@ function CreateProject() {
   const [project, setProject] = useState({
     name: "",
     description: "",
-    objective: "",
-    startDate: "",
-    deadline: "",
     teamId: "",
   });
 
@@ -30,13 +27,6 @@ function CreateProject() {
         const loadedTeams = Array.isArray(teamsData) ? teamsData : [];
 
         setTeams(loadedTeams);
-
-        if (loadedTeams.length > 0) {
-          setProject((current) => ({
-            ...current,
-            teamId: String(loadedTeams[0].id),
-          }));
-        }
       } catch (error) {
         console.error("Failed to load teams:", error);
         setError(error.message || "Failed to load teams.");
@@ -178,77 +168,7 @@ function CreateProject() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Project Objective</label>
-
-            <textarea
-              placeholder="What do you want to achieve?"
-              rows="4"
-              value={project.objective}
-              onChange={(event) =>
-                setProject({
-                  ...project,
-                  objective: event.target.value,
-                })
-              }
-              required
-              disabled={loading}
-            ></textarea>
-          </div>
-
           {error && <p className="login-error">{error}</p>}
-        </div>
-
-        <div className="form-section">
-          <div className="form-section-header">
-            <h3>Project Timeline</h3>
-
-            <p>
-              Define when the project starts and when it should be completed.
-            </p>
-          </div>
-
-          <div className="form-date-grid">
-            <div className="form-group">
-              <label>
-                <CalendarDays size={14} />
-                Start Date
-              </label>
-
-              <input
-                type="date"
-                value={project.startDate}
-                onChange={(event) =>
-                  setProject({
-                    ...project,
-                    startDate: event.target.value,
-                  })
-                }
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>
-                <CalendarDays size={14} />
-                Deadline
-              </label>
-
-              <input
-                type="date"
-                value={project.deadline}
-                onChange={(event) =>
-                  setProject({
-                    ...project,
-                    deadline: event.target.value,
-                  })
-                }
-                required
-                disabled={loading}
-              />
-            </div>
-          </div>
         </div>
 
         <div className="create-form-actions">

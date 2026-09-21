@@ -15,7 +15,9 @@ import TeamDetails from "./pages/TeamDetails";
 import Notifications from "./pages/Notifications";
 import AIAssistant from "./pages/AIAssistant";
 import TaskDetails from "./pages/TaskDetails";
+import Profile from "./pages/Profile";
 import MainLayout from "./layouts/MainLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -25,44 +27,53 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
 
-        {/* Main Workspace */}
-        <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+        {/* Protected Main Workspace */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* Projects */}
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/create" element={<CreateProject />} />
+            {/* Profile */}
+            <Route path="/profile" element={<Profile />} />
 
-          {/* Project Overview */}
-          <Route path="/projects/:projectId" element={<ProjectOverview />} />
+            {/* Projects */}
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/create" element={<CreateProject />} />
 
-          {/* Project Tasks */}
-          <Route path="/projects/:projectId/tasks" element={<ProjectTasks />} />
-          {/*  TaskDetails  */}
-          <Route
-            path="/projects/:projectId/tasks/:taskId"
-            element={<TaskDetails />}
-          />
+            {/* Project Overview */}
+            <Route path="/projects/:projectId" element={<ProjectOverview />} />
 
-          {/* Create Project Task */}
-          <Route
-            path="/projects/:projectId/tasks/create"
-            element={<CreateTask />}
-          />
+            {/* Project Tasks */}
+            <Route
+              path="/projects/:projectId/tasks"
+              element={<ProjectTasks />}
+            />
 
-          {/* My Tasks */}
-          <Route path="/tasks" element={<Tasks />} />
+            {/* Task Details */}
+            <Route
+              path="/projects/:projectId/tasks/:taskId"
+              element={<TaskDetails />}
+            />
 
-          {/* Teams */}
-          <Route path="/teams" element={<Teams />} />
-          <Route path="/teams/create" element={<CreateTeam />} />
-          <Route path="/teams/:teamId" element={<TeamDetails />} />
+            {/* Create Project Task */}
+            <Route
+              path="/projects/:projectId/tasks/create"
+              element={<CreateTask />}
+            />
 
-          {/* Activity */}
-          <Route path="/notifications" element={<Notifications />} />
+            {/* My Tasks */}
+            <Route path="/tasks" element={<Tasks />} />
 
-          {/* AI */}
-          <Route path="/ai-assistant" element={<AIAssistant />} />
+            {/* Teams */}
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/teams/create" element={<CreateTeam />} />
+            <Route path="/teams/:teamId" element={<TeamDetails />} />
+
+            {/* Activity */}
+            <Route path="/notifications" element={<Notifications />} />
+
+            {/* AI */}
+            <Route path="/ai-assistant" element={<AIAssistant />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

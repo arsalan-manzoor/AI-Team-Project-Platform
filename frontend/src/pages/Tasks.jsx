@@ -1,11 +1,20 @@
-import { CheckSquare, Clock3, CircleCheck, AlertCircle } from "lucide-react";
+import {
+  CheckSquare,
+  Clock3,
+  CircleCheck,
+  AlertCircle,
+  ArrowRight,
+} from "lucide-react";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { getTasks } from "../services/taskService";
 import { getCurrentUser } from "../services/authService";
 
 function Tasks() {
+  const navigate = useNavigate();
+
   const [tasks, setTasks] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -102,6 +111,15 @@ function Tasks() {
       default:
         return status || "Pending";
     }
+  }
+
+  function openTaskDetails(task) {
+    if (!task?.project_id || !task?.id) {
+      setError("This task is missing its project information.");
+      return;
+    }
+
+    navigate(`/projects/${task.project_id}/tasks/${task.id}`);
   }
 
   return (
@@ -205,14 +223,31 @@ function Tasks() {
         ) : (
           <div className="task-list">
             {tasks.map((task) => (
-              <div className="task-card" key={task.id}>
+              <div
+                className="task-card"
+                key={task.id}
+                onClick={() => openTaskDetails(task)}
+                style={{
+                  cursor: "pointer",
+                }}
+              >
                 <div>
                   <h3>{task.title}</h3>
 
                   <p>{task.description || "No description provided."}</p>
                 </div>
 
-                <span>{getDisplayStatus(task.status)}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <span>{getDisplayStatus(task.status)}</span>
+
+                  <ArrowRight size={17} />
+                </div>
               </div>
             ))}
           </div>

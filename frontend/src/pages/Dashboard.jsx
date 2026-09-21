@@ -22,6 +22,7 @@ function Dashboard() {
   const [user, setUser] = useState(null);
   const [teamMemberCount, setTeamMemberCount] = useState(0);
   const [tasks, setTasks] = useState([]);
+  const [myTasks, setMyTasks] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -50,6 +51,15 @@ function Dashboard() {
         setUser(userData);
         setTasks(loadedTasks);
 
+        const assignedTasks = loadedTasks.filter(
+          (task) =>
+            task.assigned_to !== null &&
+            task.assigned_to !== undefined &&
+            Number(task.assigned_to) === Number(userData.id),
+        );
+
+        setMyTasks(assignedTasks);
+
         let totalMembers = 0;
 
         await Promise.all(
@@ -72,6 +82,7 @@ function Dashboard() {
         setTeamMemberCount(totalMembers);
       } catch (error) {
         console.error("Dashboard loading error:", error);
+
         setError(error.message || "Failed to load dashboard.");
       } finally {
         setLoading(false);
@@ -90,6 +101,25 @@ function Dashboard() {
   const pendingTaskCount = tasks.filter(
     (task) => task.status === "pending" || task.status === "todo",
   ).length;
+
+  function getDisplayStatus(status) {
+    switch (status) {
+      case "in_progress":
+        return "In Progress";
+
+      case "completed":
+      case "complete":
+      case "done":
+        return "Completed";
+
+      case "pending":
+      case "todo":
+        return "To Do";
+
+      default:
+        return status || "Unknown";
+    }
+  }
 
   return (
     <div className="zyra-dashboard">
@@ -116,7 +146,6 @@ function Dashboard() {
       {error && <div className="dashboard-error">{error}</div>}
 
       <div className="dashboard-stats">
-        {/* Total Projects */}
         <div className="dashboard-stat-card">
           <div className="stat-icon">
             <FolderKanban size={20} />
@@ -129,7 +158,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Active Tasks */}
         <div className="dashboard-stat-card">
           <div className="stat-icon">
             <CheckSquare size={20} />
@@ -142,7 +170,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Team Members */}
         <div className="dashboard-stat-card">
           <div className="stat-icon">
             <Users size={20} />
@@ -155,7 +182,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Pending Tasks */}
         <div className="dashboard-stat-card">
           <div className="stat-icon">
             <Clock3 size={20} />
@@ -170,7 +196,6 @@ function Dashboard() {
       </div>
 
       <div className="dashboard-grid">
-        {/* Recent Projects */}
         <section className="dashboard-panel">
           <div className="panel-header">
             <div>
@@ -236,7 +261,6 @@ function Dashboard() {
           )}
         </section>
 
-        {/* My Tasks */}
         <section className="dashboard-panel">
           <div className="panel-header">
             <div>
@@ -257,27 +281,33 @@ function Dashboard() {
 
               <h4>Loading tasks...</h4>
 
-              <p>Getting your tasks from the ZYRA workspace.</p>
+              <p>Getting your assigned tasks from the ZYRA workspace.</p>
             </div>
-          ) : tasks.length === 0 ? (
+          ) : myTasks.length === 0 ? (
             <div className="dashboard-empty">
               <CheckSquare size={30} />
 
-              <h4>No tasks yet</h4>
+              <h4>No tasks assigned</h4>
 
               <p>
-                Your assigned tasks will appear here once you start working on a
+                Your assigned tasks will appear here when you start working on a
                 project.
               </p>
             </div>
           ) : (
             <div className="dashboard-project-list">
-              {tasks.slice(0, 5).map((task) => (
-                <div key={task.id} className="dashboard-project-item">
+              {myTasks.slice(0, 5).map((task) => (
+                <div
+                  key={task.id}
+                  className="dashboard-project-item"
+                  onClick={() =>
+                    navigate(`/projects/${task.project_id}/tasks/${task.id}`)
+                  }
+                >
                   <div>
                     <h4>{task.title}</h4>
 
-                    <p>Status: {task.status || "Unknown"}</p>
+                    <p>Status: {getDisplayStatus(task.status)}</p>
                   </div>
 
                   <ArrowRight size={17} />
@@ -288,7 +318,6 @@ function Dashboard() {
         </section>
       </div>
 
-      {/* AI Assistant */}
       <section className="dashboard-ai-panel">
         <div className="ai-panel-icon">✦</div>
 

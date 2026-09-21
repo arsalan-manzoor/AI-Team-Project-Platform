@@ -24,12 +24,20 @@ export async function createTask(taskData) {
     body: JSON.stringify(taskData),
   });
 }
+
 export async function updateTask(taskId, taskData) {
   return apiRequest(`/tasks/${taskId}`, {
     method: "PUT",
     body: JSON.stringify(taskData),
   });
 }
+
+export async function deleteTask(taskId) {
+  return apiRequest(`/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function getTaskSubtasks(taskId) {
   return apiRequest(`/subtasks/task/${taskId}`);
 }

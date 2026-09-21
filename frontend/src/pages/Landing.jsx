@@ -1,4 +1,7 @@
+import "../styles/landing.css";
+
 import {
+  ArrowDown,
   ArrowRight,
   Brain,
   CheckCircle2,
@@ -17,47 +20,147 @@ import { useNavigate } from "react-router-dom";
 function Landing() {
   const navigate = useNavigate();
 
+  const handleEnterZYRA = () => {
+    navigate("/login");
+  };
+
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <div className="zyra-landing">
-      {/* Animated Background */}
-      <div className="landing-background">
-        <div className="landing-orb landing-orb-one"></div>
-        <div className="landing-orb landing-orb-two"></div>
-        <div className="landing-orb landing-orb-three"></div>
-        <div className="landing-grid"></div>
-      </div>
+      {/* =========================================================
+          AMBIENT BACKGROUND
+      ========================================================= */}
 
-      {/* NAVBAR */}
-      <header className="landing-navbar">
-        <div className="landing-brand">
-          <div className="landing-logo">
-            <span>Z</span>
-          </div>
+      <div className="landing-background" aria-hidden="true">
+        <div className="landing-noise" />
+        <div className="landing-grid" />
 
-          <div>
-            <strong>ZYRA</strong>
-            <span>Intelligent Project Workspace</span>
-          </div>
+        <div className="landing-orb landing-orb-cyan" />
+        <div className="landing-orb landing-orb-blue" />
+        <div className="landing-orb landing-orb-purple" />
+
+        <div className="landing-glow landing-glow-one" />
+        <div className="landing-glow landing-glow-two" />
+        <div className="landing-glow landing-glow-three" />
+
+        <div className="landing-stars">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
 
-        <nav className="landing-nav-links">
-          <a href="#product">Product</a>
-          <a href="#features">Features</a>
-          <a href="#ai">AI</a>
-          <a href="#vision">Vision</a>
+        <div className="landing-orbit landing-orbit-one" />
+        <div className="landing-orbit landing-orbit-two" />
+        <div className="landing-orbit landing-orbit-three" />
+
+        <div className="landing-light-trail landing-light-trail-one" />
+        <div className="landing-light-trail landing-light-trail-two" />
+      </div>
+
+      {/* =========================================================
+          NAVIGATION
+      ========================================================= */}
+
+      <header className="landing-navbar">
+        <button
+          type="button"
+          className="landing-brand"
+          onClick={() => scrollToSection("hero")}
+          aria-label="Go to ZYRA home"
+        >
+          <span className="landing-brand-mark">
+            <svg
+              viewBox="0 0 64 64"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient
+                  id="landingZyraGradient"
+                  x1="8"
+                  y1="56"
+                  x2="56"
+                  y2="8"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0" stopColor="#22d3ee" />
+                  <stop offset="0.48" stopColor="#3b82f6" />
+                  <stop offset="1" stopColor="#a78bfa" />
+                </linearGradient>
+              </defs>
+
+              <path
+                d="
+                  M10 8
+                  H54
+                  C57 8 58 11 56 13
+                  L20 51
+                  H54
+                  C57 51 58 54 56 56
+                  H10
+                  C7 56 6 53 8 51
+                  L44 13
+                  H10
+                  C7 13 7 8 10 8
+                  Z
+                "
+                fill="url(#landingZyraGradient)"
+              />
+            </svg>
+          </span>
+
+          <span className="landing-brand-copy">
+            <strong>ZYRA</strong>
+            <span>Intelligent Project Workspace</span>
+          </span>
+        </button>
+
+        <nav className="landing-nav-links" aria-label="Main navigation">
+          <button type="button" onClick={() => scrollToSection("product")}>
+            Product
+          </button>
+
+          <button type="button" onClick={() => scrollToSection("features")}>
+            Features
+          </button>
+
+          <button type="button" onClick={() => scrollToSection("intelligence")}>
+            Intelligence
+          </button>
+
+          <button type="button" onClick={() => scrollToSection("vision")}>
+            Vision
+          </button>
         </nav>
 
         <div className="landing-nav-actions">
           <button
+            type="button"
             className="landing-signin-btn"
-            onClick={() => navigate("/login")}
+            onClick={handleEnterZYRA}
           >
             Sign In
           </button>
 
           <button
+            type="button"
             className="landing-get-started-btn"
-            onClick={() => navigate("/login")}
+            onClick={handleEnterZYRA}
           >
             Get Started
             <ArrowRight size={15} />
@@ -65,256 +168,426 @@ function Landing() {
         </div>
       </header>
 
-      {/* HERO */}
+      {/* =========================================================
+          MAIN
+      ========================================================= */}
+
       <main>
-        <section className="landing-hero">
+        {/* =======================================================
+            HERO
+        ======================================================= */}
+
+        <section className="landing-hero" id="hero">
           <div className="landing-hero-content">
-            <div className="landing-badge">
-              <span className="landing-badge-dot"></span>
-              The workspace that evolves with you
+            <div className="landing-eyebrow">
+              <span className="landing-eyebrow-dot" />
+              THE INTELLIGENT PROJECT WORKSPACE
             </div>
 
-            <h1>
-              Build better projects.
-              <span>Work smarter together.</span>
+            <h1 className="landing-hero-title">
+              Everything your team
+              <span>needs to build.</span>
             </h1>
 
             <p className="landing-hero-description">
-              ZYRA brings projects, tasks, teams, and intelligent assistance
-              into one evolving workspace built for the way modern teams work.
+              Projects, tasks, teams and intelligence in one evolving workspace.
             </p>
 
             <div className="landing-hero-actions">
               <button
+                type="button"
                 className="landing-primary-btn"
-                onClick={() => navigate("/login")}
+                onClick={handleEnterZYRA}
               >
-                Start Building
+                Get Started
                 <ArrowRight size={18} />
               </button>
 
-              <a href="#product" className="landing-secondary-btn">
-                Explore ZYRA
-                <ChevronRight size={17} />
-              </a>
+              {/* WATCH DEMO — FIXED ICON */}
+              <button
+                type="button"
+                className="landing-demo-btn"
+                onClick={() => scrollToSection("intelligence")}
+              >
+                <span className="landing-demo-icon">
+                  <ChevronRight size={16} strokeWidth={2.5} />
+                </span>
+                Watch Demo
+              </button>
             </div>
 
             <div className="landing-trust-row">
               <div>
-                <CheckCircle2 size={15} />
+                <CheckCircle2 size={16} />
                 <span>Project Management</span>
               </div>
 
               <div>
-                <CheckCircle2 size={15} />
+                <CheckCircle2 size={16} />
                 <span>Team Collaboration</span>
               </div>
 
               <div>
-                <CheckCircle2 size={15} />
+                <CheckCircle2 size={16} />
                 <span>AI Ready</span>
               </div>
             </div>
           </div>
 
-          {/* INTERACTIVE PRODUCT VISUAL */}
+          {/* =====================================================
+              VISUAL 1 — ZYRA WORKSPACE
+          ===================================================== */}
+
           <div className="landing-product-stage">
-            <div className="landing-stage-glow"></div>
+            <div className="landing-stage-aura" />
 
-            <div className="floating-card floating-card-top">
-              <div className="floating-icon">
-                <Sparkles size={16} />
+            <div className="landing-stage-ring landing-stage-ring-one" />
+            <div className="landing-stage-ring landing-stage-ring-two" />
+
+            {/* AI FLOATING CARD */}
+
+            <div className="landing-floating-card landing-ai-floating">
+              <div className="floating-card-icon">
+                <Sparkles size={17} />
               </div>
-              <div>
-                <strong>AI Assistant</strong>
-                <span>Analyzing workspace...</span>
+
+              <div className="floating-card-content">
+                <strong>ZYRA Intelligence</strong>
+                <span>Analyzing your workspace...</span>
               </div>
-              <div className="ai-pulse"></div>
+
+              <span className="floating-live-dot" />
             </div>
 
-            <div className="landing-dashboard-window">
-              <div className="dashboard-window-header">
-                <div className="window-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
+            {/* COLLABORATION CARD */}
 
-                <span className="window-title">ZYRA Workspace</span>
-
-                <div className="window-status">
-                  <span></span>
-                  Live
-                </div>
-              </div>
-
-              <div className="dashboard-window-body">
-                <aside className="mini-sidebar">
-                  <div className="mini-brand">
-                    <div className="mini-z">Z</div>
-                    <span>ZYRA</span>
-                  </div>
-
-                  <div className="mini-nav active">
-                    <Layers3 size={14} />
-                    Dashboard
-                  </div>
-
-                  <div className="mini-nav">
-                    <FolderKanban size={14} />
-                    Projects
-                  </div>
-
-                  <div className="mini-nav">
-                    <CircleCheck size={14} />
-                    Tasks
-                  </div>
-
-                  <div className="mini-nav">
-                    <Users size={14} />
-                    Teams
-                  </div>
-
-                  <div className="mini-ai">
-                    <Sparkles size={14} />
-                    <span>AI Assistant</span>
-                  </div>
-                </aside>
-
-                <div className="mini-main">
-                  <div className="mini-topline">
-                    <div>
-                      <span>OVERVIEW</span>
-                      <h3>Good morning, Arsalan</h3>
-                    </div>
-
-                    <div className="mini-avatar">A</div>
-                  </div>
-
-                  <div className="mini-stats">
-                    <div className="mini-stat">
-                      <div className="mini-stat-icon">
-                        <FolderKanban size={14} />
-                      </div>
-                      <span>Projects</span>
-                      <strong>08</strong>
-                    </div>
-
-                    <div className="mini-stat">
-                      <div className="mini-stat-icon">
-                        <CircleCheck size={14} />
-                      </div>
-                      <span>Tasks Done</span>
-                      <strong>42</strong>
-                    </div>
-
-                    <div className="mini-stat">
-                      <div className="mini-stat-icon">
-                        <Users size={14} />
-                      </div>
-                      <span>Members</span>
-                      <strong>12</strong>
-                    </div>
-                  </div>
-
-                  <div className="mini-workspace">
-                    <div className="mini-panel">
-                      <div className="mini-panel-heading">
-                        <div>
-                          <span>ACTIVE PROJECT</span>
-                          <strong>ZYRA Platform</strong>
-                        </div>
-
-                        <span className="mini-active">Active</span>
-                      </div>
-
-                      <div className="mini-progress">
-                        <div className="mini-progress-label">
-                          <span>Project progress</span>
-                          <strong>68%</strong>
-                        </div>
-
-                        <div className="progress-track">
-                          <div className="progress-fill"></div>
-                        </div>
-                      </div>
-
-                      <div className="mini-task-list">
-                        <div className="mini-task completed">
-                          <div className="task-check">
-                            <CheckCircle2 size={13} />
-                          </div>
-                          <span>Workspace foundation</span>
-                          <small>Done</small>
-                        </div>
-
-                        <div className="mini-task">
-                          <div className="task-check pending">
-                            <Clock3 size={13} />
-                          </div>
-                          <span>AI Assistant integration</span>
-                          <small>In progress</small>
-                        </div>
-
-                        <div className="mini-task">
-                          <div className="task-check pending">
-                            <Clock3 size={13} />
-                          </div>
-                          <span>Predictive intelligence</span>
-                          <small>Upcoming</small>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mini-ai-panel">
-                      <div className="mini-ai-heading">
-                        <div className="mini-ai-symbol">
-                          <Brain size={15} />
-                        </div>
-
-                        <div>
-                          <strong>ZYRA AI</strong>
-                          <span>Intelligence layer</span>
-                        </div>
-                      </div>
-
-                      <div className="ai-message">
-                        <span className="ai-message-dot"></span>I found 3 tasks
-                        that may need attention.
-                      </div>
-
-                      <div className="ai-lines">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="floating-card floating-card-bottom">
-              <div className="floating-members">
+            <div className="landing-floating-card landing-collaboration-floating">
+              <div className="collaboration-avatars">
                 <span>A</span>
                 <span>M</span>
                 <span>+</span>
               </div>
 
-              <div>
-                <strong>Team online</strong>
-                <span>2 members collaborating</span>
+              <div className="floating-card-content">
+                <strong>Team Collaboration</strong>
+                <span>2 members online</span>
               </div>
+            </div>
+
+            {/* AI INSIGHT CARD */}
+
+            <div className="landing-floating-card landing-insight-floating">
+              <div className="floating-insight-icon">
+                <Brain size={16} />
+              </div>
+
+              <div className="floating-card-content">
+                <strong>AI Insight</strong>
+                <span>3 tasks may need attention.</span>
+              </div>
+            </div>
+
+            {/* MAIN ZYRA WINDOW */}
+
+            <div className="landing-dashboard-window">
+              <div className="dashboard-window-topbar">
+                <div className="dashboard-window-brand">
+                  <div className="dashboard-mini-logo">Z</div>
+                  <strong>ZYRA</strong>
+                </div>
+
+                <div className="dashboard-window-search">
+                  <span>Search projects, tasks, AI insights...</span>
+                </div>
+
+                <div className="dashboard-window-actions">
+                  <span className="window-action-dot" />
+                  <span className="window-action-dot" />
+
+                  <div className="dashboard-user">
+                    <span className="dashboard-user-avatar">A</span>
+                    <span>Arsalan</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-window-body">
+                {/* MINI SIDEBAR */}
+
+                <aside className="dashboard-mini-sidebar">
+                  <div className="mini-sidebar-heading">WORKSPACE</div>
+
+                  <div className="mini-sidebar-link active">
+                    <Layers3 size={14} />
+                    Dashboard
+                  </div>
+
+                  <div className="mini-sidebar-link">
+                    <FolderKanban size={14} />
+                    Projects
+                  </div>
+
+                  <div className="mini-sidebar-link">
+                    <CircleCheck size={14} />
+                    Tasks
+                  </div>
+
+                  <div className="mini-sidebar-link">
+                    <Users size={14} />
+                    Teams
+                  </div>
+
+                  <div className="mini-sidebar-heading mini-activity-heading">
+                    ACTIVITY
+                  </div>
+
+                  <div className="mini-sidebar-link">
+                    <Clock3 size={14} />
+                    Notifications
+                  </div>
+
+                  <div className="mini-ai-link">
+                    <Sparkles size={14} />
+                    <span>AI Assistant</span>
+                  </div>
+                </aside>
+
+                {/* MINI DASHBOARD */}
+
+                <div className="dashboard-mini-main">
+                  <div className="dashboard-mini-header">
+                    <div>
+                      <span>OVERVIEW</span>
+
+                      <h3>
+                        Good morning, Arsalan
+                        <span>👋</span>
+                      </h3>
+                    </div>
+
+                    <div className="dashboard-mini-avatar">A</div>
+                  </div>
+
+                  <div className="dashboard-mini-content">
+                    {/* PROJECTS */}
+
+                    <div className="dashboard-project-area">
+                      <div className="mini-section-header">
+                        <strong>Current Projects</strong>
+                        <span>View all</span>
+                      </div>
+
+                      <div className="mini-project-grid">
+                        <div className="mini-project-card cyan">
+                          <div className="mini-project-top">
+                            <strong>Project Nexus</strong>
+                            <span>•••</span>
+                          </div>
+
+                          <div className="mini-project-meta">
+                            <span>Progress</span>
+                            <strong>85%</strong>
+                          </div>
+
+                          <div className="mini-progress">
+                            <div
+                              className="mini-progress-fill"
+                              style={{ width: "85%" }}
+                            />
+                          </div>
+
+                          <div className="mini-project-bottom">
+                            <div className="mini-avatars">
+                              <span>A</span>
+                              <span>M</span>
+                              <span>+</span>
+                            </div>
+
+                            <span className="mini-status cyan-status">
+                              In Progress
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mini-project-card blue">
+                          <div className="mini-project-top">
+                            <strong>Horizon Launch</strong>
+                            <span>•••</span>
+                          </div>
+
+                          <div className="mini-project-meta">
+                            <span>Progress</span>
+                            <strong>72%</strong>
+                          </div>
+
+                          <div className="mini-progress">
+                            <div
+                              className="mini-progress-fill"
+                              style={{ width: "72%" }}
+                            />
+                          </div>
+
+                          <div className="mini-project-bottom">
+                            <div className="mini-avatars">
+                              <span>A</span>
+                              <span>M</span>
+                            </div>
+
+                            <span className="mini-status blue-status">
+                              Active
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mini-project-card purple">
+                          <div className="mini-project-top">
+                            <strong>Helix Redesign</strong>
+                            <span>•••</span>
+                          </div>
+
+                          <div className="mini-project-meta">
+                            <span>Progress</span>
+                            <strong>64%</strong>
+                          </div>
+
+                          <div className="mini-progress">
+                            <div
+                              className="mini-progress-fill"
+                              style={{ width: "64%" }}
+                            />
+                          </div>
+
+                          <div className="mini-project-bottom">
+                            <div className="mini-avatars">
+                              <span>A</span>
+                              <span>+</span>
+                            </div>
+
+                            <span className="mini-status purple-status">
+                              Review
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* INTELLIGENCE PANEL */}
+
+                    <div className="mini-intelligence-panel">
+                      <div className="mini-panel-title">
+                        <strong>ZYRA Intelligence</strong>
+                        <Sparkles size={14} />
+                      </div>
+
+                      <span className="mini-panel-subtitle">
+                        AI Performance Outlook
+                      </span>
+
+                      <div className="mini-chart">
+                        <svg
+                          viewBox="0 0 240 80"
+                          preserveAspectRatio="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M0 62 C30 35 48 58 76 43 S120 58 150 29 S190 48 240 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                          />
+                        </svg>
+                      </div>
+
+                      <p>Focus areas: Nexus is on track; Helix needs review.</p>
+
+                      <div className="mini-recommendations">
+                        <strong>Priority Recommendations</strong>
+                        <span>1. Optimize resources for Nexus.</span>
+                        <span>2. Resolve Helix UI bottlenecks.</span>
+                      </div>
+                    </div>
+
+                    {/* BOTTOM PANELS */}
+
+                    <div className="mini-bottom-panels">
+                      <div className="mini-tasks-panel">
+                        <div className="mini-section-header">
+                          <strong>My Tasks</strong>
+                          <span>•••</span>
+                        </div>
+
+                        <div className="mini-task">
+                          <CheckCircle2 size={14} />
+                          <span>Finalize Helix UX Review</span>
+                          <small>Today</small>
+                        </div>
+
+                        <div className="mini-task">
+                          <CircleCheck size={14} />
+                          <span>Sync Marketing Plan</span>
+                          <small>Tomorrow</small>
+                        </div>
+
+                        <div className="mini-task">
+                          <Clock3 size={14} />
+                          <span>Project Retrospective</span>
+                          <small>Friday</small>
+                        </div>
+                      </div>
+
+                      <div className="mini-team-panel">
+                        <div className="mini-section-header">
+                          <strong>Team Activity</strong>
+                          <span>•••</span>
+                        </div>
+
+                        <div className="mini-feed-item">
+                          <span className="feed-avatar">A</span>
+
+                          <p>
+                            Updated <strong>Project Nexus</strong> and synced
+                            the team.
+                          </p>
+                        </div>
+
+                        <div className="mini-feed-item">
+                          <span className="feed-avatar purple-feed">M</span>
+
+                          <p>
+                            Updated project tasks and collaborated with the
+                            team.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ACTIVE STATUS */}
+
+            <div className="landing-stage-status">
+              <span className="status-pulse" />
+
+              <span>ZYRA workspace is active</span>
+
+              <span className="status-divider" />
+
+              <strong>2 members online</strong>
             </div>
           </div>
         </section>
 
-        {/* PRODUCT INTRO */}
-        <section className="landing-product-section" id="product">
-          <div className="section-heading">
-            <div className="section-label">
+        {/* =======================================================
+            CAPABILITIES
+        ======================================================= */}
+
+        <section className="landing-capabilities-section" id="features">
+          <div className="landing-section-heading">
+            <div className="landing-section-label">
               <Zap size={15} />
-              ONE WORKSPACE
+              ONE INTELLIGENT WORKSPACE
             </div>
 
             <h2>
@@ -323,99 +596,103 @@ function Landing() {
             </h2>
 
             <p>
-              ZYRA connects the everyday building blocks of a project into one
-              workspace, creating the foundation for intelligent collaboration.
+              ZYRA brings the essential pieces of project execution together
+              before intelligence takes it further.
             </p>
           </div>
 
-          <div className="landing-product-cards">
-            <div className="product-card product-card-large">
-              <div className="product-card-icon">
+          <div className="landing-capability-grid">
+            <div className="landing-capability-card">
+              <div className="capability-icon">
                 <FolderKanban size={22} />
               </div>
 
-              <span className="product-card-number">01</span>
+              <div className="capability-content">
+                <span className="capability-number">01</span>
+                <h3>Projects</h3>
 
-              <h3>Projects</h3>
+                <p>
+                  Organize projects, track progress and keep everything
+                  connected.
+                </p>
+              </div>
 
-              <p>
-                Organize projects, track progress, and keep every important
-                piece of work connected.
-              </p>
-
-              <div className="product-card-line"></div>
+              <span className="capability-arrow">
+                <ArrowRight size={16} />
+              </span>
             </div>
 
-            <div className="product-card">
-              <div className="product-card-icon">
+            <div className="landing-capability-card">
+              <div className="capability-icon">
                 <CircleCheck size={22} />
               </div>
 
-              <span className="product-card-number">02</span>
+              <div className="capability-content">
+                <span className="capability-number">02</span>
+                <h3>Tasks</h3>
 
-              <h3>Tasks</h3>
+                <p>
+                  Turn ideas into actionable work and stay aligned on what comes
+                  next.
+                </p>
+              </div>
 
-              <p>
-                Turn ideas into actionable work and keep everyone aligned on
-                what comes next.
-              </p>
-
-              <div className="product-card-line"></div>
+              <span className="capability-arrow">
+                <ArrowRight size={16} />
+              </span>
             </div>
 
-            <div className="product-card">
-              <div className="product-card-icon">
+            <div className="landing-capability-card">
+              <div className="capability-icon">
                 <Users size={22} />
               </div>
 
-              <span className="product-card-number">03</span>
+              <div className="capability-content">
+                <span className="capability-number">03</span>
+                <h3>Teams</h3>
 
-              <h3>Teams</h3>
+                <p>
+                  Give teams a shared space for better collaboration and
+                  visibility.
+                </p>
+              </div>
 
-              <p>
-                Give teams a shared space where collaboration becomes simpler
-                and more transparent.
-              </p>
+              <span className="capability-arrow">
+                <ArrowRight size={16} />
+              </span>
+            </div>
 
-              <div className="product-card-line"></div>
+            <div className="landing-capability-card ai-capability">
+              <div className="capability-icon">
+                <Sparkles size={22} />
+              </div>
+
+              <div className="capability-content">
+                <span className="capability-number">04</span>
+                <h3>AI Assistant</h3>
+
+                <p>
+                  Get intelligent insights, suggestions and support while you
+                  work.
+                </p>
+              </div>
+
+              <span className="capability-arrow">
+                <ArrowRight size={16} />
+              </span>
             </div>
           </div>
         </section>
 
-        {/* AI SECTION */}
-        <section className="landing-ai-section" id="ai">
-          <div className="ai-section-visual">
-            <div className="ai-orbit orbit-one"></div>
-            <div className="ai-orbit orbit-two"></div>
-            <div className="ai-orbit orbit-three"></div>
+        {/* =======================================================
+            VISUAL 2 — ZYRA INTELLIGENCE NETWORK
+        ======================================================= */}
 
-            <div className="ai-core">
-              <div className="ai-core-inner">
-                <Brain size={42} />
-              </div>
-            </div>
-
-            <div className="ai-node node-one">
-              <FolderKanban size={16} />
-            </div>
-
-            <div className="ai-node node-two">
-              <CircleCheck size={16} />
-            </div>
-
-            <div className="ai-node node-three">
-              <Users size={16} />
-            </div>
-
-            <div className="ai-node node-four">
-              <Sparkles size={16} />
-            </div>
-          </div>
-
-          <div className="ai-section-content">
-            <div className="section-label">
+        <section className="landing-intelligence-section" id="intelligence">
+          <div className="landing-section-heading intelligence-heading">
+            <div className="landing-section-label">
               <Sparkles size={15} />
-              INTELLIGENCE LAYER
+              THE INTELLIGENCE LAYER
             </div>
 
             <h2>
@@ -423,96 +700,420 @@ function Landing() {
               <span>gets smarter over time.</span>
             </h2>
 
+            <p>Your work is connected. Your intelligence should be too.</p>
+          </div>
+
+          {/* =====================================================
+              INTELLIGENCE VISUAL
+          ===================================================== */}
+
+          <div className="zyra-intelligence-visual">
+            <div className="intelligence-visual-title">
+              <span>YOUR WORK IS CONNECTED.</span>
+              <strong>YOUR INTELLIGENCE SHOULD BE TOO.</strong>
+            </div>
+
+            <div className="intelligence-network">
+              {/* ENERGY RINGS */}
+
+              <div className="network-ring network-ring-one" />
+              <div className="network-ring network-ring-two" />
+              <div className="network-ring network-ring-three" />
+
+              {/* SVG CONNECTION SYSTEM */}
+
+              <svg
+                className="network-connections"
+                viewBox="0 0 1100 620"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                {/* PROJECTS */}
+
+                <path
+                  className="network-line"
+                  d="M160 160 C330 160 360 280 500 310"
+                />
+
+                <path
+                  className="network-line-glow"
+                  d="M160 160 C330 160 360 280 500 310"
+                />
+
+                {/* TEAMS */}
+
+                <path
+                  className="network-line"
+                  d="M160 430 C330 430 360 350 500 310"
+                />
+
+                <path
+                  className="network-line-glow"
+                  d="M160 430 C330 430 360 350 500 310"
+                />
+
+                {/* TASKS */}
+
+                <path
+                  className="network-line"
+                  d="M940 160 C770 160 740 280 600 310"
+                />
+
+                <path
+                  className="network-line-glow"
+                  d="M940 160 C770 160 740 280 600 310"
+                />
+
+                {/* PEOPLE */}
+
+                <path
+                  className="network-line"
+                  d="M940 430 C770 430 740 350 600 310"
+                />
+
+                <path
+                  className="network-line-glow"
+                  d="M940 430 C770 430 740 350 600 310"
+                />
+
+                {/* LOWER CONNECTION */}
+
+                <path
+                  className="network-lower-line"
+                  d="M550 370 C550 445 550 475 550 535"
+                />
+              </svg>
+
+              {/* MOVING PARTICLES */}
+
+              <span className="network-particle particle-projects" />
+              <span className="network-particle particle-teams" />
+              <span className="network-particle particle-tasks" />
+              <span className="network-particle particle-people" />
+
+              {/* PROJECT NODE */}
+
+              <div className="network-card network-card-projects">
+                <div className="network-card-heading">
+                  <FolderKanban size={15} />
+                  PROJECTS
+                </div>
+
+                <div className="network-card-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="network-mini-chart">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                </div>
+
+                <span className="network-node-dot" />
+              </div>
+
+              {/* TASK NODE */}
+
+              <div className="network-card network-card-tasks">
+                <div className="network-card-heading">
+                  <CircleCheck size={15} />
+                  TASKS
+                </div>
+
+                <div className="network-card-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="network-task-bars">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+
+                <span className="network-node-dot" />
+              </div>
+
+              {/* TEAMS NODE */}
+
+              <div className="network-card network-card-teams">
+                <div className="network-card-heading">
+                  <Users size={15} />
+                  TEAMS
+                </div>
+
+                <div className="network-card-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="network-team-dots">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+
+                <span className="network-node-dot" />
+              </div>
+
+              {/* PEOPLE NODE */}
+
+              <div className="network-card network-card-people">
+                <div className="network-card-heading">
+                  <Users size={15} />
+                  PEOPLE
+                </div>
+
+                <div className="network-card-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="network-people-icons">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+
+                <span className="network-node-dot" />
+              </div>
+
+              {/* CENTRAL ZYRA CORE */}
+
+              <div className="zyra-network-core">
+                <div className="core-energy-ring core-ring-one" />
+                <div className="core-energy-ring core-ring-two" />
+                <div className="core-energy-ring core-ring-three" />
+
+                <div className="core-pulse" />
+
+                <div className="core-logo">
+                  <span>Z</span>
+                </div>
+
+                <strong>ZYRA</strong>
+                <small>AI INTELLIGENCE</small>
+              </div>
+
+              {/* LOWER SYSTEM */}
+
+              <div className="network-lower-system">
+                <div className="lower-system-core">
+                  <div className="lower-core-glow" />
+                  <strong>ZYRA</strong>
+                  <span>INTELLIGENCE</span>
+                </div>
+
+                <div className="lower-system-node lower-projects">PROJECTS</div>
+
+                <div className="lower-system-node lower-tasks">TASKS</div>
+
+                <div className="lower-system-node lower-teams">TEAMS</div>
+
+                <div className="lower-system-node lower-people">PEOPLE</div>
+              </div>
+
+              <div className="network-down-arrow">
+                <ArrowDown size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* ORIGINAL EVOLUTION FLOW REMAINS */}
+
+          <div className="intelligence-evolution">
+            <div className="intelligence-line" />
+
+            <div className="intelligence-stage">
+              <div className="intelligence-node">
+                <Layers3 size={23} />
+              </div>
+
+              <span className="intelligence-step">FOUNDATION</span>
+
+              <strong>Workspace</strong>
+              <span>Organize & manage</span>
+            </div>
+
+            <div className="intelligence-connector">
+              <ArrowRight size={18} />
+            </div>
+
+            <div className="intelligence-stage active">
+              <div className="intelligence-node">
+                <Sparkles size={23} />
+              </div>
+
+              <span className="intelligence-step">NOW</span>
+
+              <strong>AI Assistant</strong>
+              <span>Get instant help</span>
+            </div>
+
+            <div className="intelligence-connector">
+              <ArrowRight size={18} />
+            </div>
+
+            <div className="intelligence-stage">
+              <div className="intelligence-node">
+                <Brain size={23} />
+              </div>
+
+              <span className="intelligence-step">NEXT</span>
+
+              <strong>Predictive Intelligence</strong>
+              <span>Spot risks & opportunities</span>
+            </div>
+
+            <div className="intelligence-connector">
+              <ArrowRight size={18} />
+            </div>
+
+            <div className="intelligence-stage future">
+              <div className="intelligence-node">
+                <Zap size={23} />
+              </div>
+
+              <span className="intelligence-step">FUTURE</span>
+
+              <strong>AI Project Agent</strong>
+              <span>Take action automatically</span>
+            </div>
+          </div>
+        </section>
+
+        {/* =======================================================
+            SHOWCASE
+        ======================================================= */}
+
+        <section className="landing-showcase-section">
+          <div className="landing-showcase-header">
+            <div>
+              <div className="landing-section-label">
+                <Layers3 size={15} />
+                BUILT TO EVOLVE
+              </div>
+
+              <h2>
+                From organized work
+                <span>to intelligent work.</span>
+              </h2>
+            </div>
+
             <p>
-              ZYRA starts with a powerful project workspace. As the platform
-              evolves, intelligence becomes part of the way your team works.
+              ZYRA starts with a powerful project workspace and creates a
+              foundation for progressively deeper intelligence.
             </p>
+          </div>
 
-            <div className="ai-roadmap">
-              <div className="ai-roadmap-item active">
-                <div className="roadmap-number">01</div>
-                <div>
-                  <strong>AI Assistant</strong>
-                  <span>Understand and assist with project work.</span>
-                </div>
+          <div className="landing-showcase-grid">
+            <div className="showcase-card showcase-large">
+              <div className="showcase-card-top">
+                <span>01</span>
+                <FolderKanban size={20} />
               </div>
 
-              <div className="ai-roadmap-item">
-                <div className="roadmap-number">02</div>
-                <div>
-                  <strong>Predictive Intelligence</strong>
-                  <span>Identify patterns and project risks.</span>
+              <h3>Projects & Teams</h3>
+
+              <p>
+                Keep your people, projects and progress connected in one
+                intelligent workspace.
+              </p>
+
+              <div className="showcase-mini-ui">
+                <div className="showcase-ui-sidebar">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <div className="showcase-ui-content">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
                 </div>
               </div>
+            </div>
 
-              <div className="ai-roadmap-item">
-                <div className="roadmap-number">03</div>
-                <div>
-                  <strong>AI Project Agent</strong>
-                  <span>Move from assistance toward intelligent action.</span>
-                </div>
+            <div className="showcase-card">
+              <div className="showcase-card-top">
+                <span>02</span>
+                <CircleCheck size={20} />
+              </div>
+
+              <h3>Tasks & Milestones</h3>
+
+              <p>Turn project goals into clear, trackable work.</p>
+
+              <div className="showcase-kanban">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+
+            <div className="showcase-card">
+              <div className="showcase-card-top">
+                <span>03</span>
+                <Sparkles size={20} />
+              </div>
+
+              <h3>AI Assistant</h3>
+
+              <p>
+                Ask questions, understand your workspace and get intelligent
+                assistance.
+              </p>
+
+              <div className="showcase-ai-message">
+                <Sparkles size={14} />
+                <span>3 tasks may need attention.</span>
+              </div>
+            </div>
+
+            <div className="showcase-card">
+              <div className="showcase-card-top">
+                <span>04</span>
+                <Brain size={20} />
+              </div>
+
+              <h3>Predictive Intelligence</h3>
+
+              <p>Progressively identify patterns, risks and opportunities.</p>
+
+              <div className="showcase-chart">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
               </div>
             </div>
           </div>
         </section>
 
-        {/* FEATURES */}
-        <section className="landing-features-section" id="features">
-          <div className="section-heading centered">
-            <div className="section-label">
-              <Layers3 size={15} />
-              BUILT TO EVOLVE
-            </div>
+        {/* =======================================================
+            VISION
+        ======================================================= */}
 
-            <h2>
-              Simple at the beginning.
-              <span>Powerful as it grows.</span>
-            </h2>
-          </div>
-
-          <div className="feature-grid">
-            <div className="feature-item">
-              <div className="feature-number">01</div>
-              <h3>Project-first architecture</h3>
-              <p>
-                A structured workspace designed to become the foundation for
-                deeper intelligence.
-              </p>
-            </div>
-
-            <div className="feature-item">
-              <div className="feature-number">02</div>
-              <h3>Collaboration built in</h3>
-              <p>
-                Projects, tasks, teams, and communication stay connected instead
-                of living in separate tools.
-              </p>
-            </div>
-
-            <div className="feature-item">
-              <div className="feature-number">03</div>
-              <h3>AI-ready foundation</h3>
-              <p>
-                The platform is designed so intelligence can progressively
-                become part of everyday project workflows.
-              </p>
-            </div>
-
-            <div className="feature-item">
-              <div className="feature-number">04</div>
-              <h3>Built for the future</h3>
-              <p>
-                The architecture leaves room for machine learning, automation,
-                integrations, and intelligent agents.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* VISION */}
         <section className="landing-vision-section" id="vision">
+          <div className="vision-background-word">ZYRA</div>
+
+          <div className="vision-orbit vision-orbit-one" />
+          <div className="vision-orbit vision-orbit-two" />
+
           <div className="vision-content">
-            <div className="section-label">
+            <div className="landing-section-label">
               <Sparkles size={15} />
               THE ZYRA VISION
             </div>
@@ -525,33 +1126,32 @@ function Landing() {
             </h2>
 
             <p>
-              ZYRA is not just another project-management tool. It is a
-              workspace designed to progressively evolve from organization into
-              intelligence.
+              ZYRA is designed to progressively evolve from organization into
+              intelligence — helping teams not only manage work, but understand
+              it.
             </p>
 
             <button
+              type="button"
               className="landing-primary-btn"
-              onClick={() => navigate("/login")}
+              onClick={handleEnterZYRA}
             >
               Enter ZYRA
               <ArrowRight size={18} />
             </button>
           </div>
-
-          <div className="vision-word">
-            <span>ZYRA</span>
-            <div className="vision-line"></div>
-            <small>Intelligent Project Workspace</small>
-          </div>
         </section>
 
-        {/* FINAL CTA */}
+        {/* =======================================================
+            FINAL CTA
+        ======================================================= */}
+
         <section className="landing-final-cta">
-          <div className="final-cta-glow"></div>
+          <div className="final-cta-aura" />
+          <div className="final-cta-grid" />
 
           <div className="final-cta-content">
-            <div className="section-label">
+            <div className="landing-section-label">
               <Sparkles size={15} />
               START BUILDING
             </div>
@@ -561,11 +1161,12 @@ function Landing() {
               <span>Ready to evolve.</span>
             </h2>
 
-            <p>Bring your projects, people, and ideas together with ZYRA.</p>
+            <p>Bring your projects, people and ideas together with ZYRA.</p>
 
             <button
-              className="landing-primary-btn final-btn"
-              onClick={() => navigate("/login")}
+              type="button"
+              className="landing-primary-btn final-cta-button"
+              onClick={handleEnterZYRA}
             >
               Get Started
               <ArrowRight size={18} />
@@ -574,10 +1175,13 @@ function Landing() {
         </section>
       </main>
 
-      {/* FOOTER */}
+      {/* =========================================================
+          FOOTER
+      ========================================================= */}
+
       <footer className="landing-footer">
-        <div className="footer-brand">
-          <div className="footer-logo">Z</div>
+        <div className="landing-footer-brand">
+          <div className="footer-logo-mark">Z</div>
 
           <div>
             <strong>ZYRA</strong>
@@ -585,9 +1189,11 @@ function Landing() {
           </div>
         </div>
 
-        <div className="footer-tagline">Plan. Collaborate. Build. Evolve.</div>
+        <div className="landing-footer-tagline">
+          Plan. Collaborate. Build. Evolve.
+        </div>
 
-        <div className="footer-copy">© 2026 ZYRA</div>
+        <div className="landing-footer-copy">© 2026 ZYRA</div>
       </footer>
     </div>
   );

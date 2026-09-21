@@ -336,7 +336,31 @@ The context layer should apply:
 5. Time-window filtering
 6. Result-size limits
 
-For example, "recent activity" may initially use a bounded time window rather than the complete historical database.
+For example, "recent activity" may initially use a bounded time window rather than the complete historical database.### Initial context types
+
+The first context layer should support a small set of bounded context types rather than attempting to understand the entire workspace at once.
+
+| Context type | Intended use | Primary data |
+|---|---|---|
+| Project Context | Project status, progress, delays, and project-level questions | Project, milestones, tasks, recent comments |
+| Task Context | Details, status, delays, and issues concerning a specific task | Task, project, subtasks, related comments |
+| User Task Context | User workload, assigned work, and upcoming deadlines | Assigned tasks and related project information |
+
+The context type should be selected from the user's intent and workspace scope.
+
+Examples:
+
+- "Why is Project A behind schedule?" → Project Context
+- "Why is Task X late?" → Task Context
+- "What tasks are assigned to me?" → User Task Context
+
+The system should select the minimum context necessary to answer the question rather than loading the entire database.
+
+### Ambiguous scope
+
+If the user's question does not identify a sufficiently clear project, task, or workspace scope, the context layer should not automatically expand the query to the entire database.
+
+Instead, the future assistant should request clarification or use an explicitly defined workspace scope when one exists.
 
 ### Structured context beats raw SQL output
 

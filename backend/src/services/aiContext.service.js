@@ -1,3 +1,4 @@
+const { buildAIContextContract } = require("./aiContext.contract");
 const { getUserTaskContext } = require("./userTaskContext.service");
 const { getTeamContext } = require("./teamContext.service");
 const { getProjectContext } = require("./projectContext.service");
@@ -82,7 +83,7 @@ async function getAIContext(type, id, userId) {
             throw new Error("Invalid AI context type");
     }
 
-    return limitContextItems(context);
+    return buildAIContextContract(type, limitContextItems(context));
 }
 
 module.exports = {

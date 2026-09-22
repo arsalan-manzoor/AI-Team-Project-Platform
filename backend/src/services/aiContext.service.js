@@ -1,34 +1,35 @@
-const pool = require("../config/db");
+const { getUserTaskContext } = require("./userTaskContext.service");
+const { getTeamContext } = require("./teamContext.service");
+const { getProjectContext } = require("./projectContext.service");
+const { getTaskContext } = require("./taskContext.service");
+const { getMilestoneContext } = require("./milestoneContext.service");
+const { getRecentActivityContext } = require("./recentActivityContext.service");
 
-async function getUserTaskContext(userId) {
-    const result = await pool.query(
-        `SELECT
-            tasks.id,
-            tasks.title,
-            tasks.status,
-            tasks.priority,
-            tasks.deadline,
-            projects.id AS project_id,
-            projects.name AS project_name
-         FROM tasks
-         JOIN projects
-            ON tasks.project_id = projects.id
-         JOIN team_members
-            ON projects.team_id = team_members.team_id
-         WHERE tasks.assigned_to = $1
-           AND team_members.user_id = $1
-         ORDER BY tasks.deadline ASC NULLS LAST`,
-        [userId]
-    );
+async function getAIContext(type, id, userId) {
+    switch (type) {
+        case "user_tasks":
+            return getUserTaskContext(userId);
 
-    return {
-        user: {
-            id: userId
-        },
-        tasks: result.rows
-    };
+        case "team":
+            return getTeamContext(id, userId);
+
+        case "project":
+            return getProjectContext(id, userId);
+
+        case "task":
+            return getTaskContext(id, userId);
+
+        case "milestone":
+            return getMilestoneContext(id, userId);
+
+        case "recent_activity":
+            return getRecentActivityContext(id, userId);
+
+        default:
+            throw new Error("Invalid AI context type");
+    }
 }
 
 module.exports = {
-    getUserTaskContext
+    getAIContext
 };

@@ -18,6 +18,15 @@ router.get("/:type", authMiddleware, async (req, res) => {
             });
         }
 
+        if (
+            type !== "user_tasks" &&
+            !Number.isInteger(id)
+        ) {
+            return res.status(400).json({
+                error: "Context ID must be a valid integer"
+            });
+        }
+
         const context = await getAIContext(
             type,
             id,

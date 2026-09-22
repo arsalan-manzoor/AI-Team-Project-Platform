@@ -1,3 +1,4 @@
+const aiContextRoutes = require("./routes/aiContextRoutes");
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
@@ -29,4 +30,5 @@ app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/resources", resourceRoutes);
+app.use("/api/ai/context", aiContextRoutes);
 module.exports = app;

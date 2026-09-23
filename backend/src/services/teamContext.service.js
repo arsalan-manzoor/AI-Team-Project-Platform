@@ -23,8 +23,7 @@ async function getTeamContext(teamId, userId) {
     const membersResult = await pool.query(
         `SELECT
             users.id,
-            users.name,
-            users.email
+            users.name
          FROM users
          JOIN team_members
             ON users.id = team_members.user_id

@@ -7,29 +7,87 @@ const {
 } = require("../services/projectSummaryContext.service");
 const tools = require("./toolRegistry");
 
+function validateUserId(userId) {
+    if (!Number.isInteger(userId)) {
+        throw new Error("Authenticated user ID must be a valid integer");
+    }
+}
+
+function validateToolArguments(tool, args) {
+    const parameters = tool.parameters || {};
+    const providedArgs = args || {};
+
+    for (const [parameterName, parameterDefinition] of Object.entries(parameters)) {
+        if (
+            parameterDefinition.required &&
+            providedArgs[parameterName] === undefined
+        ) {
+            throw new Error(
+                `Missing required AI tool argument: ${parameterName}`
+            );
+        }
+
+        if (providedArgs[parameterName] === undefined) {
+            continue;
+        }
+
+        if (
+            parameterDefinition.type === "integer" &&
+            !Number.isInteger(providedArgs[parameterName])
+        ) {
+            throw new Error(
+                `AI tool argument "${parameterName}" must be a valid integer`
+            );
+        }
+    }
+}
+
 async function executeTool(toolName, args, userId) {
-    if (!tools[toolName]) {
+    const tool = tools[toolName];
+
+    if (!tool) {
         throw new Error("Unknown AI tool");
     }
+
+    validateUserId(userId);
+    validateToolArguments(tool, args);
+
+    const toolArgs = args || {};
 
     switch (toolName) {
         case "get_projects":
             return getProjectListContext(userId);
 
         case "get_project":
-            return getAIContext("project", args.project_id, userId);
+            return getAIContext(
+                "project",
+                toolArgs.project_id,
+                userId
+            );
 
         case "get_tasks":
             return getTaskListContext(userId);
 
         case "get_task":
-            return getAIContext("task", args.task_id, userId);
+            return getAIContext(
+                "task",
+                toolArgs.task_id,
+                userId
+            );
 
         case "get_team_members":
-            return getAIContext("team", args.team_id, userId);
+            return getAIContext(
+                "team",
+                toolArgs.team_id,
+                userId
+            );
 
         case "get_milestones":
-            return getAIContext("milestone", args.milestone_id, userId);
+            return getAIContext(
+                "milestone",
+                toolArgs.milestone_id,
+                userId
+            );
 
         case "get_notifications":
             return getNotificationContext(userId);
@@ -37,13 +95,13 @@ async function executeTool(toolName, args, userId) {
         case "get_recent_activity":
             return getAIContext(
                 "recent_activity",
-                args.project_id,
+                toolArgs.project_id,
                 userId
             );
 
         case "get_project_summary_data":
             return getProjectSummaryContext(
-                args.project_id,
+                toolArgs.project_id,
                 userId
             );
 

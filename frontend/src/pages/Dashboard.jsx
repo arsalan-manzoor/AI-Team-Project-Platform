@@ -14,6 +14,7 @@ import { getProjects } from "../services/ProjectService";
 import { getCurrentUser } from "../services/authService";
 import { getTeams, getTeamMembers } from "../services/teamService";
 import { getTasks } from "../services/taskService";
+import "../styles/dashboard.css";
 
 function Dashboard() {
   const navigate = useNavigate();

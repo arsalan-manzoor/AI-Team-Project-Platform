@@ -24,6 +24,10 @@ function Landing() {
     navigate("/login");
   };
 
+  const handleGetStarted = () => {
+    navigate("/signup");
+  };
+
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({
       behavior: "smooth",
@@ -160,7 +164,7 @@ function Landing() {
           <button
             type="button"
             className="landing-get-started-btn"
-            onClick={handleEnterZYRA}
+            onClick={handleGetStarted}
           >
             Get Started
             <ArrowRight size={15} />
@@ -197,7 +201,7 @@ function Landing() {
               <button
                 type="button"
                 className="landing-primary-btn"
-                onClick={handleEnterZYRA}
+                onClick={handleGetStarted}
               >
                 Get Started
                 <ArrowRight size={18} />
@@ -1166,7 +1170,7 @@ function Landing() {
             <button
               type="button"
               className="landing-primary-btn final-cta-button"
-              onClick={handleEnterZYRA}
+              onClick={handleGetStarted}
             >
               Get Started
               <ArrowRight size={18} />

@@ -1,0 +1,1023 @@
+/* =========================================================
+   ZYRA LOGIN — COMMAND CENTER
+   ========================================================= */
+
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: #f8fafc;
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(23, 100, 130, 0.24),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 82% 28%,
+      rgba(55, 65, 180, 0.18),
+      transparent 27%
+    ),
+    radial-gradient(
+      circle at 15% 70%,
+      rgba(20, 120, 150, 0.14),
+      transparent 25%
+    ),
+    linear-gradient(135deg, #05080d 0%, #091018 48%, #05080e 100%);
+}
+
+/* =========================================================
+   MOVING TECHNICAL GRID
+   ========================================================= */
+
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: -100px;
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px);
+
+  background-size: 48px 48px;
+
+  animation: gridMove 5s linear infinite;
+}
+
+/* =========================================================
+   ANIMATED BACKGROUND
+   ========================================================= */
+
+.login-background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* =========================================================
+   AMBIENT GLOWS
+   ========================================================= */
+
+.ambient-glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  filter: blur(75px);
+  pointer-events: none;
+}
+
+.ambient-glow-1 {
+  top: 10%;
+  left: 5%;
+  background: rgba(34, 211, 238, 0.32);
+
+  animation:
+    glowMoveOne 6s ease-in-out infinite alternate,
+    glowPulseOne 3s ease-in-out infinite;
+}
+
+.ambient-glow-2 {
+  right: 3%;
+  bottom: 5%;
+  background: rgba(99, 102, 241, 0.3);
+
+  animation:
+    glowMoveTwo 7s ease-in-out infinite alternate,
+    glowPulseTwo 3.5s ease-in-out infinite;
+}
+
+/* =========================================================
+   NETWORK LINES
+   ========================================================= */
+
+.network-line {
+  position: absolute;
+  height: 2px;
+  transform-origin: left center;
+
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 211, 238, 0.15) 15%,
+    rgba(34, 211, 238, 0.95) 50%,
+    rgba(99, 102, 241, 0.55) 75%,
+    transparent 100%
+  );
+
+  border-radius: 999px;
+
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.45));
+
+  animation:
+    lineOpacity 2.2s ease-in-out infinite,
+    lineGlow 1.6s ease-in-out infinite;
+}
+
+/* Fixed line positions and angles */
+
+.network-line-1 {
+  width: 430px;
+  top: 29%;
+  left: 5%;
+  transform: rotate(18deg);
+  animation-delay: 0s;
+}
+
+.network-line-2 {
+  width: 380px;
+  top: 43%;
+  left: 5%;
+  transform: rotate(-25deg);
+  animation-delay: 0.5s;
+}
+
+.network-line-3 {
+  width: 450px;
+  top: 29%;
+  right: 3%;
+  transform: rotate(-19deg);
+  animation-delay: 0.9s;
+}
+
+.network-line-4 {
+  width: 390px;
+  top: 55%;
+  right: 5%;
+  transform: rotate(26deg);
+  animation-delay: 1.3s;
+}
+
+.network-line-5 {
+  width: 470px;
+  bottom: 20%;
+  left: 17%;
+  transform: rotate(-13deg);
+  animation-delay: 1.7s;
+}
+
+/* =========================================================
+   NETWORK NODES
+   ========================================================= */
+
+.network-node {
+  position: absolute;
+
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+
+  background: #22d3ee;
+
+  box-shadow:
+    0 0 8px rgba(34, 211, 238, 1),
+    0 0 22px rgba(34, 211, 238, 0.9),
+    0 0 42px rgba(34, 211, 238, 0.45);
+
+  animation:
+    nodePulse 1.5s ease-in-out infinite,
+    nodeFloat 3s ease-in-out infinite alternate;
+}
+
+.network-node-1 {
+  top: 29%;
+  left: 5%;
+  animation-delay: 0s;
+}
+
+.network-node-2 {
+  top: 43%;
+  left: 36%;
+  animation-delay: 0.4s;
+}
+
+.network-node-3 {
+  top: 29%;
+  right: 3%;
+  animation-delay: 0.8s;
+}
+
+.network-node-4 {
+  top: 55%;
+  right: 5%;
+
+  background: #818cf8;
+
+  box-shadow:
+    0 0 8px rgba(129, 140, 248, 1),
+    0 0 22px rgba(129, 140, 248, 0.9),
+    0 0 42px rgba(129, 140, 248, 0.45);
+
+  animation-delay: 1.2s;
+}
+
+.network-node-5 {
+  bottom: 20%;
+  left: 17%;
+  animation-delay: 1.6s;
+}
+
+.network-node-6 {
+  top: 67%;
+  right: 32%;
+
+  background: #67e8f9;
+
+  box-shadow:
+    0 0 8px rgba(103, 232, 249, 1),
+    0 0 22px rgba(103, 232, 249, 0.9),
+    0 0 42px rgba(103, 232, 249, 0.45);
+
+  animation-delay: 2s;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.login-header {
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+  min-height: 82px;
+
+  box-sizing: border-box;
+
+  padding: 20px 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+
+  background: rgba(5, 8, 13, 0.72);
+
+  backdrop-filter: blur(12px);
+}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Official ZYRA logo */
+
+.login-brand-logo {
+  width: 48px;
+  height: 48px;
+
+  display: block;
+  flex: 0 0 48px;
+
+  object-fit: cover;
+
+  border-radius: 10px;
+
+  border: 1px solid rgba(34, 211, 238, 0.35);
+
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.08);
+
+  background: #080d16;
+}
+
+/* Brand text */
+
+.login-brand h1 {
+  margin: 0;
+
+  font-size: 18px;
+  line-height: 1.1;
+
+  letter-spacing: 0.22em;
+
+  font-weight: 700;
+
+  color: #f8fafc;
+}
+
+.login-brand > div > span {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 11px;
+  line-height: 1.2;
+
+  letter-spacing: 0.08em;
+
+  color: #7f8da3;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+/* =========================================================
+   SYSTEM STATUS
+   ========================================================= */
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  letter-spacing: 0.16em;
+
+  color: #8fa3b8;
+
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #22d3ee;
+
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+
+  animation: statusPulse 1.4s ease-in-out infinite;
+}
+
+/* =========================================================
+   MAIN AUTHENTICATION AREA
+   ========================================================= */
+
+.login-main {
+  position: relative;
+  z-index: 2;
+
+  flex: 1;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 60px 24px 70px;
+}
+
+/* =========================================================
+   LOGIN CARD
+   ========================================================= */
+
+.login-card {
+  position: relative;
+
+  width: min(100%, 430px);
+
+  box-sizing: border-box;
+
+  padding: 42px;
+
+  border: 1px solid rgba(148, 163, 184, 0.16);
+
+  border-radius: 18px;
+
+  background: linear-gradient(
+    145deg,
+    rgba(17, 25, 36, 0.96),
+    rgba(8, 14, 23, 0.94)
+  );
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.5),
+    0 0 45px rgba(34, 211, 238, 0.04);
+
+  backdrop-filter: blur(18px);
+
+  overflow: hidden;
+
+  animation: cardEntrance 0.8s ease-out both;
+}
+
+/* Top cyan edge */
+
+.login-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 12%;
+  right: 12%;
+
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34, 211, 238, 0.9),
+    rgba(99, 102, 241, 0.8),
+    transparent
+  );
+
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.35);
+}
+
+/* =========================================================
+   CARD HEADER
+   ========================================================= */
+
+.login-card-header {
+  margin-bottom: 32px;
+}
+
+.login-eyebrow {
+  display: inline-block;
+
+  margin-bottom: 13px;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 0.18em;
+
+  color: #22d3ee;
+}
+
+.login-card-header h2 {
+  margin: 0;
+
+  font-size: 30px;
+  line-height: 1.15;
+
+  font-weight: 650;
+
+  letter-spacing: -0.025em;
+
+  color: #f8fafc;
+}
+
+.login-card-header p {
+  margin: 10px 0 0;
+
+  font-size: 13px;
+  line-height: 1.6;
+
+  color: #7f8da3;
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+}
+
+/* =========================================================
+   FORM GROUP
+   ========================================================= */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+
+  letter-spacing: 0.08em;
+
+  color: #aab7c8;
+}
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.form-group input {
+  width: 100%;
+
+  min-height: 50px;
+
+  box-sizing: border-box;
+
+  padding: 0 15px;
+
+  border: 1px solid rgba(148, 163, 184, 0.18);
+
+  border-radius: 9px;
+
+  outline: none;
+
+  background: rgba(3, 8, 15, 0.72);
+
+  color: #f8fafc;
+
+  font-size: 13px;
+
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+.form-group input::placeholder {
+  color: #536174;
+}
+
+.form-group input:hover {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.form-group input:focus {
+  border-color: rgba(34, 211, 238, 0.65);
+
+  background: rgba(6, 14, 23, 0.92);
+
+  box-shadow:
+    0 0 0 3px rgba(34, 211, 238, 0.08),
+    0 0 20px rgba(34, 211, 238, 0.08);
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.login-error {
+  margin: -5px 0 0;
+
+  padding: 10px 12px;
+
+  border: 1px solid rgba(248, 113, 113, 0.22);
+
+  border-radius: 8px;
+
+  background: rgba(127, 29, 29, 0.14);
+
+  color: #fca5a5;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   LOGIN BUTTON
+   ========================================================= */
+
+.login-btn {
+  width: 100%;
+
+  min-height: 51px;
+
+  margin-top: 3px;
+
+  border: 1px solid rgba(34, 211, 238, 0.45);
+
+  border-radius: 9px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(20, 184, 166, 0.18),
+    rgba(37, 99, 235, 0.24)
+  );
+
+  color: #e8fbff;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.1em;
+
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 20px rgba(34, 211, 238, 0.06);
+
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+.login-btn:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.8);
+
+  background: linear-gradient(
+    135deg,
+    rgba(20, 184, 166, 0.28),
+    rgba(37, 99, 235, 0.34)
+  );
+
+  box-shadow:
+    0 0 25px rgba(34, 211, 238, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  transform: translateY(-1px);
+}
+
+.login-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* =========================================================
+   SECURITY NOTE
+   ========================================================= */
+
+.login-security-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-top: 26px;
+  padding-top: 17px;
+
+  border-top: 1px solid rgba(148, 163, 184, 0.09);
+
+  font-size: 8px;
+  font-weight: 600;
+
+  letter-spacing: 0.13em;
+
+  color: #4f6075;
+}
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+/* Moving grid */
+
+@keyframes gridMove {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  100% {
+    transform: translate(48px, 48px);
+  }
+}
+
+/* Network line brightness */
+
+@keyframes lineOpacity {
+  0% {
+    opacity: 0.25;
+  }
+
+  25% {
+    opacity: 0.85;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  75% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Network line glow */
+
+@keyframes lineGlow {
+  0% {
+    filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.2));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 16px rgba(34, 211, 238, 0.8));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.3));
+  }
+}
+
+/* Nodes */
+
+@keyframes nodePulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: scale(1.8);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.7);
+    opacity: 0.45;
+  }
+}
+
+@keyframes nodeFloat {
+  0% {
+    margin-top: -8px;
+  }
+
+  100% {
+    margin-top: 12px;
+  }
+}
+
+/* Cyan glow movement */
+
+@keyframes glowMoveOne {
+  0% {
+    transform: translate(0, 0) scale(0.85);
+  }
+
+  50% {
+    transform: translate(120px, 60px) scale(1.2);
+  }
+
+  100% {
+    transform: translate(30px, 150px) scale(0.95);
+  }
+}
+
+@keyframes glowPulseOne {
+  0% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0.4;
+  }
+}
+
+/* Indigo glow movement */
+
+@keyframes glowMoveTwo {
+  0% {
+    transform: translate(0, 0) scale(0.9);
+  }
+
+  50% {
+    transform: translate(-120px, -80px) scale(1.25);
+  }
+
+  100% {
+    transform: translate(-40px, -140px) scale(0.95);
+  }
+}
+
+@keyframes glowPulseTwo {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.75;
+  }
+
+  100% {
+    opacity: 0.35;
+  }
+}
+
+/* System status */
+
+@keyframes statusPulse {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.4;
+
+    box-shadow: 0 0 4px rgba(34, 211, 238, 0.4);
+  }
+
+  50% {
+    transform: scale(1.4);
+    opacity: 1;
+
+    box-shadow:
+      0 0 10px rgba(34, 211, 238, 1),
+      0 0 24px rgba(34, 211, 238, 0.8);
+  }
+
+  100% {
+    transform: scale(0.75);
+    opacity: 0.4;
+
+    box-shadow: 0 0 4px rgba(34, 211, 238, 0.4);
+  }
+}
+
+/* Card entrance */
+
+@keyframes cardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .login-header {
+    min-height: 74px;
+    padding: 16px 24px;
+  }
+
+  .login-brand-logo {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .login-brand h1 {
+    font-size: 17px;
+  }
+
+  .login-brand > div > span {
+    font-size: 9px;
+  }
+
+  .system-status {
+    font-size: 9px;
+  }
+
+  .login-main {
+    padding: 45px 20px 55px;
+  }
+
+  .login-card {
+    padding: 36px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 560px) {
+  .login-header {
+    padding: 14px 18px;
+  }
+
+  .login-brand {
+    gap: 10px;
+  }
+
+  .login-brand-logo {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    border-radius: 8px;
+  }
+
+  .login-brand h1 {
+    font-size: 15px;
+  }
+
+  .login-brand > div > span {
+    max-width: 190px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    font-size: 8px;
+  }
+
+  .system-status {
+    gap: 6px;
+    font-size: 7px;
+    letter-spacing: 0.1em;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .login-main {
+    padding: 35px 16px 45px;
+  }
+
+  .login-card {
+    width: 100%;
+    padding: 30px 24px;
+    border-radius: 15px;
+  }
+
+  .login-card-header {
+    margin-bottom: 27px;
+  }
+
+  .login-card-header h2 {
+    font-size: 26px;
+  }
+
+  .login-card-header p {
+    font-size: 12px;
+  }
+
+  .form-group input {
+    min-height: 48px;
+  }
+
+  .login-btn {
+    min-height: 49px;
+  }
+
+  .login-security-note {
+    font-size: 7px;
+  }
+
+  .ambient-glow {
+    width: 280px;
+    height: 280px;
+  }
+
+  .network-line {
+    opacity: 0.55;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 390px) {
+  .system-status {
+    display: none;
+  }
+
+  .login-card {
+    padding: 26px 20px;
+  }
+
+  .login-card-header h2 {
+    font-size: 24px;
+  }
+
+  .login-security-note {
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION ACCESSIBILITY
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page::before,
+  .ambient-glow,
+  .network-line,
+  .network-node,
+  .status-dot,
+  .login-card {
+    animation: none !important;
+  }
+
+  .login-btn,
+  .form-group input {
+    transition: none !important;
+  }
+}

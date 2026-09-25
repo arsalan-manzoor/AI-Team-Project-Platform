@@ -1,3 +1,38 @@
+const OLLAMA_URL = "http://localhost:11434/api/chat";
+const MODEL_NAME = "qwen2.5:3b";
+
+function convertToolDefinition(tool) {
+    const properties = {};
+
+    for (const [name, definition] of Object.entries(
+        tool.parameters || {}
+    )) {
+        properties[name] = {
+            type: definition.type
+        };
+    }
+
+    const required = Object.entries(
+        tool.parameters || {}
+    )
+        .filter(([, definition]) => definition.required)
+        .map(([name]) => name);
+
+    return {
+        type: "function",
+        function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: {
+                type: "object",
+                properties,
+                required,
+                additionalProperties: false
+            }
+        }
+    };
+}
+
 async function generateResponse({
     messages,
     tools
@@ -14,9 +49,53 @@ async function generateResponse({
         );
     }
 
-    throw new Error(
-        "AI model adapter is not configured yet"
+    const response = await fetch(
+        OLLAMA_URL,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: MODEL_NAME,
+                messages,
+                tools: tools.map(convertToolDefinition),
+                stream: false
+            })
+        }
     );
+
+    if (!response.ok) {
+        throw new Error(
+            `Ollama request failed with status ${response.status}`
+        );
+    }
+
+    const data = await response.json();
+
+    if (!data.message) {
+        throw new Error(
+            "Ollama returned an invalid response"
+        );
+    }
+
+    if (
+        Array.isArray(data.message.tool_calls) &&
+        data.message.tool_calls.length > 0
+    ) {
+        const toolCall = data.message.tool_calls[0];
+
+        return {
+            tool_call: {
+                name: toolCall.function.name,
+                arguments: toolCall.function.arguments
+            }
+        };
+    }
+
+    return {
+        content: data.message.content || ""
+    };
 }
 
 module.exports = {

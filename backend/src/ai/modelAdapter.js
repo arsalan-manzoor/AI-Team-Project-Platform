@@ -83,18 +83,19 @@ async function generateResponse({
         Array.isArray(data.message.tool_calls) &&
         data.message.tool_calls.length > 0
     ) {
-        const toolCall = data.message.tool_calls[0];
-
         return {
             tool_call: {
-                name: toolCall.function.name,
-                arguments: toolCall.function.arguments
-            }
+                name: data.message.tool_calls[0].function.name,
+                arguments:
+                    data.message.tool_calls[0].function.arguments
+            },
+            assistant_message: data.message
         };
     }
 
     return {
-        content: data.message.content || ""
+        content: data.message.content || "",
+        assistant_message: data.message
     };
 }
 

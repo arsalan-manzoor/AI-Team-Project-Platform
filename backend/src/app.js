@@ -1,4 +1,5 @@
 const aiContextRoutes = require("./routes/aiContextRoutes");
+const aiChatRoutes = require("./routes/aiChatRoutes");
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
@@ -16,6 +17,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 app.get("/", (req, res) => {
     res.send("Backend is working");
 });
@@ -31,4 +33,6 @@ app.use("/api/milestones", milestoneRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/ai/context", aiContextRoutes);
+app.use("/api/ai/chat", aiChatRoutes);
+
 module.exports = app;

@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
-import { FolderKanban, ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Users,
+  CheckSquare,
+  Flag,
+  FileText,
+  Plus,
+  CalendarDays,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import "../styles/create-project.css";
 
 import { createProject } from "../services/ProjectService";
 import { getTeams } from "../services/teamService";
@@ -68,130 +77,449 @@ function CreateProject() {
     }
   }
 
+  const selectedTeam = teams.find(
+    (team) => String(team.id) === String(project.teamId)
+  );
+
+  const projectName =
+    project.name.trim() || "Your Project Name";
+
+  const projectDescription =
+    project.description.trim() ||
+    "Your project description will appear here.";
+
   return (
     <div className="zyra-create-page">
-      <button
-        className="back-page-btn"
-        onClick={() => navigate("/projects")}
-        disabled={loading}
-      >
-        <ArrowLeft size={16} />
-        Back to Projects
-      </button>
 
-      <div className="create-page-header">
-        <div className="create-page-icon">
-          <FolderKanban size={22} />
-        </div>
+      {/* =====================================================
+          SUBTLE BACKGROUND ANIMATION
+          ===================================================== */}
 
-        <div>
-          <p className="create-page-eyebrow">PROJECT WORKSPACE</p>
+      <div className="create-project-background" aria-hidden="true">
+        <div className="create-bg-orb create-bg-orb-one"></div>
+        <div className="create-bg-orb create-bg-orb-two"></div>
+        <div className="create-bg-orb create-bg-orb-three"></div>
+      </div>
 
-          <h2>Create New Project</h2>
+      {/* =====================================================
+          TOP NAVIGATION
+          ===================================================== */}
 
-          <p>Set up your project and define what your team wants to achieve.</p>
+      <div className="create-project-topbar">
+        <button
+          className="create-back-button"
+          onClick={() => navigate("/projects")}
+          disabled={loading}
+        >
+          <ArrowLeft size={15} />
+          <span>Back to Projects</span>
+        </button>
+
+        <div className="create-breadcrumb">
+          <span>Projects</span>
+          <span className="breadcrumb-separator">›</span>
+          <span>New</span>
         </div>
       </div>
 
-      <form className="zyra-create-form" onSubmit={handleSubmit}>
-        <div className="form-section">
-          <div className="form-section-header">
-            <h3>Project Information</h3>
-            <p>Basic information about your project.</p>
+      {/* =====================================================
+          MAIN CREATE PROJECT LAYOUT
+          ===================================================== */}
+
+      <div className="create-project-layout">
+
+        {/* ===================================================
+            LEFT SIDE
+            =================================================== */}
+
+        <div className="create-project-content">
+
+          <div className="create-project-heading">
+            <span className="create-project-label">
+              PROJECT WORKSPACE
+            </span>
+
+            <h1>What are we building?</h1>
+
+            <p>
+              Set up your project and define what your team wants to achieve.
+            </p>
           </div>
 
-          <div className="form-group">
-            <label>Project Name</label>
+          <form
+            className="create-project-form"
+            onSubmit={handleSubmit}
+          >
 
-            <input
-              type="text"
-              placeholder="Enter project name"
-              value={project.name}
-              onChange={(event) =>
-                setProject({
-                  ...project,
-                  name: event.target.value,
-                })
-              }
-              required
-              disabled={loading}
-            />
-          </div>
+            {/* Project Name */}
 
-          <div className="form-group">
-            <label>Description</label>
+            <div className="create-field">
+              <label htmlFor="project-name">
+                Project name
+              </label>
 
-            <textarea
-              placeholder="Describe your project"
-              rows="5"
-              value={project.description}
-              onChange={(event) =>
-                setProject({
-                  ...project,
-                  description: event.target.value,
-                })
-              }
-              required
-              disabled={loading}
-            ></textarea>
-          </div>
+              <input
+                id="project-name"
+                type="text"
+                placeholder="e.g., Acme Platform Launch"
+                value={project.name}
+                onChange={(event) =>
+                  setProject({
+                    ...project,
+                    name: event.target.value,
+                  })
+                }
+                required
+                disabled={loading}
+              />
+            </div>
 
-          <div className="form-group">
-            <label>Team</label>
+            {/* Description */}
 
-            <select
-              value={project.teamId}
-              onChange={(event) =>
-                setProject({
-                  ...project,
-                  teamId: event.target.value,
-                })
-              }
-              required
-              disabled={loading || loadingTeams}
-            >
-              {loadingTeams ? (
-                <option value="">Loading teams...</option>
-              ) : teams.length === 0 ? (
-                <option value="">No teams available</option>
-              ) : (
-                <>
-                  <option value="">Select a team</option>
+            <div className="create-field">
+              <label htmlFor="project-description">
+                Project description
+              </label>
 
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
+              <div className="description-wrapper">
+
+                <div className="description-toolbar">
+                  <button type="button" tabIndex="-1">
+                    B
+                  </button>
+
+                  <button type="button" tabIndex="-1">
+                    <span className="italic-icon">I</span>
+                  </button>
+
+                  <button type="button" tabIndex="-1">
+                    <span className="underline-icon">U</span>
+                  </button>
+
+                  <span className="toolbar-divider"></span>
+
+                  <button type="button" tabIndex="-1">
+                    •
+                  </button>
+
+                  <button type="button" tabIndex="-1">
+                    ≡
+                  </button>
+
+                  <button type="button" tabIndex="-1">
+                    ↗
+                  </button>
+                </div>
+
+                <textarea
+                  id="project-description"
+                  placeholder="e.g., Describe the goals, scope, and objectives of the project..."
+                  rows="6"
+                  value={project.description}
+                  onChange={(event) =>
+                    setProject({
+                      ...project,
+                      description: event.target.value,
+                    })
+                  }
+                  required
+                  disabled={loading}
+                ></textarea>
+
+              </div>
+            </div>
+
+            {/* Team */}
+
+            <div className="create-field">
+              <label htmlFor="project-team">
+                Team
+              </label>
+
+              <div className="team-select-wrapper">
+
+                <div className="team-select-icon">
+                  <Users size={15} />
+                </div>
+
+                <select
+                  id="project-team"
+                  value={project.teamId}
+                  onChange={(event) =>
+                    setProject({
+                      ...project,
+                      teamId: event.target.value,
+                    })
+                  }
+                  required
+                  disabled={loading || loadingTeams}
+                >
+                  {loadingTeams ? (
+                    <option value="">
+                      Loading teams...
                     </option>
-                  ))}
-                </>
-              )}
-            </select>
+                  ) : teams.length === 0 ? (
+                    <option value="">
+                      No teams available
+                    </option>
+                  ) : (
+                    <>
+                      <option value="">
+                        Select a team...
+                      </option>
+
+                      {teams.map((team) => (
+                        <option
+                          key={team.id}
+                          value={team.id}
+                        >
+                          {team.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+
+              </div>
+            </div>
+
+            {/* Error */}
+
+            {error && (
+              <p className="create-project-error">
+                {error}
+              </p>
+            )}
+
+            {/* Actions */}
+
+            <div className="create-project-actions">
+
+              <button
+                type="submit"
+                className="create-project-submit"
+                disabled={
+                  loading ||
+                  loadingTeams ||
+                  teams.length === 0
+                }
+              >
+                {loading ? (
+                  <>
+                    <span className="button-spinner"></span>
+                    Creating...
+                  </>
+                ) : (
+                  "Create project"
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="create-project-cancel"
+                onClick={() => navigate("/projects")}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+
+            </div>
+
+          </form>
+        </div>
+
+        {/* ===================================================
+            RIGHT SIDE — PROJECT PREVIEW
+            =================================================== */}
+
+        <aside className="project-preview">
+
+          <div className="preview-header">
+            <span>Project Preview</span>
+
+            <span className="preview-status">
+              DRAFT
+            </span>
           </div>
 
-          {error && <p className="login-error">{error}</p>}
-        </div>
+          <div className="preview-project-name">
+            {projectName}
 
-        <div className="create-form-actions">
-          <button
-            type="button"
-            className="cancel-form-btn"
-            onClick={() => navigate("/projects")}
-            disabled={loading}
-          >
-            Cancel
-          </button>
+            <span className="draft-label">
+              (Draft)
+            </span>
+          </div>
 
-          <button
-            type="submit"
-            className="submit-project-btn"
-            disabled={loading || loadingTeams || teams.length === 0}
-          >
-            <FolderKanban size={16} />
+          <p className="preview-description">
+            {projectDescription}
+          </p>
 
-            {loading ? "Creating Project..." : "Create Project"}
-          </button>
-        </div>
-      </form>
+          {/* Stats */}
+
+          <div className="preview-stats">
+
+            {/* Team */}
+
+            <div className="preview-stat-card active">
+
+              <div className="preview-stat-top">
+                <div className="preview-stat-icon">
+                  <Users size={17} />
+                </div>
+
+                <strong>
+                  {selectedTeam ? selectedTeam.name : "1 Team"}
+                </strong>
+              </div>
+
+              <span className="preview-stat-label">
+                {selectedTeam
+                  ? "Selected team"
+                  : "Team"}
+              </span>
+
+              <div className="preview-team-members">
+                <span className="member-avatar">
+                  {selectedTeam?.name?.charAt(0)?.toUpperCase() || "T"}
+                </span>
+
+                <span className="member-avatar member-avatar-two">
+                  +
+                </span>
+              </div>
+
+            </div>
+
+            {/* Tasks */}
+
+            <div className="preview-stat-card">
+
+              <div className="preview-stat-top">
+                <div className="preview-stat-icon">
+                  <CheckSquare size={17} />
+                </div>
+
+                <strong>0 Tasks</strong>
+              </div>
+
+              <span className="preview-stat-label">
+                Active 0 &nbsp;&nbsp; Completed 0
+              </span>
+
+              <button
+                type="button"
+                className="preview-small-button"
+              >
+                <Plus size={13} />
+                Create task
+              </button>
+
+            </div>
+
+            {/* Milestones */}
+
+            <div className="preview-stat-card">
+
+              <div className="preview-stat-top">
+                <div className="preview-stat-icon">
+                  <Flag size={17} />
+                </div>
+
+                <strong>0 Milestones</strong>
+              </div>
+
+              <div className="preview-mini-stats">
+                <span>
+                  Upcoming
+                  <b>0</b>
+                </span>
+
+                <span>
+                  Overdue
+                  <b>0</b>
+                </span>
+              </div>
+
+            </div>
+
+            {/* Resources */}
+
+            <div className="preview-stat-card">
+
+              <div className="preview-stat-top">
+                <div className="preview-stat-icon">
+                  <FileText size={17} />
+                </div>
+
+                <strong>0 Resources</strong>
+              </div>
+
+              <div className="preview-mini-stats">
+                <span>
+                  Docs
+                  <b>0</b>
+                </span>
+
+                <span>
+                  Links
+                  <b>0</b>
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              TIMELINE
+              ================================================= */}
+
+          <div className="preview-timeline">
+
+            <div className="timeline-header">
+
+              <div>
+                <CalendarDays size={14} />
+
+                <span>Timeline</span>
+              </div>
+
+              <span className="timeline-menu">
+                •••
+              </span>
+
+            </div>
+
+            <div className="timeline-dates">
+              <span>Sept 2026</span>
+              <span>Oct 2026</span>
+              <span>Nov 2026</span>
+              <span>Dec 2026</span>
+              <span>Jan 2027</span>
+            </div>
+
+            <div className="timeline-track">
+
+              <div className="timeline-line"></div>
+
+              <div className="timeline-progress"></div>
+
+              <span className="timeline-dot dot-one"></span>
+              <span className="timeline-dot dot-two"></span>
+              <span className="timeline-dot dot-three"></span>
+
+            </div>
+
+            <div className="timeline-footer">
+              <span>Roadmap</span>
+              <span>Jun 2026</span>
+            </div>
+
+          </div>
+
+        </aside>
+
+      </div>
     </div>
   );
 }

@@ -8,10 +8,18 @@ import {
   Trash2,
   X,
   Save,
+  Search,
+  List,
+  LayoutGrid,
+  ArrowUpDown,
+  TrendingUp,
+  CheckCircle2,
+  CircleDot,
+  Sparkles,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   getProjects,
@@ -21,6 +29,8 @@ import {
 
 import { getTeams, getTeamMembers } from "../services/teamService";
 import { getCurrentUser } from "../services/authService";
+
+import "../styles/projects.css";
 
 function Projects() {
   const navigate = useNavigate();
@@ -38,6 +48,11 @@ function Projects() {
   const [projectDescription, setProjectDescription] = useState("");
   const [updatingProjectId, setUpdatingProjectId] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All Projects");
+  const [sortOrder, setSortOrder] = useState("name");
+  const [viewMode, setViewMode] = useState("grid");
 
   useEffect(() => {
     async function loadProjects() {
@@ -189,9 +204,49 @@ function Projects() {
     return Number(project.created_by) === Number(currentUser.id);
   }
 
-  // Currently the backend does not have a project status field.
-  // Therefore, all projects are treated as active for now.
-  const activeProjects = projects;
+  const filteredProjects = useMemo(() => {
+    let result = [...projects];
+
+    const search = searchTerm.trim().toLowerCase();
+
+    if (search) {
+      result = result.filter((project) => {
+        const name = project.name?.toLowerCase() || "";
+        const description = project.description?.toLowerCase() || "";
+
+        return name.includes(search) || description.includes(search);
+      });
+    }
+
+    /*
+     * The current backend does not expose a project status field.
+     * Therefore:
+     * - All Projects = all projects
+     * - Active = all current projects because existing UI treats them as active
+     * - Planning / Completed are intentionally not fabricated
+     */
+    if (activeFilter === "All Projects" || activeFilter === "Active") {
+      // Keep all current projects.
+    }
+
+    if (activeFilter === "Planning" || activeFilter === "Completed") {
+      result = [];
+    }
+
+    result.sort((a, b) => {
+      if (sortOrder === "newest") {
+        return Number(b.id) - Number(a.id);
+      }
+
+      if (sortOrder === "oldest") {
+        return Number(a.id) - Number(b.id);
+      }
+
+      return (a.name || "").localeCompare(b.name || "");
+    });
+
+    return result;
+  }, [projects, searchTerm, activeFilter, sortOrder]);
 
   const totalCollaborators = projects.reduce((total, project) => {
     const count = memberCounts[project.team_id] || 0;
@@ -199,22 +254,43 @@ function Projects() {
     return total + count;
   }, 0);
 
+  const featuredProject =
+    filteredProjects.length > 0 ? filteredProjects[0] : null;
+
+  const secondaryProjects =
+    filteredProjects.length > 1 ? filteredProjects.slice(1) : [];
+
   return (
     <div className="zyra-projects">
+      {/* Background decoration */}
+      <div className="projects-background-grid" />
+      <div className="projects-background-glow projects-glow-one" />
+      <div className="projects-background-glow projects-glow-two" />
+
+      {/* Back */}
       <button className="back-page-btn" onClick={() => navigate("/dashboard")}>
         <ArrowLeft size={15} />
         Back to Dashboard
       </button>
 
+      {/* Header */}
       <div className="projects-header">
-        <div>
-          <p className="projects-eyebrow">PROJECT WORKSPACE</p>
+        <div className="projects-heading">
+          <div className="projects-title-row">
+            <div className="projects-title-marker">
+              <Sparkles size={15} />
+            </div>
 
-          <h2>My Projects</h2>
+            <div>
+              <p className="projects-eyebrow">PROJECT WORKSPACE</p>
 
-          <p className="projects-subtitle">
-            Create, organize, and track everything your team is building.
-          </p>
+              <h2>My Projects</h2>
+
+              <p className="projects-subtitle">
+                Manage your team's workspaces, tasks and progress
+              </p>
+            </div>
+          </div>
         </div>
 
         <button
@@ -228,56 +304,143 @@ function Projects() {
 
       {error && <div className="dashboard-error">{error}</div>}
 
+      {/* Statistics */}
       <div className="projects-summary">
-        {/* Total Projects */}
         <div className="project-summary-card">
           <div className="project-summary-icon">
             <FolderKanban size={19} />
           </div>
 
-          <div>
-            <span>Total Projects</span>
+          <div className="project-summary-content">
+            <strong>
+              {loading ? "..." : String(projects.length).padStart(2, "0")}
+            </strong>
 
-            <strong>{loading ? "..." : projects.length}</strong>
+            <span>Projects</span>
           </div>
+
+          <TrendingUp className="summary-trend" size={17} />
         </div>
 
-        {/* Active Projects */}
         <div className="project-summary-card">
           <div className="project-summary-icon">
-            <CalendarDays size={19} />
+            <CircleDot size={19} />
           </div>
 
-          <div>
-            <span>Active Projects</span>
-
-            <strong>{loading ? "..." : activeProjects.length}</strong>
+          <div className="project-summary-content">
+            <strong>—</strong>
+            <span>Tasks</span>
           </div>
+
+          <TrendingUp className="summary-trend" size={17} />
         </div>
 
-        {/* Collaborators */}
+        <div className="project-summary-card">
+          <div className="project-summary-icon">
+            <CheckCircle2 size={19} />
+          </div>
+
+          <div className="project-summary-content">
+            <strong>—</strong>
+            <span>Average Progress</span>
+          </div>
+
+          <TrendingUp className="summary-trend" size={17} />
+        </div>
+
         <div className="project-summary-card">
           <div className="project-summary-icon">
             <Users size={19} />
           </div>
 
-          <div>
-            <span>Collaborators</span>
+          <div className="project-summary-content">
+            <strong>
+              {loading ? "..." : String(totalCollaborators).padStart(2, "0")}
+            </strong>
 
-            <strong>{loading ? "..." : totalCollaborators}</strong>
+            <span>Teams</span>
+          </div>
+
+          <TrendingUp className="summary-trend" size={17} />
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="projects-toolbar">
+        <div className="projects-search">
+          <Search size={15} />
+
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search projects"
+          />
+        </div>
+
+        <div className="projects-filters">
+          {["All Projects", "Active", "Planning", "Completed"].map((filter) => (
+            <button
+              key={filter}
+              className={
+                activeFilter === filter
+                  ? "project-filter active"
+                  : "project-filter"
+              }
+              onClick={() => setActiveFilter(filter)}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+
+        <div className="projects-toolbar-actions">
+          <button
+            className="projects-sort-btn"
+            onClick={() =>
+              setSortOrder((current) =>
+                current === "name"
+                  ? "newest"
+                  : current === "newest"
+                    ? "oldest"
+                    : "name",
+              )
+            }
+          >
+            <ArrowUpDown size={14} />
+            Sort by
+          </button>
+
+          <div className="projects-view-toggle">
+            <button
+              className={
+                viewMode === "grid"
+                  ? "view-toggle-btn active"
+                  : "view-toggle-btn"
+              }
+              onClick={() => setViewMode("grid")}
+              title="Grid view"
+            >
+              <LayoutGrid size={15} />
+            </button>
+
+            <button
+              className={
+                viewMode === "list"
+                  ? "view-toggle-btn active"
+                  : "view-toggle-btn"
+              }
+              onClick={() => setViewMode("list")}
+              title="List view"
+            >
+              <List size={15} />
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Projects */}
       <section className="projects-panel">
-        <div className="projects-panel-header">
-          <div>
-            <h3>Your Projects</h3>
-
-            <p>Projects you are currently working on</p>
-          </div>
-        </div>
-
         {loading ? (
           <div className="dashboard-empty">
             <FolderKanban size={30} />
@@ -302,160 +465,254 @@ function Projects() {
               Create Project
             </button>
           </div>
-        ) : (
-          <div className="project-list">
-            {projects.map((project) => {
-              const teamMemberCount = memberCounts[project.team_id] || 0;
+        ) : filteredProjects.length === 0 ? (
+          <div className="dashboard-empty">
+            <Search size={30} />
 
-              const isCreator = isProjectCreator(project);
+            <h4>No matching projects</h4>
 
-              const isUpdating = updatingProjectId === project.id;
-
-              const isDeleting = deletingProjectId === project.id;
-
-              const isEditing = editingProjectId === project.id;
-
-              return (
-                <div className="project-card" key={project.id}>
-                  {isEditing ? (
-                    <form
-                      className="project-edit-form"
-                      onSubmit={handleUpdateProject}
-                    >
-                      <div className="project-edit-header">
-                        <div>
-                          <p className="projects-eyebrow">EDIT PROJECT</p>
-
-                          <h3>Update Project</h3>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="project-edit-cancel-btn"
-                          onClick={handleCancelEdit}
-                          disabled={isUpdating}
-                          title="Cancel"
-                        >
-                          <X size={18} />
-                        </button>
-                      </div>
-
-                      <div className="form-group">
-                        <label>Project Name</label>
-
-                        <input
-                          type="text"
-                          value={projectName}
-                          onChange={(event) =>
-                            setProjectName(event.target.value)
-                          }
-                          placeholder="Enter project name"
-                          disabled={isUpdating}
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>Description</label>
-
-                        <textarea
-                          value={projectDescription}
-                          onChange={(event) =>
-                            setProjectDescription(event.target.value)
-                          }
-                          placeholder="Enter project description"
-                          rows="4"
-                          disabled={isUpdating}
-                        />
-                      </div>
-
-                      <div className="project-edit-actions">
-                        <button
-                          type="button"
-                          className="project-edit-cancel-action"
-                          onClick={handleCancelEdit}
-                          disabled={isUpdating}
-                        >
-                          <X size={15} />
-                          Cancel
-                        </button>
-
-                        <button
-                          type="submit"
-                          className="project-edit-save-action"
-                          disabled={isUpdating}
-                        >
-                          <Save size={15} />
-                          {isUpdating ? "Saving..." : "Save Changes"}
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                      <div className="project-card-main">
-                        <div className="project-card-icon">
-                          <FolderKanban size={22} />
-                        </div>
-
-                        <div className="project-card-info">
-                          <h3>{project.name}</h3>
-
-                          <p>
-                            {project.description || "No description provided."}
-                          </p>
-
-                          <div className="project-card-meta">
-                            <span>
-                              <CalendarDays size={13} />
-                              Active Project
-                            </span>
-
-                            <span>
-                              <Users size={13} />
-                              {teamMemberCount} Members
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="project-card-actions">
-                        <button
-                          className="project-open-btn"
-                          onClick={() => navigate(`/projects/${project.id}`)}
-                        >
-                          Open Project
-                          <ArrowLeft size={15} />
-                        </button>
-
-                        {isCreator && (
-                          <>
-                            <button
-                              className="project-edit-btn"
-                              onClick={() => handleOpenEdit(project)}
-                              disabled={isDeleting}
-                            >
-                              <Pencil size={15} />
-                              Edit
-                            </button>
-
-                            <button
-                              className="project-delete-btn"
-                              onClick={() => handleDeleteProject(project)}
-                              disabled={isDeleting}
-                            >
-                              <Trash2 size={15} />
-
-                              {isDeleting ? "Deleting..." : "Delete"}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+            <p>Try changing your search or filter.</p>
           </div>
+        ) : (
+          <>
+            {/* Featured Project */}
+            {featuredProject && (
+              <div className="featured-project-card">
+                <div className="featured-project-left">
+                  <div className="featured-project-icon">
+                    <FolderKanban size={22} />
+                  </div>
+
+                  <div className="featured-project-info">
+                    <div className="featured-project-title">
+                      <h3>{featuredProject.name}</h3>
+
+                      <span className="project-status active">Active</span>
+                    </div>
+
+                    <p>
+                      {featuredProject.description ||
+                        "No description provided."}
+                    </p>
+
+                    <div className="featured-project-meta">
+                      <div className="featured-progress">
+                        <div className="progress-track">
+                          <div className="progress-fill" />
+                        </div>
+
+                        <span>—</span>
+                      </div>
+
+                      <div className="featured-divider" />
+
+                      <span>
+                        <Users size={13} />
+                        {memberCounts[featuredProject.team_id] || 0} Members
+                      </span>
+
+                      <div className="featured-divider" />
+
+                      <span>
+                        <CalendarDays size={13} />
+                        Active Project
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  className="project-open-btn"
+                  onClick={() => navigate(`/projects/${featuredProject.id}`)}
+                >
+                  Open Project
+                </button>
+              </div>
+            )}
+
+            {/* Secondary project cards */}
+            {secondaryProjects.length > 0 && (
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "project-list project-grid-view"
+                    : "project-list project-list-view"
+                }
+              >
+                {secondaryProjects.map((project) => {
+                  const teamMemberCount = memberCounts[project.team_id] || 0;
+
+                  const isCreator = isProjectCreator(project);
+
+                  const isUpdating = updatingProjectId === project.id;
+
+                  const isDeleting = deletingProjectId === project.id;
+
+                  const isEditing = editingProjectId === project.id;
+
+                  return (
+                    <div className="project-card" key={project.id}>
+                      {isEditing ? (
+                        <form
+                          className="project-edit-form"
+                          onSubmit={handleUpdateProject}
+                        >
+                          <div className="project-edit-header">
+                            <div>
+                              <p className="projects-eyebrow">EDIT PROJECT</p>
+
+                              <h3>Update Project</h3>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="project-edit-cancel-btn"
+                              onClick={handleCancelEdit}
+                              disabled={isUpdating}
+                              title="Cancel"
+                            >
+                              <X size={18} />
+                            </button>
+                          </div>
+
+                          <div className="form-group">
+                            <label>Project Name</label>
+
+                            <input
+                              type="text"
+                              value={projectName}
+                              onChange={(event) =>
+                                setProjectName(event.target.value)
+                              }
+                              placeholder="Enter project name"
+                              disabled={isUpdating}
+                              required
+                            />
+                          </div>
+
+                          <div className="form-group">
+                            <label>Description</label>
+
+                            <textarea
+                              value={projectDescription}
+                              onChange={(event) =>
+                                setProjectDescription(event.target.value)
+                              }
+                              placeholder="Enter project description"
+                              rows="4"
+                              disabled={isUpdating}
+                            />
+                          </div>
+
+                          <div className="project-edit-actions">
+                            <button
+                              type="button"
+                              className="project-edit-cancel-action"
+                              onClick={handleCancelEdit}
+                              disabled={isUpdating}
+                            >
+                              <X size={15} />
+                              Cancel
+                            </button>
+
+                            <button
+                              type="submit"
+                              className="project-edit-save-action"
+                              disabled={isUpdating}
+                            >
+                              <Save size={15} />
+
+                              {isUpdating ? "Saving..." : "Save Changes"}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="project-card-main">
+                            <div className="project-card-icon">
+                              <FolderKanban size={21} />
+                            </div>
+
+                            <div className="project-card-info">
+                              <div className="project-card-title">
+                                <h3>{project.name}</h3>
+
+                                <span className="project-status">Status</span>
+                              </div>
+
+                              <p>
+                                {project.description ||
+                                  "No description provided."}
+                              </p>
+
+                              <div className="project-card-progress">
+                                <div className="progress-label">
+                                  <span>Progress</span>
+
+                                  <span>—</span>
+                                </div>
+
+                                <div className="progress-track">
+                                  <div className="progress-fill" />
+                                </div>
+                              </div>
+
+                              <div className="project-card-meta">
+                                <span>
+                                  <Users size={13} />
+                                  {teamMemberCount} Team
+                                </span>
+
+                                <span>
+                                  <CalendarDays size={13} />
+                                  Active
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="project-card-actions">
+                            <button
+                              className="project-open-btn"
+                              onClick={() =>
+                                navigate(`/projects/${project.id}`)
+                              }
+                            >
+                              Open Project
+                            </button>
+
+                            {isCreator && (
+                              <>
+                                <button
+                                  className="project-edit-btn"
+                                  onClick={() => handleOpenEdit(project)}
+                                  disabled={isDeleting}
+                                  title="Edit project"
+                                >
+                                  <Pencil size={15} />
+                                </button>
+
+                                <button
+                                  className="project-delete-btn"
+                                  onClick={() => handleDeleteProject(project)}
+                                  disabled={isDeleting}
+                                  title="Delete project"
+                                >
+                                  <Trash2 size={15} />
+
+                                  {isDeleting ? "Deleting..." : ""}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

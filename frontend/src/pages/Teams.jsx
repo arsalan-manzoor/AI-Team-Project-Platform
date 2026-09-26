@@ -5,13 +5,18 @@ import {
   ArrowLeft,
   ArrowRight,
   Trash2,
+  Activity,
+  MoreHorizontal,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { getTeams, getTeamMembers, deleteTeam } from "../services/teamService";
+
 import { getProjects } from "../services/ProjectService";
+
+import "../styles/teams.css";
 
 function Teams() {
   const navigate = useNavigate();
@@ -35,6 +40,7 @@ function Teams() {
       ]);
 
       const loadedTeams = Array.isArray(teamsData) ? teamsData : [];
+
       const loadedProjects = Array.isArray(projectsData) ? projectsData : [];
 
       setTeams(loadedTeams);
@@ -112,22 +118,72 @@ function Teams() {
 
   const totalProjects = projects.length;
 
+  const averageMembers =
+    totalTeams > 0 ? (totalMembers / totalTeams).toFixed(1) : "0";
+
+  function getTeamProjects(teamId) {
+    return projects.filter((project) => project.team_id === teamId);
+  }
+
+  function getTeamInitials(name) {
+    if (!name) {
+      return "TM";
+    }
+
+    const words = name.trim().split(/\s+/);
+
+    if (words.length === 1) {
+      return words[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+
   return (
     <div className="zyra-teams">
-      <button
-        className="back-page-btn"
-        onClick={() => navigate("/dashboard")}
-        disabled={deletingTeamId !== null}
-      >
-        <ArrowLeft size={15} />
-        Back to Dashboard
-      </button>
+      {/* =====================================================
+          BACKGROUND
+          ===================================================== */}
 
-      <div className="teams-header">
-        <div>
-          <p className="teams-eyebrow">TEAM WORKSPACE</p>
+      <div className="teams-background-grid" />
+      <div className="teams-background-glow teams-glow-one" />
+      <div className="teams-background-glow teams-glow-two" />
 
-          <h2>Teams</h2>
+      {/* =====================================================
+          HEADER
+          ===================================================== */}
+
+      <div className="teams-topbar">
+        <button
+          type="button"
+          className="back-page-btn"
+          onClick={() => navigate("/dashboard")}
+          disabled={deletingTeamId !== null}
+        >
+          <ArrowLeft size={14} />
+          Back to Dashboard
+        </button>
+
+        <div className="teams-workspace-status">
+          <span className="teams-status-dot" />
+          WORKSPACE ACTIVE
+        </div>
+      </div>
+
+      <header className="teams-header">
+        <div className="teams-header-content">
+          <p className="teams-eyebrow">ZYRA / COLLABORATION</p>
+
+          <div className="teams-title-row">
+            <h2>Teams</h2>
+
+            <span className="teams-title-divider" />
+
+            <div className="teams-title-context">
+              <strong>Team Workspace</strong>
+              <span>Connect, collaborate and build together</span>
+            </div>
+          </div>
 
           <p className="teams-subtitle">
             Organize your collaborators and work together across projects.
@@ -135,68 +191,99 @@ function Teams() {
         </div>
 
         <button
+          type="button"
           className="teams-create-btn"
           onClick={() => navigate("/teams/create")}
           disabled={deletingTeamId !== null}
         >
-          <UserPlus size={17} />
+          <UserPlus size={16} />
           Create Team
+          <span className="create-btn-plus">+</span>
         </button>
-      </div>
+      </header>
 
       {error && <div className="dashboard-error">{error}</div>}
 
-      <div className="teams-summary">
+      {/* =====================================================
+          SUMMARY
+          ===================================================== */}
+
+      <section className="teams-summary">
         <div className="team-summary-card">
-          <div className="team-summary-icon">
-            <Users size={19} />
+          <div className="team-summary-label">TOTAL TEAMS</div>
+
+          <div className="team-summary-value">
+            {loading ? "..." : totalTeams}
           </div>
 
-          <div>
-            <span>Total Teams</span>
-
-            <strong>{loading ? "..." : totalTeams}</strong>
+          <div className="team-summary-icon">
+            <Users size={16} />
           </div>
         </div>
 
         <div className="team-summary-card">
-          <div className="team-summary-icon">
-            <UserPlus size={19} />
+          <div className="team-summary-label">TEAM MEMBERS</div>
+
+          <div className="team-summary-value">
+            {loading ? "..." : totalMembers}
           </div>
 
-          <div>
-            <span>Team Members</span>
-
-            <strong>{loading ? "..." : totalMembers}</strong>
+          <div className="team-summary-icon">
+            <UserPlus size={16} />
           </div>
         </div>
 
         <div className="team-summary-card">
-          <div className="team-summary-icon">
-            <FolderKanban size={19} />
+          <div className="team-summary-label">TEAM PROJECTS</div>
+
+          <div className="team-summary-value">
+            {loading ? "..." : totalProjects}
           </div>
 
-          <div>
-            <span>Team Projects</span>
-
-            <strong>{loading ? "..." : totalProjects}</strong>
+          <div className="team-summary-icon">
+            <FolderKanban size={16} />
           </div>
         </div>
-      </div>
+
+        <div className="team-summary-card">
+          <div className="team-summary-label">AVG. MEMBERS / TEAM</div>
+
+          <div className="team-summary-value">
+            {loading ? "..." : averageMembers}
+          </div>
+
+          <div className="team-summary-icon">
+            <Activity size={16} />
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          TEAMS SECTION
+          ===================================================== */}
 
       <section className="teams-panel">
         <div className="teams-panel-header">
           <div>
-            <h3>Your Teams</h3>
+            <span className="teams-section-label">
+              <span className="section-live-dot" />
+              YOUR TEAMS
+            </span>
+
+            <h3>Collaboration Hub</h3>
 
             <p>Teams you are currently a member of</p>
+          </div>
+
+          <div className="teams-panel-count">
+            {loading ? "..." : `${totalTeams} TEAMS`}
           </div>
         </div>
 
         {loading ? (
           <div className="teams-empty">
             <div className="teams-empty-icon">
-              <Users size={28} />
+              <Users size={27} />
             </div>
 
             <h3>Loading teams...</h3>
@@ -206,7 +293,7 @@ function Teams() {
         ) : teams.length === 0 ? (
           <div className="teams-empty">
             <div className="teams-empty-icon">
-              <Users size={28} />
+              <Users size={27} />
             </div>
 
             <h3>No teams yet</h3>
@@ -217,6 +304,7 @@ function Teams() {
             </p>
 
             <button
+              type="button"
               className="teams-empty-btn"
               onClick={() => navigate("/teams/create")}
             >
@@ -226,55 +314,128 @@ function Teams() {
           </div>
         ) : (
           <div className="team-list">
-            {teams.map((team) => {
-              const teamProjects = projects.filter(
-                (project) => project.team_id === team.id,
-              );
+            {teams.map((team, index) => {
+              const teamProjects = getTeamProjects(team.id);
+
+              const memberCount = memberCounts[team.id] || 0;
 
               const isDeleting = deletingTeamId === team.id;
 
+              const initials = getTeamInitials(team.name);
+
               return (
-                <div className="team-card" key={team.id}>
-                  <div className="team-card-main">
+                <article
+                  className="team-card"
+                  key={team.id}
+                  style={{
+                    "--team-index": index,
+                  }}
+                >
+                  {/* Top row */}
+
+                  <div className="team-card-top">
                     <div className="team-card-icon">
-                      <Users size={22} />
+                      <span>{initials}</span>
                     </div>
-
-                    <div>
-                      <h3>{team.name}</h3>
-
-                      <p>{team.description || "No description provided."}</p>
-                    </div>
-                  </div>
-
-                  <div className="team-card-meta">
-                    <span>{memberCounts[team.id] || 0} Members</span>
-
-                    <span>{teamProjects.length} Projects</span>
 
                     <button
                       type="button"
-                      className="team-view-btn"
-                      onClick={() => navigate(`/teams/${team.id}`)}
-                      disabled={isDeleting}
-                    >
-                      View Team
-                      <ArrowRight size={15} />
-                    </button>
-
-                    <button
-                      type="button"
-                      className="team-view-btn"
+                      className="team-card-menu"
                       onClick={() => handleDeleteTeam(team)}
                       disabled={isDeleting}
                       title="Delete team"
                     >
-                      <Trash2 size={15} />
-
-                      {isDeleting ? "Deleting..." : "Delete"}
+                      <MoreHorizontal size={17} />
                     </button>
                   </div>
-                </div>
+
+                  {/* Team identity */}
+
+                  <div className="team-card-content">
+                    <span className="team-card-code">TEAM #{team.id}</span>
+
+                    <h3>{team.name}</h3>
+
+                    <p>{team.description || "No description provided."}</p>
+                  </div>
+
+                  {/* Team metrics */}
+
+                  <div className="team-card-metrics">
+                    <div className="team-card-metric">
+                      <strong>{memberCount}</strong>
+
+                      <span>MEMBERS</span>
+                    </div>
+
+                    <div className="team-card-metric-divider" />
+
+                    <div className="team-card-metric">
+                      <strong>{teamProjects.length}</strong>
+
+                      <span>PROJECTS</span>
+                    </div>
+                  </div>
+
+                  {/* Member visual */}
+
+                  <div className="team-card-members">
+                    <div className="team-member-stack">
+                      {Array.from({
+                        length: Math.min(memberCount, 4),
+                      }).map((_, memberIndex) => (
+                        <span className="team-member-avatar" key={memberIndex}>
+                          <Users size={11} />
+                        </span>
+                      ))}
+
+                      {memberCount > 4 && (
+                        <span className="team-member-more">
+                          +{memberCount - 4}
+                        </span>
+                      )}
+
+                      {memberCount === 0 && (
+                        <span className="team-no-members">No members</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bottom */}
+
+                  <div className="team-card-footer">
+                    <div className="team-card-activity">
+                      <span className="activity-dot" />
+                      <span>
+                        {memberCount > 0 ? "Team active" : "Awaiting members"}
+                      </span>
+                    </div>
+
+                    <div className="team-card-actions">
+                      <button
+                        type="button"
+                        className="team-view-btn"
+                        onClick={() => navigate(`/teams/${team.id}`)}
+                        disabled={isDeleting}
+                      >
+                        View Team
+                        <ArrowRight size={14} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="team-delete-btn"
+                        onClick={() => handleDeleteTeam(team)}
+                        disabled={isDeleting}
+                        title="Delete team"
+                      >
+                        <Trash2 size={14} />
+
+                        {isDeleting ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
               );
             })}
           </div>

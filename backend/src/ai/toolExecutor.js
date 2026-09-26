@@ -5,6 +5,9 @@ const { getNotificationContext } = require("../services/notificationContext.serv
 const {
     getProjectSummaryContext
 } = require("../services/projectSummaryContext.service");
+const {
+    getResourceContext
+} = require("../services/resourceContext.service");
 const tools = require("./toolRegistry");
 
 function validateUserId(userId) {
@@ -110,6 +113,12 @@ async function executeTool(toolName, args, userId) {
         case "get_project_summary_data":
             return getProjectSummaryContext(
                 toolArgs.project_id,
+                userId
+            );
+
+        case "get_resource":
+            return getResourceContext(
+                toolArgs.resource_id,
                 userId
             );
 

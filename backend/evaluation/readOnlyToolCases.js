@@ -159,6 +159,30 @@ const readOnlyToolCases = [
     },
 
     {
+        name: "missing_resource_id",
+        tool: "get_resource",
+        user_id: 6,
+        arguments: {},
+        expected: {
+            should_execute: false,
+            error: "Missing required AI tool argument: resource_id"
+        }
+    },
+
+    {
+        name: "unavailable_resource_access",
+        tool: "get_resource",
+        user_id: 6,
+        arguments: {
+            resource_id: 999999
+        },
+        expected: {
+            should_execute: true,
+            should_return_data: false
+        }
+    },
+
+    {
         name: "unexpected_project_argument",
         tool: "get_project",
         user_id: 6,
@@ -273,6 +297,19 @@ const readOnlyToolCases = [
         expected: {
             should_execute: false,
             error: 'AI tool argument "project_id" must be a valid integer'
+        }
+    },
+
+    {
+        name: "invalid_resource_id_type",
+        tool: "get_resource",
+        user_id: 6,
+        arguments: {
+            resource_id: "999999"
+        },
+        expected: {
+            should_execute: false,
+            error: 'AI tool argument "resource_id" must be a valid integer'
         }
     }
 ];

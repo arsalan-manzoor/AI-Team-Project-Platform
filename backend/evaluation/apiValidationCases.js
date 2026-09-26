@@ -1,183 +1,268 @@
+require("dotenv").config();
+
+const http = require("http");
+
 const BASE_URL = "http://localhost:5000";
+const TEST_EMAIL = "zyraaitest2026@gmail.com";
+const TEST_PASSWORD = process.env.ZYRA_TEST_PASSWORD;
+
+if (!TEST_PASSWORD) {
+    console.error(
+        "Evaluation error: ZYRA_TEST_PASSWORD environment variable is required"
+    );
+    process.exit(1);
+}
+
+function request(path, options = {}) {
+    return new Promise((resolve, reject) => {
+        const url = new URL(path, BASE_URL);
+
+        const requestOptions = {
+            hostname: url.hostname,
+            port: url.port,
+            path: url.pathname + url.search,
+            method: options.method || "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+            }
+        };
+
+        const req = http.request(
+            requestOptions,
+            (res) => {
+                let data = "";
+
+                res.on("data", (chunk) => {
+                    data += chunk;
+                });
+
+                res.on("end", () => {
+                    let body = data;
+
+                    try {
+                        body = JSON.parse(data);
+                    } catch {
+                        // Keep non-JSON response as text.
+                    }
+
+                    resolve({
+                        status: res.statusCode,
+                        body
+                    });
+                });
+            }
+        );
+
+        req.on("error", reject);
+
+        if (options.body) {
+            req.write(JSON.stringify(options.body));
+        }
+
+        req.end();
+    });
+}
 
 async function login() {
-    const response = await fetch(
-        `${BASE_URL}/api/auth/login`,
+    const response = await request(
+        "/api/auth/login",
         {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: "zyraaitest2026@gmail.com",
-                password: process.env.ZYRA_TEST_PASSWORD
-            })
+            body: {
+                email: TEST_EMAIL,
+                password: TEST_PASSWORD
+            }
         }
     );
 
-    const data = await response.json();
-
-    if (!response.ok || !data.token) {
+    if (
+        response.status !== 200 ||
+        !response.body ||
+        !response.body.token
+    ) {
         throw new Error(
-            "Test login failed"
+            "Login failed during API evaluation"
         );
     }
 
-    return data.token;
+    return response.body.token;
 }
 
-async function testCase(
+async function runCase(
     name,
-    token,
-    body,
-    expectedStatus
+    callback
 ) {
-    const headers = {
-        "Content-Type": "application/json"
-    };
-
-    if (token) {
-        headers.Authorization =
-            `Bearer ${token}`;
-    }
-
-    const response = await fetch(
-        `${BASE_URL}/api/ai/chat`,
-        {
-            method: "POST",
-            headers,
-            body: JSON.stringify(body)
-        }
-    );
-
-    const data = await response.json();
-
-    if (response.status === expectedStatus) {
-        console.log(
-            `PASS: ${name}`
-        );
+    try {
+        await callback();
+        console.log(`PASS: ${name}`);
         return true;
+    } catch (error) {
+        console.log(`FAIL: ${name}`);
+        console.log(`  Reason: ${error.message}`);
+        return false;
     }
-
-    console.log(
-        `FAIL: ${name}`
-    );
-    console.log(
-        `  Expected: ${expectedStatus}`
-    );
-    console.log(
-        `  Received: ${response.status}`
-    );
-    console.log(
-        `  Response: ${JSON.stringify(data)}`
-    );
-
-    return false;
 }
 
-async function runEvaluation() {
-    if (!process.env.ZYRA_TEST_PASSWORD) {
-        throw new Error(
-            "ZYRA_TEST_PASSWORD environment variable is required"
-        );
-    }
-
+async function main() {
     const token = await login();
 
-    const cases = [
-        {
-            name: "missing_token",
-            token: null,
-            body: {
-                messages: [
+    const results = [];
+
+    results.push(
+        await runCase(
+            "missing_messages",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
                     {
-                        role: "user",
-                        content: "Hello"
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {}
                     }
-                ]
-            },
-            expectedStatus: 401
-        },
+                );
 
-        {
-            name: "missing_messages",
-            token,
-            body: {},
-            expectedStatus: 400
-        },
-
-        {
-            name: "empty_messages",
-            token,
-            body: {
-                messages: []
-            },
-            expectedStatus: 400
-        },
-
-        {
-            name: "invalid_role",
-            token,
-            body: {
-                messages: [
-                    {
-                        role: "invalid",
-                        content: "Hello"
-                    }
-                ]
-            },
-            expectedStatus: 400
-        },
-
-        {
-            name: "invalid_content",
-            token,
-            body: {
-                messages: [
-                    {
-                        role: "user",
-                        content: 123
-                    }
-                ]
-            },
-            expectedStatus: 400
-        }
-    ];
-
-    let passed = 0;
-
-    for (const testCaseData of cases) {
-        const passedCase = await testCase(
-            testCaseData.name,
-            testCaseData.token,
-            testCaseData.body,
-            testCaseData.expectedStatus
-        );
-
-        if (passedCase) {
-            passed++;
-        }
-    }
-
-    console.log("");
-
-    console.log(
-        "API validation evaluation: " +
-        passed +
-        "/" +
-        cases.length +
-        " cases passed"
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+            }
+        )
     );
 
-    if (passed !== cases.length) {
-        process.exitCode = 1;
+    results.push(
+        await runCase(
+            "empty_messages",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {
+                            messages: []
+                        }
+                    }
+                );
+
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+            }
+        )
+    );
+
+    results.push(
+        await runCase(
+            "invalid_role",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {
+                            messages: [
+                                {
+                                    role: "invalid",
+                                    content: "Hello"
+                                }
+                            ]
+                        }
+                    }
+                );
+
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+            }
+        )
+    );
+
+    results.push(
+        await runCase(
+            "invalid_content_type",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: 123
+                                }
+                            ]
+                        }
+                    }
+                );
+
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+            }
+        )
+    );
+
+    results.push(
+        await runCase(
+            "missing_authentication",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        body: {
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: "Hello"
+                                }
+                            ]
+                        }
+                    }
+                );
+
+                if (response.status !== 401) {
+                    throw new Error(
+                        `Expected 401, received ${response.status}`
+                    );
+                }
+            }
+        )
+    );
+
+    const passed = results.filter(Boolean).length;
+
+    console.log(
+        `\nAPI validation evaluation: ${passed}/${results.length} cases passed`
+    );
+
+    if (passed !== results.length) {
+        process.exit(1);
     }
 }
 
-runEvaluation().catch((error) => {
+main().catch((error) => {
     console.error(
-        "Evaluation error:",
-        error.message
+        `Evaluation error: ${error.message}`
     );
-    process.exitCode = 1;
+    process.exit(1);
 });

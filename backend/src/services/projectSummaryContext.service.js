@@ -1,6 +1,12 @@
 const pool = require("../config/db");
+const {
+    buildAIContextContract
+} = require("./aiContext.contract");
 
-async function getProjectSummaryContext(projectId, userId) {
+async function getProjectSummaryContext(
+    projectId,
+    userId
+) {
     const projectResult = await pool.query(
         `SELECT
             projects.id,
@@ -18,7 +24,10 @@ async function getProjectSummaryContext(projectId, userId) {
     );
 
     if (projectResult.rows.length === 0) {
-        return null;
+        return buildAIContextContract(
+            "project_summary",
+            null
+        );
     }
 
     const tasksResult = await pool.query(
@@ -47,11 +56,14 @@ async function getProjectSummaryContext(projectId, userId) {
         [projectId]
     );
 
-    return {
-        project: projectResult.rows[0],
-        tasks: tasksResult.rows,
-        milestones: milestonesResult.rows
-    };
+    return buildAIContextContract(
+        "project_summary",
+        {
+            project: projectResult.rows[0],
+            tasks: tasksResult.rows,
+            milestones: milestonesResult.rows
+        }
+    );
 }
 
 module.exports = {

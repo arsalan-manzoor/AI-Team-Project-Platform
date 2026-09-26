@@ -17,6 +17,14 @@ function validateToolArguments(tool, args) {
     const parameters = tool.parameters || {};
     const providedArgs = args || {};
 
+    for (const argumentName of Object.keys(providedArgs)) {
+        if (!Object.prototype.hasOwnProperty.call(parameters, argumentName)) {
+            throw new Error(
+                `Unexpected AI tool argument: ${argumentName}`
+            );
+        }
+    }
+
     for (const [parameterName, parameterDefinition] of Object.entries(parameters)) {
         if (
             parameterDefinition.required &&

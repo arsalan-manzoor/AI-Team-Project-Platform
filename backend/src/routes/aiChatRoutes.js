@@ -1,6 +1,9 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
-const { runAIRequest } = require("../ai/aiOrchestrator");
+const {
+    runAIRequest,
+    validateMessages
+} = require("../ai/aiOrchestrator");
 
 const router = express.Router();
 
@@ -9,17 +12,7 @@ router.post("/", authMiddleware, async (req, res) => {
         const body = req.body || {};
         const { messages } = body;
 
-        if (!Array.isArray(messages)) {
-            return res.status(400).json({
-                error: "Messages must be an array"
-            });
-        }
-
-        if (messages.length === 0) {
-            return res.status(400).json({
-                error: "At least one message is required"
-            });
-        }
+        validateMessages(messages);
 
         const result = await runAIRequest({
             messages,
@@ -28,7 +21,27 @@ router.post("/", authMiddleware, async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        console.error("AI chat error:", error.message);
+        if (
+            error.message ===
+                "AI request messages must be an array" ||
+            error.message ===
+                "AI request must contain at least one message" ||
+            error.message ===
+                "Each AI message must be an object" ||
+            error.message ===
+                "AI message role is invalid" ||
+            error.message ===
+                "AI message content must be a string"
+        ) {
+            return res.status(400).json({
+                error: error.message
+            });
+        }
+
+        console.error(
+            "AI chat error:",
+            error.message
+        );
 
         res.status(500).json({
             error: "Failed to process AI request"

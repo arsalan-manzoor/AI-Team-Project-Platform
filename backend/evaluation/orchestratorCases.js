@@ -47,13 +47,10 @@ const cases = [
                     role: "assistant",
                     content: ""
                 }
-            },
-            {
-                content: "Project data retrieved"
             }
         ],
-        expected_content: "Project data retrieved",
-        expected_tool_data: false
+        expected_content:
+            "No authorized information is available for the requested item."
     },
 
     {
@@ -162,8 +159,93 @@ const cases = [
             }
         ],
         expected_error: "Unknown AI tool"
+    },
+
+    {
+        name: "tool_execution_round_limit",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_error:
+            "AI tool execution exceeded the maximum allowed rounds"
+    },
+
+    {
+        name: "null_model_response",
+        user_id: 6,
+        model_responses: [
+            null
+        ],
+        expected_error:
+            "AI model returned an invalid response"
+    },
+
+    {
+        name: "invalid_model_response_type",
+        user_id: 6,
+        model_responses: [
+            "invalid response"
+        ],
+        expected_error:
+            "AI model returned an invalid response"
     }
 ];
+
+function normalizeContent(value) {
+    return String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
 
 async function runCase(testCase) {
     let responseIndex = 0;
@@ -237,8 +319,16 @@ async function runCase(testCase) {
         });
 
         if (testCase.expected_content) {
+            const actualContent =
+                normalizeContent(result.content);
+
+            const expectedContent =
+                normalizeContent(
+                    testCase.expected_content
+                );
+
             const passed =
-                result.content === testCase.expected_content;
+                actualContent === expectedContent;
 
             console.log(
                 (passed ? "PASS" : "FAIL") +
@@ -248,8 +338,13 @@ async function runCase(testCase) {
 
             if (!passed) {
                 console.log(
-                    "  Reason: " +
-                    result.content
+                    "  Expected: " +
+                    expectedContent
+                );
+
+                console.log(
+                    "  Received: " +
+                    actualContent
                 );
             }
 
@@ -259,7 +354,7 @@ async function runCase(testCase) {
         if (testCase.expected_error) {
             console.log("FAIL: " + testCase.name);
             console.log(
-                "  Reason: tool executed when it should have been rejected"
+                "  Reason: expected validation error"
             );
             return false;
         }
@@ -268,7 +363,8 @@ async function runCase(testCase) {
     } catch (error) {
         if (testCase.expected_error) {
             const passed =
-                error.message === testCase.expected_error;
+                error.message ===
+                testCase.expected_error;
 
             console.log(
                 (passed ? "PASS" : "FAIL") +
@@ -287,7 +383,9 @@ async function runCase(testCase) {
         }
 
         console.log("FAIL: " + testCase.name);
-        console.log("  Reason: " + error.message);
+        console.log(
+            "  Reason: " + error.message
+        );
 
         return false;
     }

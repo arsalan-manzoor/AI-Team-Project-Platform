@@ -1,4 +1,8 @@
-require("dotenv").config();
+const path = require("path");
+
+require("dotenv").config({
+    path: path.resolve(__dirname, "../.env")
+});
 
 const http = require("http");
 
@@ -82,7 +86,7 @@ async function login() {
         !response.body.token
     ) {
         throw new Error(
-            "Login failed during API evaluation"
+            `Login failed during API evaluation (status: ${response.status})`
         );
     }
 
@@ -261,8 +265,7 @@ async function main() {
 }
 
 main().catch((error) => {
-    console.error(
-        `Evaluation error: ${error.message}`
-    );
+    console.error("Evaluation error:", error.message);
+    console.error(error.stack);
     process.exit(1);
 });

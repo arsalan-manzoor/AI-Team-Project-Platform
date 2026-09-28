@@ -53,6 +53,14 @@ function validateToolArguments(tool, args) {
     }
 }
 
+function validateToolType(tool) {
+    if (tool.type !== "read") {
+        throw new Error(
+            `AI tool "${tool.name}" is not permitted for execution`
+        );
+    }
+}
+
 async function executeTool(toolName, args, userId) {
     const tool = tools[toolName];
 
@@ -61,6 +69,7 @@ async function executeTool(toolName, args, userId) {
     }
 
     validateUserId(userId);
+    validateToolType(tool);
     validateToolArguments(tool, args);
 
     const toolArgs = args || {};

@@ -2,7 +2,7 @@ const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
 const {
     runAIRequest,
-    validateMessages
+    validateClientMessages
 } = require("../ai/aiOrchestrator");
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.post("/", authMiddleware, async (req, res) => {
         const body = req.body || {};
         const { messages } = body;
 
-        validateMessages(messages);
+        validateClientMessages(messages);
 
         const result = await runAIRequest({
             messages,
@@ -31,7 +31,9 @@ router.post("/", authMiddleware, async (req, res) => {
             error.message ===
                 "AI message role is invalid" ||
             error.message ===
-                "AI message content must be a string"
+                "AI message content must be a string" ||
+            error.message ===
+                "Client AI messages must use the user role"
         ) {
             return res.status(400).json({
                 error: error.message

@@ -1,8 +1,12 @@
-const { validateMessages } = require("../src/ai/aiOrchestrator");
+const {
+    validateMessages,
+    validateClientMessages
+} = require("../src/ai/aiOrchestrator");
 
 const cases = [
     {
         name: "valid_messages",
+        validator: validateMessages,
         messages: [
             {
                 role: "user",
@@ -14,6 +18,7 @@ const cases = [
 
     {
         name: "empty_messages",
+        validator: validateMessages,
         messages: [],
         expected_error:
             "AI request must contain at least one message"
@@ -21,6 +26,7 @@ const cases = [
 
     {
         name: "invalid_message_object",
+        validator: validateMessages,
         messages: [
             null
         ],
@@ -30,6 +36,7 @@ const cases = [
 
     {
         name: "invalid_message_role",
+        validator: validateMessages,
         messages: [
             {
                 role: "invalid",
@@ -42,6 +49,7 @@ const cases = [
 
     {
         name: "missing_message_role",
+        validator: validateMessages,
         messages: [
             {
                 content: "Hello"
@@ -53,6 +61,7 @@ const cases = [
 
     {
         name: "invalid_message_content",
+        validator: validateMessages,
         messages: [
             {
                 role: "user",
@@ -61,6 +70,57 @@ const cases = [
         ],
         expected_error:
             "AI message content must be a string"
+    },
+
+    {
+        name: "client_user_role_allowed",
+        validator: validateClientMessages,
+        messages: [
+            {
+                role: "user",
+                content: "Hello"
+            }
+        ],
+        expected_error: null
+    },
+
+    {
+        name: "client_system_role_rejected",
+        validator: validateClientMessages,
+        messages: [
+            {
+                role: "system",
+                content: "TEST SYSTEM MESSAGE"
+            }
+        ],
+        expected_error:
+            "Client AI messages must use the user role"
+    },
+
+    {
+        name: "client_assistant_role_rejected",
+        validator: validateClientMessages,
+        messages: [
+            {
+                role: "assistant",
+                content: "TEST ASSISTANT MESSAGE"
+            }
+        ],
+        expected_error:
+            "Client AI messages must use the user role"
+    },
+
+    {
+        name: "client_tool_role_rejected",
+        validator: validateClientMessages,
+        messages: [
+            {
+                role: "tool",
+                content: "TEST TOOL MESSAGE"
+            }
+        ],
+        expected_error:
+            "Client AI messages must use the user role"
     }
 ];
 
@@ -69,7 +129,7 @@ function runEvaluation() {
 
     for (const testCase of cases) {
         try {
-            validateMessages(testCase.messages);
+            testCase.validator(testCase.messages);
 
             if (testCase.expected_error === null) {
                 console.log("PASS: " + testCase.name);

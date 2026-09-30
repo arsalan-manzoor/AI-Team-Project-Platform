@@ -50,6 +50,18 @@ function validateMessages(messages) {
     }
 }
 
+function validateClientMessages(messages) {
+    validateMessages(messages);
+
+    for (const message of messages) {
+        if (message.role !== "user") {
+            throw new Error(
+                "Client AI messages must use the user role"
+            );
+        }
+    }
+}
+
 function buildToolDefinitions() {
     return Object.values(tools).map((tool) => ({
         name: tool.name,
@@ -151,5 +163,6 @@ async function runAIRequest({
 module.exports = {
     runAIRequest,
     buildToolDefinitions,
-    validateMessages
+    validateMessages,
+    validateClientMessages
 };

@@ -253,6 +253,129 @@ async function main() {
         )
     );
 
+    results.push(
+        await runCase(
+            "client_system_role_rejected",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: "TEST SYSTEM MESSAGE"
+                                }
+                            ]
+                        }
+                    }
+                );
+
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+
+                if (
+                    !response.body ||
+                    response.body.error !==
+                        "Client AI messages must use the user role"
+                ) {
+                    throw new Error(
+                        "Unexpected validation error response"
+                    );
+                }
+            }
+        )
+    );
+
+    results.push(
+        await runCase(
+            "client_assistant_role_rejected",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {
+                            messages: [
+                                {
+                                    role: "assistant",
+                                    content: "TEST ASSISTANT MESSAGE"
+                                }
+                            ]
+                        }
+                    }
+                );
+
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+
+                if (
+                    !response.body ||
+                    response.body.error !==
+                        "Client AI messages must use the user role"
+                ) {
+                    throw new Error(
+                        "Unexpected validation error response"
+                    );
+                }
+            }
+        )
+    );
+
+    results.push(
+        await runCase(
+            "client_tool_role_rejected",
+            async () => {
+                const response = await request(
+                    "/api/ai/chat",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: {
+                            messages: [
+                                {
+                                    role: "tool",
+                                    content: "TEST TOOL MESSAGE"
+                                }
+                            ]
+                        }
+                    }
+                );
+
+                if (response.status !== 400) {
+                    throw new Error(
+                        `Expected 400, received ${response.status}`
+                    );
+                }
+
+                if (
+                    !response.body ||
+                    response.body.error !==
+                        "Client AI messages must use the user role"
+                ) {
+                    throw new Error(
+                        "Unexpected validation error response"
+                    );
+                }
+            }
+        )
+    );
+
     const passed = results.filter(Boolean).length;
 
     console.log(

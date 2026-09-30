@@ -1,50 +1,127 @@
 import { useEffect, useState } from "react";
 import {
-  CheckSquare,
   ArrowLeft,
   CalendarDays,
-  Flag,
+  CheckSquare,
   CircleDot,
+  Flag,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Link,
+  Code,
+  Undo2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { createTask } from "../services/taskService";
 import { getCurrentUser } from "../services/authService";
+import { getProjectById } from "../services/ProjectService";
+import { getTeamMembers } from "../services/teamService";
+
+import "../styles/create-task.css";
 
 function CreateTask() {
   const navigate = useNavigate();
   const { projectId } = useParams();
 
   const [user, setUser] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   const [task, setTask] = useState({
     name: "",
     description: "",
+    assignedTo: "",
     priority: "medium",
     deadline: "",
     status: "todo",
   });
 
   const [loading, setLoading] = useState(false);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadUser() {
+    async function loadCreateTaskData() {
       try {
-        const userData = await getCurrentUser();
-        setUser(userData);
-      } catch (error) {
-        console.error("Failed to load current user:", error);
+        setLoadingData(true);
+        setError("");
 
-        setError(error.message || "Failed to load your account information.");
+        const [userData, projectData] = await Promise.all([
+          getCurrentUser(),
+          getProjectById(projectId),
+        ]);
+
+        setUser(userData);
+
+        let members = [];
+
+        if (projectData?.team_id) {
+          members = await getTeamMembers(projectData.team_id);
+        }
+
+        const safeMembers = Array.isArray(members) ? members : [];
+
+        setTeamMembers(safeMembers);
+
+        /*
+         * Default assignee:
+         * current logged-in user if they belong to the project team.
+         * Otherwise use the first available team member.
+         */
+        const currentUserMember = safeMembers.find(
+          (member) =>
+            Number(member.id || member.user_id) === Number(userData?.id),
+        );
+
+        const firstMember = safeMembers[0];
+
+        const defaultAssignee =
+          currentUserMember?.id ||
+          currentUserMember?.user_id ||
+          firstMember?.id ||
+          firstMember?.user_id ||
+          "";
+
+        setTask((currentTask) => ({
+          ...currentTask,
+          assignedTo: String(defaultAssignee),
+        }));
+      } catch (error) {
+        console.error("Create task data loading error:", error);
+
+        setError(error.message || "Failed to load task creation information.");
       } finally {
-        setLoadingUser(false);
+        setLoadingData(false);
       }
     }
 
-    loadUser();
-  }, []);
+    if (projectId) {
+      loadCreateTaskData();
+    }
+  }, [projectId]);
+
+  function handlePriorityChange(priority) {
+    setTask((currentTask) => ({
+      ...currentTask,
+      priority,
+    }));
+  }
+
+  function handleStatusChange(status) {
+    setTask((currentTask) => ({
+      ...currentTask,
+      status,
+    }));
+  }
+
+  function handleAssigneeChange(event) {
+    setTask((currentTask) => ({
+      ...currentTask,
+      assignedTo: event.target.value,
+    }));
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -56,8 +133,8 @@ function CreateTask() {
       return;
     }
 
-    if (!user?.id) {
-      setError("Unable to identify the current user.");
+    if (!task.assignedTo) {
+      setError("Please select an assignee.");
       return;
     }
 
@@ -68,7 +145,7 @@ function CreateTask() {
         title: task.name.trim(),
         description: task.description.trim(),
         projectId: Number(projectId),
-        assignedTo: Number(user.id),
+        assignedTo: Number(task.assignedTo),
         status: task.status,
         priority: task.priority,
         deadline: task.deadline,
@@ -86,9 +163,32 @@ function CreateTask() {
     }
   }
 
+  function getMemberName(member) {
+    return (
+      member.name ||
+      member.user_name ||
+      member.username ||
+      member.email ||
+      "Team Member"
+    );
+  }
+
+  function getMemberId(member) {
+    return member.id || member.user_id;
+  }
+
+  function getInitial(member) {
+    return getMemberName(member).charAt(0).toUpperCase();
+  }
+
   return (
     <div className="zyra-create-page">
+      {/* =====================================================
+          BACK BUTTON
+      ===================================================== */}
+
       <button
+        type="button"
         className="back-page-btn"
         onClick={() => navigate(`/projects/${projectId}/tasks`)}
         disabled={loading}
@@ -97,90 +197,167 @@ function CreateTask() {
         Back to Project Tasks
       </button>
 
-      <div className="create-page-header">
-        <div className="create-page-icon">
-          <CheckSquare size={22} />
-        </div>
+      {/* =====================================================
+          PAGE HEADING
+      ===================================================== */}
 
-        <div>
-          <p className="create-page-eyebrow">TASK WORKSPACE</p>
+      <div className="create-task-heading">
+        <h1>CREATE TASK</h1>
 
-          <h2>Create New Task</h2>
-
-          <p>
-            Create a task and define its priority, deadline, and progress
-            status.
-          </p>
-        </div>
+        <p>Define the next piece of work</p>
       </div>
 
+      {/* =====================================================
+          MAIN FORM
+      ===================================================== */}
+
       <form className="zyra-create-form" onSubmit={handleSubmit}>
-        <div className="form-section">
-          <div className="form-section-header">
-            <h3>Task Information</h3>
+        {/* ===================================================
+            TASK TITLE
+        =================================================== */}
 
-            <p>Describe what needs to be completed.</p>
-          </div>
+        <div className="create-task-field task-title-field">
+          <label htmlFor="task-name">TASK TITLE</label>
 
-          <div className="form-group">
-            <label>Task Name</label>
+          <input
+            id="task-name"
+            type="text"
+            placeholder="Enter the task title..."
+            value={task.name}
+            onChange={(event) =>
+              setTask((currentTask) => ({
+                ...currentTask,
+                name: event.target.value,
+              }))
+            }
+            required
+            disabled={loading}
+            autoComplete="off"
+          />
+        </div>
 
-            <input
-              type="text"
-              placeholder="Enter task name"
-              value={task.name}
+        {/* ===================================================
+            DESCRIPTION
+        =================================================== */}
+
+        <div className="create-task-field description-field">
+          <label htmlFor="task-description">DESCRIPTION</label>
+
+          <div className="description-editor">
+            <div className="description-toolbar">
+              <button type="button" aria-label="Bold">
+                <Bold size={15} />
+              </button>
+
+              <button type="button" aria-label="Italic">
+                <Italic size={15} />
+              </button>
+
+              <span className="toolbar-divider"></span>
+
+              <button type="button" aria-label="Bulleted list">
+                <List size={15} />
+              </button>
+
+              <button type="button" aria-label="Numbered list">
+                <ListOrdered size={15} />
+              </button>
+
+              <button type="button" aria-label="Insert link">
+                <Link size={15} />
+              </button>
+
+              <button type="button" aria-label="Code">
+                <Code size={15} />
+              </button>
+
+              <button type="button" aria-label="Undo">
+                <Undo2 size={15} />
+              </button>
+            </div>
+
+            <textarea
+              id="task-description"
+              placeholder="Describe what needs to be completed..."
+              value={task.description}
               onChange={(event) =>
-                setTask({
-                  ...task,
-                  name: event.target.value,
-                })
+                setTask((currentTask) => ({
+                  ...currentTask,
+                  description: event.target.value,
+                }))
               }
               required
               disabled={loading}
             />
           </div>
-
-          <div className="form-group">
-            <label>Task Description</label>
-
-            <textarea
-              placeholder="Describe the task"
-              rows="5"
-              value={task.description}
-              onChange={(event) =>
-                setTask({
-                  ...task,
-                  description: event.target.value,
-                })
-              }
-              required
-              disabled={loading}
-            ></textarea>
-          </div>
         </div>
 
-        <div className="form-section">
-          <div className="form-section-header">
-            <h3>Task Details</h3>
+        {/* ===================================================
+            DETAILS GRID
+        =================================================== */}
 
-            <p>Set the priority, deadline, and current status.</p>
-          </div>
+        <div className="create-task-details-grid">
+          {/* =================================================
+              ASSIGNEE
+          ================================================= */}
 
-          <div className="form-date-grid">
-            <div className="form-group">
-              <label>
-                <Flag size={14} />
-                Priority
-              </label>
+          <div className="create-task-field">
+            <label htmlFor="task-assignee">ASSIGNEE</label>
+
+            <div className="select-wrapper assignee-select-wrapper">
+              <div className="assignee-select-icon">
+                {task.assignedTo
+                  ? getInitial(
+                      teamMembers.find(
+                        (member) =>
+                          String(getMemberId(member)) ===
+                          String(task.assignedTo),
+                      ) || {},
+                    )
+                  : "U"}
+              </div>
 
               <select
+                id="task-assignee"
+                value={task.assignedTo}
+                onChange={handleAssigneeChange}
+                disabled={loading || loadingData}
+              >
+                <option value="">
+                  {loadingData ? "Loading members..." : "Select Assignee"}
+                </option>
+
+                {teamMembers.map((member) => (
+                  <option key={getMemberId(member)} value={getMemberId(member)}>
+                    {getMemberName(member)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <span className="field-helper">
+              {teamMembers.length > 0
+                ? `${teamMembers.length} team member${
+                    teamMembers.length === 1 ? "" : "s"
+                  } available`
+                : "No team members found"}
+            </span>
+          </div>
+
+          {/* =================================================
+              PRIORITY
+          ================================================= */}
+
+          <div className="create-task-field">
+            <label htmlFor="task-priority">PRIORITY</label>
+
+            <div className="select-wrapper">
+              <Flag size={14} />
+
+              <select
+                id="task-priority"
                 value={task.priority}
-                onChange={(event) =>
-                  setTask({
-                    ...task,
-                    priority: event.target.value,
-                  })
-                }
+                onChange={(event) => handlePriorityChange(event.target.value)}
                 disabled={loading}
               >
                 <option value="low">Low</option>
@@ -189,20 +366,53 @@ function CreateTask() {
               </select>
             </div>
 
-            <div className="form-group">
-              <label>
-                <CircleDot size={14} />
-                Status
-              </label>
+            <div className="option-badges priority-badges">
+              <button
+                type="button"
+                className={`priority-badge high ${
+                  task.priority === "high" ? "active" : ""
+                }`}
+                onClick={() => handlePriorityChange("high")}
+              >
+                High
+              </button>
+
+              <button
+                type="button"
+                className={`priority-badge medium ${
+                  task.priority === "medium" ? "active" : ""
+                }`}
+                onClick={() => handlePriorityChange("medium")}
+              >
+                Medium
+              </button>
+
+              <button
+                type="button"
+                className={`priority-badge low ${
+                  task.priority === "low" ? "active" : ""
+                }`}
+                onClick={() => handlePriorityChange("low")}
+              >
+                Low
+              </button>
+            </div>
+          </div>
+
+          {/* =================================================
+              STATUS
+          ================================================= */}
+
+          <div className="create-task-field">
+            <label htmlFor="task-status">STATUS</label>
+
+            <div className="select-wrapper">
+              <CircleDot size={14} />
 
               <select
+                id="task-status"
                 value={task.status}
-                onChange={(event) =>
-                  setTask({
-                    ...task,
-                    status: event.target.value,
-                  })
-                }
+                onChange={(event) => handleStatusChange(event.target.value)}
                 disabled={loading}
               >
                 <option value="todo">To Do</option>
@@ -210,30 +420,78 @@ function CreateTask() {
                 <option value="completed">Completed</option>
               </select>
             </div>
+
+            <div className="option-badges status-badges">
+              <button
+                type="button"
+                className={`status-badge todo ${
+                  task.status === "todo" ? "active" : ""
+                }`}
+                onClick={() => handleStatusChange("todo")}
+              >
+                To Do
+              </button>
+
+              <button
+                type="button"
+                className={`status-badge progress ${
+                  task.status === "in_progress" ? "active" : ""
+                }`}
+                onClick={() => handleStatusChange("in_progress")}
+              >
+                In Progress
+              </button>
+
+              <button
+                type="button"
+                className={`status-badge done ${
+                  task.status === "completed" ? "active" : ""
+                }`}
+                onClick={() => handleStatusChange("completed")}
+              >
+                Done
+              </button>
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>
-              <CalendarDays size={14} />
-              Deadline
-            </label>
+          {/* =================================================
+              DUE DATE
+          ================================================= */}
 
-            <input
-              type="date"
-              value={task.deadline}
-              onChange={(event) =>
-                setTask({
-                  ...task,
-                  deadline: event.target.value,
-                })
-              }
-              required
-              disabled={loading}
-            />
+          <div className="create-task-field">
+            <label htmlFor="task-deadline">DUE DATE</label>
+
+            <div className="date-input-wrapper">
+              <input
+                id="task-deadline"
+                type="date"
+                value={task.deadline}
+                onChange={(event) =>
+                  setTask((currentTask) => ({
+                    ...currentTask,
+                    deadline: event.target.value,
+                  }))
+                }
+                required
+                disabled={loading}
+              />
+
+              <CalendarDays size={15} />
+            </div>
+
+            <span className="field-helper">Select Date</span>
           </div>
-
-          {error && <p className="login-error">{error}</p>}
         </div>
+
+        {/* ===================================================
+            ERROR
+        =================================================== */}
+
+        {error && <p className="create-task-error">{error}</p>}
+
+        {/* ===================================================
+            ACTIONS
+        =================================================== */}
 
         <div className="create-form-actions">
           <button
@@ -248,7 +506,7 @@ function CreateTask() {
           <button
             type="submit"
             className="submit-project-btn"
-            disabled={loading || loadingUser}
+            disabled={loading || loadingData || !task.assignedTo}
           >
             <CheckSquare size={16} />
 

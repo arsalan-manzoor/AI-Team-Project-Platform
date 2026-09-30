@@ -1,4 +1,7 @@
 const cors = require("cors");
+const express = require("express");
+const path = require("path");
+
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -9,12 +12,16 @@ const milestoneRoutes = require("./routes/milestoneRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const resourceRoutes = require("./routes/resourceRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-const express = require("express");
 
 const app = express();
 
 app.use(cors());
+
 app.use(express.json());
+
+// Serve uploaded resource files
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 app.get("/", (req, res) => {
   res.send("Backend is working");
 });
@@ -29,4 +36,5 @@ app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/resources", resourceRoutes);
+
 module.exports = app;

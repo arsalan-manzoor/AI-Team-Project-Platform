@@ -19,3 +19,17 @@ export async function markAllNotificationsAsRead() {
     method: "PUT",
   });
 }
+
+// Delete one notification
+export async function deleteNotification(notificationId) {
+  return apiRequest(`/notifications/${notificationId}`, {
+    method: "DELETE",
+  });
+}
+
+// Delete all notifications
+export async function deleteAllNotifications() {
+  return apiRequest("/notifications/delete-all", {
+    method: "DELETE",
+  });
+}

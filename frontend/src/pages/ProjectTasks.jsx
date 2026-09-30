@@ -1,15 +1,19 @@
 import {
-  CheckSquare,
   Plus,
   ArrowLeft,
-  Clock3,
-  CircleCheck,
-  AlertCircle,
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
+  CalendarDays,
   UserRound,
   Trash2,
+  CircleDot,
+  CheckCircle2,
+  Clock3,
+  Eye,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { getProjectById } from "../services/ProjectService";
@@ -21,10 +25,13 @@ import {
 import { getTeamMembers } from "../services/teamService";
 import { getCurrentUser } from "../services/authService";
 
+import "../styles/project-tasks.css";
+
 function ProjectTasks() {
   const navigate = useNavigate();
   const { projectId } = useParams();
 
+  const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -34,6 +41,11 @@ function ProjectTasks() {
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [pendingAssignees, setPendingAssignees] = useState({});
   const [error, setError] = useState("");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [dueDateFilter, setDueDateFilter] = useState("all");
 
   useEffect(() => {
     async function loadProjectTasks() {
@@ -47,6 +59,7 @@ function ProjectTasks() {
           getCurrentUser(),
         ]);
 
+        setProject(projectData);
         setTasks(Array.isArray(tasksData) ? tasksData : []);
         setCurrentUser(userData);
 
@@ -71,20 +84,18 @@ function ProjectTasks() {
     }
   }, [projectId]);
 
-  const inProgressTasks = tasks.filter(
-    (task) => task.status === "in_progress" || task.status === "In Progress",
+  const completedTasks = tasks.filter((task) => isCompletedStatus(task.status));
+
+  const inProgressTasks = tasks.filter((task) =>
+    isInProgressStatus(task.status),
   );
 
-  const completedTasks = tasks.filter(
-    (task) =>
-      task.status === "completed" ||
-      task.status === "complete" ||
-      task.status === "done" ||
-      task.status === "Completed",
-  );
+  const todoTasks = tasks.filter((task) => isTodoStatus(task.status));
+
+  const reviewTasks = tasks.filter((task) => isReviewStatus(task.status));
 
   const overdueTasks = tasks.filter((task) => {
-    if (!task.deadline) {
+    if (!task.deadline || isCompletedStatus(task.status)) {
       return false;
     }
 
@@ -93,43 +104,105 @@ function ProjectTasks() {
 
     deadline.setHours(23, 59, 59, 999);
 
-    const isCompleted =
-      task.status === "completed" ||
-      task.status === "complete" ||
-      task.status === "done" ||
-      task.status === "Completed";
-
-    return deadline < today && !isCompleted;
+    return deadline < today;
   });
 
+  const progressPercentage =
+    tasks.length > 0
+      ? Math.round((completedTasks.length / tasks.length) * 100)
+      : 0;
+
+  function normalizeStatus(status) {
+    return String(status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+  }
+
+  function isCompletedStatus(status) {
+    const normalized = normalizeStatus(status);
+
+    return (
+      normalized === "completed" ||
+      normalized === "complete" ||
+      normalized === "done"
+    );
+  }
+
+  function isInProgressStatus(status) {
+    return normalizeStatus(status) === "in_progress";
+  }
+
+  function isReviewStatus(status) {
+    const normalized = normalizeStatus(status);
+
+    return (
+      normalized === "in_review" ||
+      normalized === "review" ||
+      normalized === "under_review"
+    );
+  }
+
+  function isTodoStatus(status) {
+    const normalized = normalizeStatus(status);
+
+    return normalized === "" || normalized === "todo" || normalized === "to_do";
+  }
+
   function getDisplayStatus(status) {
-    switch (status) {
-      case "in_progress":
-        return "In Progress";
-
-      case "completed":
-      case "complete":
-      case "done":
-        return "Completed";
-
-      case "todo":
-        return "To Do";
-
-      default:
-        return status || "To Do";
+    if (isCompletedStatus(status)) {
+      return "Completed";
     }
+
+    if (isInProgressStatus(status)) {
+      return "In Progress";
+    }
+
+    if (isReviewStatus(status)) {
+      return "In Review";
+    }
+
+    return "To Do";
   }
 
   function getMemberName(member) {
-    return member.name || member.email || `User ${member.id}`;
+    return (
+      member.name ||
+      member.user_name ||
+      member.username ||
+      member.email ||
+      `User ${member.id}`
+    );
   }
 
-  function isTaskCreator(task) {
-    if (!currentUser?.id || !task?.created_by) {
-      return false;
+  function getMemberId(member) {
+    return member.id || member.user_id;
+  }
+
+  function getMemberInitials(member) {
+    const name = getMemberName(member);
+
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }
 
-    return Number(task.created_by) === Number(currentUser.id);
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  function getTaskAssignee(task) {
+    if (
+      task.assigned_to === null ||
+      task.assigned_to === undefined ||
+      task.assigned_to === ""
+    ) {
+      return null;
+    }
+
+    return teamMembers.find(
+      (member) => Number(getMemberId(member)) === Number(task.assigned_to),
+    );
   }
 
   function getCurrentAssignee(task) {
@@ -159,6 +232,14 @@ function ProjectTasks() {
       ...current,
       [taskId]: newAssignee,
     }));
+  }
+
+  function isTaskCreator(task) {
+    if (!currentUser?.id || !task?.created_by) {
+      return false;
+    }
+
+    return Number(task.created_by) === Number(currentUser.id);
   }
 
   async function handleAssigneeUpdate(task) {
@@ -292,286 +373,506 @@ function ProjectTasks() {
     navigate(`/projects/${projectId}/tasks/${taskId}`);
   }
 
+  function matchesDueDate(task) {
+    if (dueDateFilter === "all") {
+      return true;
+    }
+
+    if (!task.deadline) {
+      return dueDateFilter === "none";
+    }
+
+    const deadline = new Date(task.deadline);
+    const today = new Date();
+
+    deadline.setHours(23, 59, 59, 999);
+    today.setHours(0, 0, 0, 0);
+
+    if (dueDateFilter === "overdue") {
+      return deadline < today && !isCompletedStatus(task.status);
+    }
+
+    if (dueDateFilter === "today") {
+      return (
+        deadline.getFullYear() === today.getFullYear() &&
+        deadline.getMonth() === today.getMonth() &&
+        deadline.getDate() === today.getDate()
+      );
+    }
+
+    if (dueDateFilter === "upcoming") {
+      return deadline >= today;
+    }
+
+    if (dueDateFilter === "none") {
+      return false;
+    }
+
+    return true;
+  }
+
+  const filteredTasks = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return tasks.filter((task) => {
+      const matchesSearch =
+        !query ||
+        task.title?.toLowerCase().includes(query) ||
+        task.description?.toLowerCase().includes(query) ||
+        String(task.id).includes(query);
+
+      const matchesPriority =
+        priorityFilter === "all" ||
+        String(task.priority || "medium").toLowerCase() === priorityFilter;
+
+      const matchesAssignee =
+        assigneeFilter === "all" ||
+        String(task.assigned_to || "") === assigneeFilter;
+
+      return (
+        matchesSearch &&
+        matchesPriority &&
+        matchesAssignee &&
+        matchesDueDate(task)
+      );
+    });
+  }, [tasks, searchTerm, priorityFilter, assigneeFilter, dueDateFilter]);
+
+  const groupedTasks = {
+    todo: filteredTasks.filter((task) => isTodoStatus(task.status)),
+    in_progress: filteredTasks.filter((task) =>
+      isInProgressStatus(task.status),
+    ),
+    in_review: filteredTasks.filter((task) => isReviewStatus(task.status)),
+    completed: filteredTasks.filter((task) => isCompletedStatus(task.status)),
+  };
+
+  function getPriorityClass(priority) {
+    const value = String(priority || "medium").toLowerCase();
+
+    if (value === "critical") {
+      return "critical";
+    }
+
+    if (value === "high") {
+      return "high";
+    }
+
+    if (value === "low") {
+      return "low";
+    }
+
+    return "medium";
+  }
+
+  function formatDeadline(deadline) {
+    if (!deadline) {
+      return "No deadline";
+    }
+
+    const date = new Date(deadline);
+
+    if (Number.isNaN(date.getTime())) {
+      return deadline;
+    }
+
+    return date.toLocaleDateString("en-IN", {
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  function renderTaskCard(task) {
+    const assignee = getTaskAssignee(task);
+    const selectedAssignee = getSelectedAssignee(task);
+    const currentAssignee = getCurrentAssignee(task);
+
+    const assigneeChanged = selectedAssignee !== currentAssignee;
+
+    const isUpdating = updatingTaskId === task.id;
+    const isDeleting = deletingTaskId === task.id;
+    const isCreator = isTaskCreator(task);
+
+    const priority = String(task.priority || "medium").toLowerCase();
+
+    return (
+      <article
+        className="workflow-task-card"
+        key={task.id}
+        onClick={() => openTaskDetails(task.id)}
+      >
+        <div className="workflow-task-card-top">
+          <h4>{task.title}</h4>
+
+          <span className="task-reference">ZYRA-{task.id}</span>
+        </div>
+
+        <p className="workflow-task-description">
+          {task.description || "No description provided."}
+        </p>
+
+        <div className="workflow-task-footer">
+          <div className="workflow-assignee">
+            {assignee ? (
+              <span className="workflow-avatar">
+                {getMemberInitials(assignee)}
+              </span>
+            ) : (
+              <span className="workflow-avatar unassigned">
+                <UserRound size={12} />
+              </span>
+            )}
+
+            <span>{assignee ? getMemberName(assignee) : "Unassigned"}</span>
+          </div>
+
+          <div className="workflow-deadline">
+            <span>Deadline</span>
+            <strong>
+              <CalendarDays size={12} />
+              {formatDeadline(task.deadline)}
+            </strong>
+          </div>
+        </div>
+
+        <div className="workflow-task-meta">
+          <span className={`workflow-priority ${getPriorityClass(priority)}`}>
+            {priority}
+          </span>
+
+          <span
+            className={`workflow-status-pill ${normalizeStatus(task.status)}`}
+          >
+            <CircleDot size={10} />
+            {getDisplayStatus(task.status)}
+          </span>
+        </div>
+
+        <div
+          className="workflow-task-controls"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <select
+            value={selectedAssignee}
+            onChange={(event) =>
+              handleAssigneeSelection(task.id, event.target.value)
+            }
+            disabled={isUpdating || isDeleting}
+            aria-label="Change assignee"
+          >
+            <option value="">Unassigned</option>
+
+            {teamMembers.map((member) => (
+              <option key={getMemberId(member)} value={getMemberId(member)}>
+                {getMemberName(member)}
+              </option>
+            ))}
+          </select>
+
+          {assigneeChanged && (
+            <button
+              type="button"
+              className="workflow-update-btn"
+              onClick={() => handleAssigneeUpdate(task)}
+              disabled={isUpdating || isDeleting}
+            >
+              {isUpdating ? "Updating..." : "Update"}
+            </button>
+          )}
+
+          <select
+            value={
+              isReviewStatus(task.status)
+                ? "in_review"
+                : isInProgressStatus(task.status)
+                  ? "in_progress"
+                  : isCompletedStatus(task.status)
+                    ? "completed"
+                    : "todo"
+            }
+            onChange={(event) =>
+              handleStatusChange(task.id, event.target.value)
+            }
+            disabled={isUpdating || isDeleting}
+            aria-label="Change status"
+          >
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="in_review">In Review</option>
+            <option value="completed">Completed</option>
+          </select>
+
+          {isCreator && (
+            <button
+              type="button"
+              className="workflow-delete-btn"
+              onClick={() => handleDeleteTask(task)}
+              disabled={isDeleting}
+              aria-label="Delete task"
+              title="Delete task"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      </article>
+    );
+  }
+
+  function renderWorkflowColumn(key, title, count, icon, columnTasks) {
+    return (
+      <section className={`workflow-column workflow-column-${key}`}>
+        <div className="workflow-column-header">
+          <div className="workflow-column-title">
+            {icon}
+            <span>{title}</span>
+            <strong>{count}</strong>
+          </div>
+        </div>
+
+        <div className="workflow-column-line" />
+
+        <div className="workflow-column-tasks">
+          {columnTasks.length > 0 ? (
+            columnTasks.map(renderTaskCard)
+          ) : (
+            <div className="workflow-column-empty">
+              <span />
+              <p>No tasks</p>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div className="zyra-project-tasks">
       <button
-        className="back-page-btn"
+        type="button"
+        className="workflow-back-btn"
         onClick={() => navigate(`/projects/${projectId}`)}
       >
-        <ArrowLeft size={16} />
-        Back to Projects
+        <ArrowLeft size={15} />
+        Back to Project
       </button>
 
-      <div className="project-tasks-header">
-        <div>
-          <p className="project-tasks-eyebrow">PROJECT WORKSPACE</p>
-
-          <h2>Project Tasks</h2>
-
-          <p className="project-tasks-subtitle">
-            Create, assign, and track tasks for this project.
-          </p>
-        </div>
-
-        <button
-          className="project-tasks-create-btn"
-          onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
-        >
-          <Plus size={17} />
-          Create New Task
-        </button>
-      </div>
-
-      {error && <div className="dashboard-error">{error}</div>}
-
-      <div className="project-tasks-summary">
-        <div className="project-task-summary-card">
-          <div className="project-task-summary-icon">
-            <CheckSquare size={19} />
-          </div>
+      <header className="workflow-page-header">
+        <div className="workflow-title-block">
+          <div className="workflow-brand-mark">Z</div>
 
           <div>
-            <span>Total Tasks</span>
-            <strong>{loading ? "..." : tasks.length}</strong>
+            <h1>ZYRA Project Tasks</h1>
+
+            <div className="workflow-breadcrumb">
+              <span>Home</span>
+              <span>/</span>
+              <span>Projects</span>
+              <span>/</span>
+              <span>{project?.name || "Project"}</span>
+              <span>/</span>
+              <strong>Tasks</strong>
+            </div>
           </div>
         </div>
 
-        <div className="project-task-summary-card">
-          <div className="project-task-summary-icon">
-            <Clock3 size={19} />
+        <div className="workflow-progress">
+          <div className="workflow-progress-label">
+            <span>Progress:</span>
+            <strong>
+              {loading ? "..." : `${progressPercentage}% Complete`}
+            </strong>
           </div>
 
-          <div>
-            <span>In Progress</span>
-            <strong>{loading ? "..." : inProgressTasks.length}</strong>
-          </div>
-        </div>
-
-        <div className="project-task-summary-card">
-          <div className="project-task-summary-icon">
-            <CircleCheck size={19} />
-          </div>
-
-          <div>
-            <span>Completed</span>
-            <strong>{loading ? "..." : completedTasks.length}</strong>
+          <div className="workflow-progress-track">
+            <span
+              style={{
+                width: `${progressPercentage}%`,
+              }}
+            />
           </div>
         </div>
 
-        <div className="project-task-summary-card">
-          <div className="project-task-summary-icon">
-            <AlertCircle size={19} />
+        <div className="workflow-header-actions">
+          <div className="workflow-project-name">
+            <span>Project Name</span>
+            <strong>
+              {project?.name || "Project"}
+              <ChevronDown size={14} />
+            </strong>
           </div>
 
-          <div>
-            <span>Overdue</span>
-            <strong>{loading ? "..." : overdueTasks.length}</strong>
+          <div className="workflow-team-avatars">
+            {teamMembers.slice(0, 4).map((member) => (
+              <span
+                className="workflow-header-avatar"
+                key={getMemberId(member)}
+                title={getMemberName(member)}
+              >
+                {getMemberInitials(member)}
+              </span>
+            ))}
+
+            {teamMembers.length > 4 && (
+              <span className="workflow-header-avatar more">
+                +{teamMembers.length - 4}
+              </span>
+            )}
           </div>
+
+          <button
+            type="button"
+            className="workflow-create-btn"
+            onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
+          >
+            <Plus size={16} />
+            Create Task
+          </button>
         </div>
-      </div>
+      </header>
 
-      <section className="project-tasks-panel">
-        <div className="project-tasks-panel-header">
+      {error && <div className="workflow-error">{error}</div>}
+
+      <main className="workflow-panel">
+        <div className="workflow-panel-header">
           <div>
-            <h3>Project Task List</h3>
+            <h2>Project Workflow Timeline</h2>
 
-            <p>Tasks created for this project will appear here.</p>
+            <p>
+              Track the movement of work through every stage of the project.
+            </p>
+          </div>
+
+          <div className="workflow-filter-row">
+            <div className="workflow-filter-label">
+              <SlidersHorizontal size={14} />
+              Filters
+            </div>
+
+            <select
+              value={priorityFilter}
+              onChange={(event) => setPriorityFilter(event.target.value)}
+            >
+              <option value="all">Priority</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+
+            <select
+              value={assigneeFilter}
+              onChange={(event) => setAssigneeFilter(event.target.value)}
+            >
+              <option value="all">Assignee</option>
+              {teamMembers.map((member) => (
+                <option key={getMemberId(member)} value={getMemberId(member)}>
+                  {getMemberName(member)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={dueDateFilter}
+              onChange={(event) => setDueDateFilter(event.target.value)}
+            >
+              <option value="all">Due Date</option>
+              <option value="today">Due Today</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="overdue">Overdue</option>
+              <option value="none">No Deadline</option>
+            </select>
+
+            <div className="workflow-search">
+              <Search size={15} />
+
+              <input
+                type="search"
+                placeholder="Search tasks..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         {loading ? (
-          <div className="project-tasks-empty">
-            <div className="project-tasks-empty-icon">
-              <CheckSquare size={28} />
-            </div>
-
-            <h3>Loading tasks...</h3>
-
+          <div className="workflow-loading">
+            <div className="workflow-loading-spinner" />
+            <h3>Loading project workflow...</h3>
             <p>Getting tasks from the ZYRA workspace.</p>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="project-tasks-empty">
-            <div className="project-tasks-empty-icon">
-              <CheckSquare size={28} />
+          <div className="workflow-empty">
+            <div className="workflow-empty-icon">
+              <CheckCircle2 size={28} />
             </div>
 
             <h3>No tasks yet</h3>
 
             <p>
-              Create your first task to start organizing and tracking the work
-              for this project.
+              Create your first task to start building the project workflow.
             </p>
 
             <button
-              className="project-tasks-empty-btn"
+              type="button"
+              className="workflow-create-btn"
               onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
             >
               <Plus size={16} />
-              Create Your First Task
+              Create Task
             </button>
           </div>
         ) : (
-          <div className="project-task-list">
-            {tasks.map((task) => {
-              const isCreator = isTaskCreator(task);
-              const isDeleting = deletingTaskId === task.id;
+          <div className="workflow-board">
+            {renderWorkflowColumn(
+              "todo",
+              "To Do",
+              groupedTasks.todo.length,
+              <Clock3 size={14} />,
+              groupedTasks.todo,
+            )}
 
-              const selectedAssignee = getSelectedAssignee(task);
-              const currentAssignee = getCurrentAssignee(task);
+            {renderWorkflowColumn(
+              "in-progress",
+              "In Progress",
+              groupedTasks.in_progress.length,
+              <CircleDot size={14} />,
+              groupedTasks.in_progress,
+            )}
 
-              const assigneeChanged = selectedAssignee !== currentAssignee;
+            {renderWorkflowColumn(
+              "in-review",
+              "In Review",
+              groupedTasks.in_review.length,
+              <Eye size={14} />,
+              groupedTasks.in_review,
+            )}
 
-              const isUpdating = updatingTaskId === task.id;
-
-              return (
-                <div
-                  className="project-task-card"
-                  key={task.id}
-                  onClick={() => openTaskDetails(task.id)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <div className="project-task-card-main">
-                    <div className="project-task-card-icon">
-                      <CheckSquare size={20} />
-                    </div>
-
-                    <div>
-                      <h3>{task.title}</h3>
-
-                      <p>{task.description || "No description provided."}</p>
-
-                      <div className="project-task-card-meta">
-                        <span>Priority: {task.priority || "Medium"}</span>
-
-                        {task.deadline && (
-                          <span>Deadline: {task.deadline}</span>
-                        )}
-
-                        <span>Status: {getDisplayStatus(task.status)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={(event) => event.stopPropagation()}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      gap: "8px",
-                      minWidth: "260px",
-                    }}
-                  >
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                      }}
-                    >
-                      <UserRound size={14} />
-                      Assignee
-                    </label>
-
-                    {/* Assignee + Update button */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        width: "100%",
-                      }}
-                    >
-                      <select
-                        className="project-task-status"
-                        style={{
-                          width: "180px",
-                          maxWidth: "180px",
-                        }}
-                        value={selectedAssignee}
-                        onChange={(event) =>
-                          handleAssigneeSelection(task.id, event.target.value)
-                        }
-                        disabled={isUpdating || isDeleting}
-                      >
-                        <option value="">Unassigned</option>
-
-                        {teamMembers.map((member) => (
-                          <option key={member.id} value={member.id}>
-                            {getMemberName(member)}
-                          </option>
-                        ))}
-                      </select>
-
-                      {assigneeChanged && (
-                        <button
-                          type="button"
-                          className="project-tasks-create-btn"
-                          style={{
-                            width: "140px",
-                            minWidth: "140px",
-                            justifyContent: "center",
-                            padding: "8px 10px",
-                          }}
-                          onClick={() => handleAssigneeUpdate(task)}
-                          disabled={isUpdating || isDeleting}
-                        >
-                          {isUpdating ? "Updating..." : "Update Assignee"}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Status */}
-                    <select
-                      className="project-task-status"
-                      style={{
-                        width: "180px",
-                        maxWidth: "180px",
-                      }}
-                      value={
-                        task.status === "In Progress"
-                          ? "in_progress"
-                          : task.status
-                      }
-                      onChange={(event) => {
-                        handleStatusChange(task.id, event.target.value);
-                      }}
-                      disabled={isUpdating || isDeleting}
-                    >
-                      <option value="todo">To Do</option>
-
-                      <option value="in_progress">In Progress</option>
-
-                      <option value="completed">Completed</option>
-                    </select>
-
-                    {/* Delete */}
-                    {isCreator && (
-                      <button
-                        type="button"
-                        className="project-task-delete-btn"
-                        style={{
-                          width: "180px",
-                          maxWidth: "180px",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => handleDeleteTask(task)}
-                        disabled={isDeleting}
-                      >
-                        <Trash2 size={14} />
-
-                        {isDeleting ? "Deleting..." : "Delete Task"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {renderWorkflowColumn(
+              "completed",
+              "Completed",
+              groupedTasks.completed.length,
+              <CheckCircle2 size={14} />,
+              groupedTasks.completed,
+            )}
           </div>
         )}
-      </section>
+
+        {!loading && tasks.length > 0 && filteredTasks.length === 0 && (
+          <div className="workflow-filter-empty">
+            No tasks match the selected filters.
+          </div>
+        )}
+
+        <div className="workflow-board-footer">
+          <span>
+            {filteredTasks.length} of {tasks.length} tasks shown
+          </span>
+
+          <span>{overdueTasks.length} overdue</span>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,0 +1,1168 @@
+/* =========================================================
+   ZYRA — PROFILE MISSION CONTROL
+   LOCKED LAYOUT 4
+   ========================================================= */
+
+.profile-page {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 18px 22px 24px;
+  color: #f4f7fb;
+  background:
+    radial-gradient(
+      circle at 52% 18%,
+      rgba(25, 104, 137, 0.08),
+      transparent 34%
+    ),
+    #09111d;
+}
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.profile-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 2px 14px;
+  border-bottom: 1px solid rgba(130, 154, 180, 0.16);
+}
+
+.profile-header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+/* =========================================================
+   BACK BUTTON
+   ========================================================= */
+
+.profile-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  margin-bottom: 12px;
+  padding: 0 10px;
+  color: #aeb9c7;
+  background: rgba(30, 43, 57, 0.7);
+  border: 1px solid rgba(125, 148, 174, 0.18);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.profile-back-button:hover {
+  color: #f2f7fb;
+  background: rgba(43, 59, 76, 0.9);
+  border-color: rgba(76, 218, 220, 0.3);
+  transform: translateX(-2px);
+}
+
+.profile-back-button svg {
+  color: #6ddfe0;
+  flex: 0 0 auto;
+}
+
+/* =========================================================
+   PAGE HEADER TEXT
+   ========================================================= */
+
+.profile-page-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: #8995a6;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-page-header h1 {
+  margin: 0;
+  color: #f5f7fb;
+  font-size: clamp(24px, 2vw, 31px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.profile-page-header p {
+  margin: 6px 0 0;
+  color: #7f8b9d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+.profile-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 10px 13px;
+  border: 1px solid rgba(130, 154, 180, 0.18);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.profile-message button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.profile-message button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.profile-message-error {
+  color: #ffb4b4;
+  background: rgba(180, 50, 50, 0.08);
+  border-color: rgba(255, 100, 100, 0.2);
+}
+
+.profile-message-success {
+  color: #a9f1dc;
+  background: rgba(35, 180, 145, 0.08);
+  border-color: rgba(48, 211, 172, 0.2);
+}
+
+/* =========================================================
+   MAIN PROFILE GRID
+   ========================================================= */
+
+.profile-mission-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(300px, 0.9fr)
+    minmax(480px, 1.55fr);
+  grid-template-areas:
+    "identity information"
+    "identity workspace"
+    "identity actions";
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 16px;
+}
+
+/* =========================================================
+   COMMON CARD STYLE
+   ========================================================= */
+
+.profile-identity-card,
+.profile-information-card,
+.profile-workspace-card {
+  box-sizing: border-box;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(28, 39, 54, 0.94),
+      rgba(17, 27, 40, 0.96)
+    );
+  border: 1px solid rgba(123, 148, 176, 0.18);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 12px 30px rgba(0, 0, 0, 0.14);
+}
+
+/* =========================================================
+   LEFT — MY PROFILE
+   ========================================================= */
+
+.profile-identity-card {
+  grid-area: identity;
+  min-height: 500px;
+  padding: 14px 16px 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+}
+
+.profile-card-heading {
+  width: 100%;
+  text-align: center;
+}
+
+.profile-card-heading span {
+  color: #e7edf5;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+/* =========================================================
+   AVATAR
+   ========================================================= */
+
+.profile-avatar-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.profile-avatar-ring {
+  position: relative;
+  width: 205px;
+  height: 205px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(68, 224, 222, 0.88);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 7px rgba(50, 190, 202, 0.045),
+    0 0 22px rgba(44, 215, 219, 0.18),
+    inset 0 0 18px rgba(47, 213, 217, 0.08);
+}
+
+.profile-avatar-ring::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border: 1px solid rgba(57, 212, 216, 0.16);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.profile-avatar-ring::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  right: 12px;
+  top: 17px;
+  background: #4ce2df;
+  border-radius: 50%;
+  box-shadow:
+    -164px 32px 0 rgba(74, 221, 222, 0.65),
+    148px 116px 0 rgba(88, 123, 234, 0.45);
+}
+
+.profile-avatar-ring-inner {
+  width: 177px;
+  height: 177px;
+  overflow: hidden;
+  border: 2px solid rgba(11, 20, 31, 0.9);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 50% 25%,
+      rgba(85, 101, 117, 0.75),
+      rgba(39, 48, 59, 0.98)
+    );
+}
+
+.profile-avatar-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #f5f8fc;
+  font-size: 62px;
+  font-weight: 700;
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      #4a5865,
+      #252e38 72%
+    );
+}
+
+/* =========================================================
+   CAMERA BUTTON ON AVATAR
+   ========================================================= */
+
+.profile-camera-overlay {
+  position: absolute;
+  right: -2px;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  color: #7be7e6;
+  background: #172533;
+  border: 2px solid #101b28;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgba(76, 224, 223, 0.3),
+    0 8px 20px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.profile-camera-overlay:hover {
+  color: #fff;
+  background: #203447;
+  transform: scale(1.05);
+}
+
+.profile-camera-overlay:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+/* =========================================================
+   IDENTITY INFO
+   ========================================================= */
+
+.profile-identity-info {
+  width: 100%;
+  margin-top: 13px;
+  text-align: center;
+}
+
+.profile-identity-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #8592a3;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.profile-identity-info h2 {
+  margin: 0;
+  color: #f5f7fb;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.profile-identity-info p {
+  margin: 5px 0 1px;
+  color: #aab5c3;
+  font-size: 12px;
+}
+
+.profile-identity-info > span:last-child {
+  color: #778496;
+  font-size: 11px;
+}
+
+/* =========================================================
+   PHOTO BUTTONS
+   ========================================================= */
+
+.profile-photo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 15px;
+}
+
+.profile-upload-button,
+.profile-camera-button,
+.profile-remove-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.profile-upload-button {
+  color: #bceeed;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(51, 190, 196, 0.19),
+      rgba(35, 113, 129, 0.25)
+    );
+  border: 1px solid rgba(76, 218, 220, 0.25);
+}
+
+.profile-camera-button {
+  color: #c5c8ff;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(86, 75, 210, 0.28),
+      rgba(54, 47, 155, 0.35)
+    );
+  border: 1px solid rgba(112, 104, 244, 0.3);
+}
+
+.profile-upload-button:hover,
+.profile-camera-button:hover,
+.profile-remove-button:hover {
+  transform: translateY(-1px);
+}
+
+.profile-upload-button:hover {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(51, 190, 196, 0.26),
+      rgba(35, 113, 129, 0.32)
+    );
+}
+
+.profile-camera-button:hover {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(86, 75, 210, 0.36),
+      rgba(54, 47, 155, 0.43)
+    );
+}
+
+.profile-camera-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* =========================================================
+   REMOVE PHOTO
+   ========================================================= */
+
+.profile-remove-button {
+  grid-column: 1 / -1;
+  color: #ffb7b7;
+  background: rgba(180, 55, 65, 0.1);
+  border: 1px solid rgba(255, 100, 110, 0.22);
+}
+
+.profile-remove-button:hover {
+  background: rgba(180, 55, 65, 0.17);
+  border-color: rgba(255, 110, 120, 0.38);
+}
+
+.profile-remove-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+/* =========================================================
+   RIGHT — PERSONAL INFORMATION
+   ========================================================= */
+
+.profile-information-card {
+  grid-area: information;
+  min-width: 0;
+  padding: 16px;
+}
+
+.profile-section-heading {
+  margin-bottom: 13px;
+}
+
+.profile-section-heading h2 {
+  margin: 0;
+  color: #f0f4f8;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px 12px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-field-full {
+  grid-column: 1 / -1;
+}
+
+.profile-field > span {
+  margin-bottom: 6px;
+  color: #aeb8c6;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.profile-field input,
+.profile-static-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 10px;
+  color: #eef3f8;
+  font-family: inherit;
+  font-size: 12px;
+  background: rgba(37, 48, 61, 0.92);
+  border: 1px solid rgba(125, 148, 174, 0.2);
+  border-radius: 6px;
+  outline: none;
+}
+
+.profile-field input::placeholder {
+  color: #687689;
+}
+
+.profile-field input:focus {
+  border-color: rgba(66, 219, 219, 0.6);
+  box-shadow: 0 0 0 2px rgba(53, 207, 211, 0.08);
+}
+
+.profile-static-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #dfe6ee;
+}
+
+.profile-static-select svg {
+  flex: 0 0 auto;
+  color: #788697;
+}
+
+/* =========================================================
+   WORKSPACE
+   ========================================================= */
+
+.profile-workspace-card {
+  grid-area: workspace;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.profile-workspace-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.profile-workspace-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profile-workspace-details span {
+  color: #7f8c9d;
+  font-size: 10px;
+}
+
+.profile-workspace-details strong {
+  overflow: hidden;
+  color: #dce4ec;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-status-active {
+  color: #6de0c3 !important;
+}
+
+/* =========================================================
+   HIDDEN RIGHT PROFILE PHOTO CARD
+   ========================================================= */
+
+.profile-photo-card {
+  display: none !important;
+}
+
+/* =========================================================
+   ACTION BAR
+   ========================================================= */
+
+.profile-action-bar {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: max-content;
+  min-height: 0;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.profile-cancel-button,
+.profile-save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.profile-cancel-button {
+  color: #d7dfe8;
+  background: rgba(38, 49, 61, 0.75);
+  border: 1px solid rgba(124, 148, 174, 0.24);
+}
+
+.profile-save-button {
+  color: #06151a;
+  background:
+    linear-gradient(
+      135deg,
+      #57d7dc,
+      #69dce2
+    );
+  border: 1px solid rgba(115, 236, 238, 0.7);
+  box-shadow: 0 5px 16px rgba(52, 207, 213, 0.13);
+}
+
+.profile-cancel-button:hover,
+.profile-save-button:hover {
+  transform: translateY(-1px);
+}
+
+.profile-cancel-button:hover {
+  background: rgba(48, 61, 75, 0.9);
+}
+
+.profile-save-button:hover {
+  background:
+    linear-gradient(
+      135deg,
+      #68e1e4,
+      #79e6e9
+    );
+}
+
+.profile-cancel-button:disabled,
+.profile-save-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+/* =========================================================
+   CAMERA MODAL
+   ========================================================= */
+
+.profile-camera-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.profile-camera-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 7, 13, 0.82);
+  backdrop-filter: blur(7px);
+}
+
+.profile-camera-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      145deg,
+      #172333,
+      #0d1724
+    );
+  border: 1px solid rgba(87, 220, 222, 0.24);
+  border-radius: 13px;
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.55),
+    0 0 35px rgba(43, 203, 209, 0.08);
+}
+
+/* =========================================================
+   CAMERA HEADER
+   ========================================================= */
+
+.profile-camera-dialog-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 15px 17px;
+  border-bottom: 1px solid rgba(125, 150, 177, 0.14);
+}
+
+.profile-camera-dialog-header span {
+  display: block;
+  margin-bottom: 3px;
+  color: #7e8c9f;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.profile-camera-dialog-header h2 {
+  margin: 0;
+  color: #f1f5f8;
+  font-size: 16px;
+}
+
+.profile-camera-dialog-header > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: #9aa7b7;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(125, 150, 177, 0.14);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.profile-camera-dialog-header > button:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* =========================================================
+   CAMERA PREVIEW
+   ========================================================= */
+
+.profile-camera-preview {
+  position: relative;
+  width: 100%;
+  height: min(52vh, 420px);
+  min-height: 260px;
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #050a10;
+}
+
+/* =========================================================
+   LIVE CAMERA
+   ========================================================= */
+
+.profile-camera-preview video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #050a10;
+  transform: scaleX(-1);
+}
+
+/* =========================================================
+   CAPTURED PHOTO
+   ========================================================= */
+
+.profile-captured-preview {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: 0;
+  background: #050a10;
+}
+
+.profile-camera-preview img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+/* =========================================================
+   CAMERA GUIDE
+   ========================================================= */
+
+.profile-camera-guide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 205px;
+  height: 250px;
+  border: 1px solid rgba(82, 229, 228, 0.65);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 0 999px rgba(2, 8, 14, 0.08),
+    0 0 22px rgba(55, 218, 220, 0.12);
+  pointer-events: none;
+}
+
+/* =========================================================
+   CAMERA ACTIONS
+   ========================================================= */
+
+.profile-camera-dialog-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 13px 15px;
+  background: #0d1724;
+  border-top: 1px solid rgba(125, 150, 177, 0.14);
+}
+
+.profile-camera-cancel,
+.profile-capture-button,
+.profile-retake-button,
+.profile-use-photo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 35px;
+  padding: 0 13px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-camera-cancel,
+.profile-retake-button {
+  color: #d0d9e3;
+  background: rgba(41, 53, 67, 0.85);
+  border: 1px solid rgba(125, 150, 177, 0.2);
+}
+
+.profile-capture-button,
+.profile-use-photo-button {
+  color: #061419;
+  background: #5bdcdf;
+  border: 1px solid #73e9e9;
+}
+
+.profile-camera-cancel:hover,
+.profile-retake-button:hover {
+  background: rgba(54, 68, 84, 0.95);
+}
+
+.profile-capture-button:hover,
+.profile-use-photo-button:hover {
+  background: #70e4e6;
+}
+
+.profile-camera-cancel:disabled,
+.profile-capture-button:disabled,
+.profile-retake-button:disabled,
+.profile-use-photo-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.profile-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 300px;
+  color: #8d9bad;
+  font-size: 12px;
+}
+
+.profile-loading-spinner,
+.profile-button-spinner {
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-top-color: #56dfe0;
+  border-radius: 50%;
+  animation: profile-spin 0.8s linear infinite;
+}
+
+.profile-loading-spinner {
+  width: 22px;
+  height: 22px;
+}
+
+.profile-button-spinner {
+  width: 13px;
+  height: 13px;
+}
+
+@keyframes profile-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
+  .profile-mission-grid {
+    grid-template-columns:
+      minmax(280px, 0.8fr)
+      minmax(420px, 1.2fr);
+  }
+
+  .profile-avatar-ring {
+    width: 180px;
+    height: 180px;
+  }
+
+  .profile-avatar-ring-inner {
+    width: 154px;
+    height: 154px;
+  }
+
+  .profile-identity-info h2 {
+    font-size: 20px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 850px) {
+  .profile-page {
+    padding: 16px;
+  }
+
+  .profile-mission-grid {
+    grid-template-columns: 1fr;
+
+    grid-template-areas:
+      "identity"
+      "information"
+      "workspace"
+      "actions";
+  }
+
+  .profile-identity-card {
+    min-height: 0;
+  }
+
+  .profile-workspace-card {
+    width: 100%;
+    margin: 0;
+  }
+
+  .profile-workspace-details {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .profile-action-bar {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .profile-page {
+    padding: 13px;
+  }
+
+  .profile-page-header h1 {
+    font-size: 23px;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-field-full {
+    grid-column: auto;
+  }
+
+  .profile-workspace-details {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-photo-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-action-bar {
+    justify-content: stretch;
+  }
+
+  .profile-cancel-button,
+  .profile-save-button {
+    flex: 1;
+  }
+
+  .profile-camera-modal {
+    padding: 10px;
+    align-items: center;
+  }
+
+  .profile-camera-dialog {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    border-radius: 13px;
+  }
+
+  .profile-camera-preview {
+    height: min(50vh, 390px);
+    min-height: 220px;
+  }
+
+  .profile-camera-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .profile-captured-preview,
+  .profile-camera-preview img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .profile-camera-guide {
+    width: 170px;
+    height: 215px;
+  }
+
+  .profile-camera-dialog-actions {
+    padding: 11px 12px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — VERY SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 400px) {
+  .profile-camera-modal {
+    padding: 7px;
+  }
+
+  .profile-camera-dialog {
+    max-height: calc(100vh - 14px);
+  }
+
+  .profile-camera-preview {
+    height: min(47vh, 330px);
+    min-height: 190px;
+  }
+
+  .profile-camera-dialog-actions {
+    gap: 6px;
+    padding: 9px;
+  }
+
+  .profile-camera-cancel,
+  .profile-capture-button,
+  .profile-retake-button,
+  .profile-use-photo-button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-back-button,
+  .profile-camera-overlay,
+  .profile-upload-button,
+  .profile-camera-button,
+  .profile-remove-button,
+  .profile-cancel-button,
+  .profile-save-button,
+  .profile-button-spinner,
+  .profile-loading-spinner {
+    transition: none;
+    animation: none;
+  }
+}

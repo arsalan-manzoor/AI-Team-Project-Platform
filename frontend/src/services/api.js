@@ -4,9 +4,13 @@ export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem("zyra_token");
 
   const headers = {
-    "Content-Type": "application/json",
     ...(options.headers || {}),
   };
+
+  // Only set JSON content type when the request body is not FormData.
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;

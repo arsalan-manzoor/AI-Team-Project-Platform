@@ -5,8 +5,15 @@
 
 .zyra-projects {
   position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
   min-height: calc(100vh - 64px);
+
   padding: 28px 32px 55px;
+
   overflow: hidden;
 
   color: #e8edf5;
@@ -100,8 +107,6 @@
   }
 }
 
-/* Decorative horizontal technical lines */
-
 .projects-background-grid {
   background-image:
     linear-gradient(rgba(82, 102, 122, 0.1) 1px, transparent 1px),
@@ -165,13 +170,24 @@
    BACK BUTTON
    ========================================================= */
 
-.back-page-btn {
-  display: inline-flex;
+.zyra-projects .back-page-btn {
+  position: relative;
+
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
+
+  width: max-content;
+
+  flex: 0 0 auto;
+
+  margin: 0 0 38px 0;
+
+  padding: 6px 10px;
+
   gap: 7px;
 
-  margin-bottom: 22px;
-  padding: 6px 10px;
+  box-sizing: border-box;
 
   border: 1px solid rgba(148, 163, 184, 0.12);
   border-radius: 6px;
@@ -183,7 +199,15 @@
   font-size: 11px;
   font-weight: 500;
 
+  line-height: 1.2;
+
   cursor: pointer;
+
+  z-index: 5;
+
+  float: none;
+
+  transform: none;
 
   transition:
     color 0.2s ease,
@@ -191,7 +215,7 @@
     transform 0.2s ease;
 }
 
-.back-page-btn:hover {
+.zyra-projects .back-page-btn:hover {
   color: #d7e4ef;
 
   border-color: rgba(74, 211, 255, 0.3);
@@ -208,7 +232,10 @@
   align-items: center;
   justify-content: space-between;
 
-  margin-bottom: 19px;
+  width: 100%;
+
+  margin: 0 0 19px 0;
+  padding: 0;
 }
 
 .projects-heading {
@@ -362,6 +389,7 @@
 
 .projects-summary {
   display: grid;
+
   grid-template-columns: repeat(4, 1fr);
 
   gap: 14px;
@@ -474,6 +502,7 @@
   font-weight: 650;
 
   line-height: 1;
+
   letter-spacing: -0.025em;
 }
 
@@ -635,6 +664,7 @@
 .projects-sort-btn {
   display: inline-flex;
   align-items: center;
+
   gap: 5px;
 
   height: 30px;
@@ -841,6 +871,7 @@
 .featured-project-title {
   display: flex;
   align-items: center;
+
   gap: 8px;
 }
 
@@ -892,6 +923,7 @@
   font-size: 10px;
 
   white-space: nowrap;
+
   text-overflow: ellipsis;
 }
 
@@ -909,6 +941,7 @@
 .featured-project-meta > span {
   display: inline-flex;
   align-items: center;
+
   gap: 5px;
 
   white-space: nowrap;
@@ -1164,6 +1197,7 @@
   font-weight: 650;
 
   white-space: nowrap;
+
   text-overflow: ellipsis;
 }
 
@@ -1177,6 +1211,7 @@
   font-size: 9px;
 
   white-space: nowrap;
+
   text-overflow: ellipsis;
 }
 
@@ -1340,11 +1375,11 @@
    ========================================================= */
 
 .project-list-view .project-card {
-  min-height: 86px;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  min-height: 86px;
 
   gap: 18px;
 }
@@ -1427,6 +1462,7 @@
 .empty-action {
   display: inline-flex;
   align-items: center;
+
   gap: 6px;
 
   margin-top: 14px;
@@ -1511,9 +1547,9 @@
 
 .form-group input,
 .form-group textarea {
-  box-sizing: border-box;
-
   display: block;
+
+  box-sizing: border-box;
 
   width: 100%;
 
@@ -1770,4 +1806,56 @@
   .projects-create-btn {
     transition: none;
   }
+}
+/* =========================================================
+   PROJECTS — BACK BUTTON / HEADER SPACING FIX
+   ========================================================= */
+
+.zyra-projects > .back-page-btn {
+  position: relative !important;
+
+  display: inline-flex !important;
+
+  width: fit-content !important;
+  max-width: fit-content !important;
+
+  height: auto !important;
+
+  margin: 0 0 38px 0 !important;
+  padding: 6px 10px !important;
+
+  flex: 0 0 auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+
+  float: none !important;
+  clear: none !important;
+
+  transform: none !important;
+
+  box-sizing: border-box !important;
+
+  align-self: flex-start !important;
+
+  z-index: 10 !important;
+}
+
+.zyra-projects > .projects-header {
+  position: relative !important;
+
+  display: flex !important;
+
+  width: 100% !important;
+
+  margin-top: 0 !important;
+  margin-bottom: 19px !important;
+  padding: 0 !important;
+
+  flex: 0 0 auto !important;
+
+  clear: none !important;
+
+  transform: none !important;
+
+  z-index: 5 !important;
 }

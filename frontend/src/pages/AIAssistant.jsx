@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Send, Mic, Trash2 } from "lucide-react";
+import { Sparkles, Send, Mic, Trash2, Pencil, X } from "lucide-react";
 import "../styles/ai-assistant.css";
 
 const quickActions = [
@@ -13,6 +13,9 @@ function AIAssistant() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [isThinking, setIsThinking] = useState(false);
+
+  // Stores the ID of the user message currently being edited
+  const [editingMessageId, setEditingMessageId] = useState(null);
 
   const generateLocalResponse = (input) => {
     const text = input.toLowerCase();
@@ -48,6 +51,10 @@ function AIAssistant() {
     return "I'm your ZYRA AI Assistant. I can help you understand your projects, tasks, teams, and workspace activity. Try asking me something specific.";
   };
 
+  // =========================================================
+  // NORMAL MESSAGE SEND
+  // =========================================================
+
   const handleSend = (message = question) => {
     const trimmedMessage = message.trim();
 
@@ -62,6 +69,7 @@ function AIAssistant() {
     };
 
     setMessages((previous) => [...previous, userMessage]);
+
     setQuestion("");
     setIsThinking(true);
 
@@ -78,26 +86,132 @@ function AIAssistant() {
     }, 900);
   };
 
+  // =========================================================
+  // KEYBOARD HANDLING
+  // =========================================================
+
   const handleKeyDown = (event) => {
+    // Escape cancels editing
+    if (event.key === "Escape" && editingMessageId !== null) {
+      event.preventDefault();
+      handleCancelEdit();
+      return;
+    }
+
+    // Enter sends / saves
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      handleSend();
+
+      if (editingMessageId !== null) {
+        handleSaveEdit(editingMessageId);
+      } else {
+        handleSend();
+      }
     }
   };
+
+  // =========================================================
+  // QUICK ACTIONS
+  // =========================================================
 
   const handleQuickAction = (action) => {
     handleSend(action);
   };
 
+  // =========================================================
+  // CLEAR CONVERSATION
+  // =========================================================
+
   const handleClearConversation = () => {
     setMessages([]);
     setQuestion("");
     setIsThinking(false);
+    setEditingMessageId(null);
+  };
+
+  // =========================================================
+  // START EDITING
+  // =========================================================
+
+  const handleStartEdit = (message) => {
+    if (isThinking) {
+      return;
+    }
+
+    setEditingMessageId(message.id);
+    setQuestion(message.content);
+  };
+
+  // =========================================================
+  // CANCEL EDITING
+  // =========================================================
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setQuestion("");
+  };
+
+  // =========================================================
+  // SAVE EDITED MESSAGE
+  // =========================================================
+
+  const handleSaveEdit = (messageId) => {
+    const trimmedText = question.trim();
+
+    if (!trimmedText || isThinking) {
+      return;
+    }
+
+    const messageIndex = messages.findIndex(
+      (message) => message.id === messageId,
+    );
+
+    if (messageIndex === -1) {
+      return;
+    }
+
+    /*
+     * Keep everything before the edited user message.
+     * The edited message becomes the last user message.
+     *
+     * This also removes the old assistant response that
+     * belonged to the previous version of the message.
+     */
+    const updatedMessages = messages.slice(0, messageIndex);
+
+    const editedUserMessage = {
+      ...messages[messageIndex],
+      content: trimmedText,
+    };
+
+    updatedMessages.push(editedUserMessage);
+
+    setMessages(updatedMessages);
+
+    setEditingMessageId(null);
+    setQuestion("");
+    setIsThinking(true);
+
+    // Generate a fresh response for the edited message
+    setTimeout(() => {
+      const assistantMessage = {
+        id: Date.now(),
+        role: "assistant",
+        content: generateLocalResponse(trimmedText),
+      };
+
+      setMessages((previous) => [...previous, assistantMessage]);
+
+      setIsThinking(false);
+    }, 900);
   };
 
   return (
     <div className="zyra-ai-page">
-      {/* Page Header */}
+      {/* =====================================================
+          PAGE HEADER
+          ===================================================== */}
+
       <div className="ai-page-header">
         <div className="ai-page-title">
           <div className="ai-page-title-icon">
@@ -116,9 +230,15 @@ function AIAssistant() {
         </div>
       </div>
 
-      {/* Main Chat */}
+      {/* =====================================================
+          MAIN CHAT
+          ===================================================== */}
+
       <div className="ai-chat-container">
-        {/* Chat Header */}
+        {/* ===================================================
+            CHAT HEADER
+            =================================================== */}
+
         <div className="ai-chat-header">
           <div className="ai-chat-header-left">
             <div className="ai-chat-avatar">
@@ -137,7 +257,7 @@ function AIAssistant() {
               type="button"
               className="ai-clear-button"
               onClick={handleClearConversation}
-              disabled={isThinking}
+              disabled={isThinking || editingMessageId !== null}
             >
               <Trash2 size={15} />
               <span>Clear conversation</span>
@@ -145,7 +265,10 @@ function AIAssistant() {
           )}
         </div>
 
-        {/* Messages */}
+        {/* ===================================================
+            MESSAGES
+            =================================================== */}
+
         <div className="ai-chat-messages">
           {messages.length === 0 ? (
             <div className="ai-welcome">
@@ -167,6 +290,7 @@ function AIAssistant() {
                     type="button"
                     className="ai-quick-action"
                     onClick={() => handleQuickAction(action)}
+                    disabled={isThinking}
                   >
                     {action}
                   </button>
@@ -178,9 +302,26 @@ function AIAssistant() {
               {messages.map((message) => (
                 <div key={message.id} className={`ai-message ${message.role}`}>
                   <div className="ai-message-bubble">{message.content}</div>
+
+                  {/* Edit button only for user messages */}
+                  {message.role === "user" && (
+                    <button
+                      type="button"
+                      className={`ai-message-edit-button ${
+                        editingMessageId === message.id ? "active" : ""
+                      }`}
+                      onClick={() => handleStartEdit(message)}
+                      disabled={isThinking}
+                      aria-label="Edit message"
+                      title="Edit message"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
                 </div>
               ))}
 
+              {/* Thinking indicator */}
               {isThinking && (
                 <div className="ai-message assistant">
                   <div className="ai-thinking">
@@ -194,15 +335,40 @@ function AIAssistant() {
           )}
         </div>
 
-        {/* Composer */}
+        {/* ===================================================
+            MAIN COMPOSER
+            =================================================== */}
+
         <div className="ai-chat-composer">
-          <div className="ai-composer-box">
+          <div
+            className={`ai-composer-box ${
+              editingMessageId !== null ? "editing" : ""
+            }`}
+          >
+            {/* Cancel edit button */}
+            {editingMessageId !== null && (
+              <button
+                type="button"
+                className="ai-composer-cancel-edit"
+                onClick={handleCancelEdit}
+                disabled={isThinking}
+                aria-label="Cancel editing"
+                title="Cancel editing"
+              >
+                <X size={17} />
+              </button>
+            )}
+
             <input
               type="text"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask ZYRA anything..."
+              placeholder={
+                editingMessageId !== null
+                  ? "Edit your message..."
+                  : "Ask ZYRA anything..."
+              }
               disabled={isThinking}
             />
 
@@ -210,7 +376,7 @@ function AIAssistant() {
               type="button"
               className="ai-composer-button"
               aria-label="Voice input"
-              disabled={isThinking}
+              disabled={isThinking || editingMessageId !== null}
             >
               <Mic size={18} />
             </button>
@@ -218,8 +384,18 @@ function AIAssistant() {
             <button
               type="button"
               className="ai-composer-button ai-send-button"
-              aria-label="Send message"
-              onClick={() => handleSend()}
+              aria-label={
+                editingMessageId !== null
+                  ? "Save edited message"
+                  : "Send message"
+              }
+              onClick={() => {
+                if (editingMessageId !== null) {
+                  handleSaveEdit(editingMessageId);
+                } else {
+                  handleSend();
+                }
+              }}
               disabled={!question.trim() || isThinking}
             >
               <Send size={17} />
@@ -227,7 +403,11 @@ function AIAssistant() {
           </div>
 
           <div className="ai-composer-footer">
-            <span className="ai-composer-hint">Press Enter to send</span>
+            <span className="ai-composer-hint">
+              {editingMessageId !== null
+                ? "Press Enter to save • Esc to cancel"
+                : "Press Enter to send"}
+            </span>
 
             <span className="ai-composer-hint">ZYRA AI Assistant</span>
           </div>

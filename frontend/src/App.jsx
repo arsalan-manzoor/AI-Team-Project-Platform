@@ -19,6 +19,7 @@ import TaskDetails from "./pages/TaskDetails";
 import Profile from "./pages/Profile";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import FileViewer from "./pages/FileViewer";
 
 function App() {
   return (
@@ -49,6 +50,8 @@ function App() {
               path="/projects/:projectId/tasks"
               element={<ProjectTasks />}
             />
+            {/* File Viewer */}
+            <Route path="/projects/:projectId/file" element={<FileViewer />} />
 
             {/* Task Details */}
             <Route

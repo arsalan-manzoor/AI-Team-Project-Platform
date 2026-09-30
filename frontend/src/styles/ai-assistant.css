@@ -886,3 +886,90 @@ body {
     display: none;
   }
 }
+/* =========================================================
+   EDIT MESSAGE FEATURE
+   ========================================================= */
+
+.ai-message.user {
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Edit button — always visible under user message */
+.ai-message-edit-button {
+  width: 28px;
+  height: 26px;
+
+  margin-top: 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 7px;
+
+  background: transparent;
+  color: #64748b;
+
+  cursor: pointer;
+
+  opacity: 1;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.ai-message-edit-button:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+
+.ai-message-edit-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   MAIN COMPOSER WHILE EDITING
+   ========================================================= */
+
+.ai-composer-box.editing {
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.07);
+}
+
+/* =========================================================
+   CANCEL EDIT BUTTON
+   ========================================================= */
+
+.ai-composer-cancel-edit {
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 9px;
+
+  background: transparent;
+  color: #64748b;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.ai-composer-cancel-edit:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+}

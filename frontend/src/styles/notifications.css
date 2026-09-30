@@ -498,7 +498,8 @@
 }
 
 .notification-filter,
-.notifications-mark-all {
+.notifications-mark-all,
+.notifications-delete-all {
   border: 1px solid rgba(113, 142, 166, 0.22);
   border-radius: 6px;
 
@@ -518,7 +519,8 @@
     color 0.2s ease,
     border-color 0.2s ease,
     background 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .notification-filter:hover {
@@ -560,6 +562,44 @@
 }
 
 .notifications-mark-all:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   DELETE ALL BUTTON
+   ========================================================= */
+
+.notifications-delete-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  margin-left: 2px;
+
+  color: #f5a1a1;
+
+  border-color: rgba(248, 113, 113, 0.25);
+
+  background: rgba(90, 31, 38, 0.34);
+}
+
+.notifications-delete-all:hover:not(:disabled) {
+  color: #ffd0d0;
+
+  border-color: rgba(248, 113, 113, 0.55);
+
+  background: rgba(120, 35, 43, 0.48);
+
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.1);
+}
+
+.notifications-delete-all:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.notifications-delete-all:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -798,11 +838,92 @@
   width: 5px;
   height: 5px;
 
+  flex: 0 0 auto;
+
   border-radius: 50%;
 
   background: #2fdfff;
 
   box-shadow: 0 0 8px rgba(47, 223, 255, 0.9);
+}
+
+/* =========================================================
+   INDIVIDUAL DELETE BUTTON
+   ========================================================= */
+
+.notification-delete-action {
+  width: 26px;
+  height: 26px;
+
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 6px;
+
+  background: rgba(70, 28, 34, 0.28);
+
+  color: #a8787d;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.notification-delete-action:hover:not(:disabled) {
+  color: #ff9c9c;
+
+  border-color: rgba(248, 113, 113, 0.5);
+
+  background: rgba(110, 35, 43, 0.48);
+
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.1);
+
+  transform: translateY(-1px);
+}
+
+.notification-delete-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.notification-delete-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.notification-delete-action:focus-visible,
+.notifications-delete-all:focus-visible {
+  outline: 1px solid rgba(248, 113, 113, 0.7);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   DELETING LABEL
+   ========================================================= */
+
+.notification-deleting-label {
+  display: inline-flex;
+  align-items: center;
+
+  margin-top: 7px;
+
+  color: #f19a9a;
+
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+
+  animation: notificationDeletingPulse 1.2s ease-in-out infinite;
 }
 
 .notification-card-content h3 {
@@ -825,6 +946,7 @@
 
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 
   overflow: hidden;
@@ -1224,6 +1346,17 @@
   }
 }
 
+@keyframes notificationDeletingPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */
@@ -1324,9 +1457,15 @@
   }
 
   .notification-filter,
-  .notifications-mark-all {
+  .notifications-mark-all,
+  .notifications-delete-all {
     font-size: 8px;
     padding: 5px 6px;
+  }
+
+  .notification-delete-action {
+    width: 24px;
+    height: 24px;
   }
 }
 
@@ -1340,12 +1479,15 @@
   .notifications-live-dot,
   .section-live-dot,
   .workspace-pill-dot,
-  .notification-item {
+  .notification-item,
+  .notification-deleting-label {
     animation: none;
   }
 
   .notification-summary-card,
-  .notification-card {
+  .notification-card,
+  .notification-delete-action,
+  .notifications-delete-all {
     transition: none;
   }
 }

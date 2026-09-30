@@ -13,10 +13,15 @@ import {
   Pencil,
   Trash2,
   Save,
+  Settings,
+  UserPlus,
+  TrendingUp,
+  AlertTriangle,
+  MoreHorizontal,
 } from "lucide-react";
 
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getProjectById } from "../services/ProjectService";
 import { getProjectTasks } from "../services/taskService";
@@ -38,6 +43,10 @@ import {
 
 import { getCurrentUser } from "../services/authService";
 
+import "../styles/project-overview.css";
+
+const RESOURCE_BASE_URL = "http://localhost:5000";
+
 function ProjectOverview() {
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -52,7 +61,10 @@ function ProjectOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Milestone creation
+  /* =========================================================
+     MILESTONE STATE
+     ========================================================= */
+
   const [showMilestoneForm, setShowMilestoneForm] = useState(false);
   const [creatingMilestone, setCreatingMilestone] = useState(false);
 
@@ -61,7 +73,6 @@ function ProjectOverview() {
   const [milestoneDeadline, setMilestoneDeadline] = useState("");
   const [milestoneStatus, setMilestoneStatus] = useState("pending");
 
-  // Milestone editing
   const [editingMilestoneId, setEditingMilestoneId] = useState(null);
   const [updatingMilestoneId, setUpdatingMilestoneId] = useState(null);
 
@@ -70,21 +81,28 @@ function ProjectOverview() {
   const [editMilestoneDeadline, setEditMilestoneDeadline] = useState("");
   const [editMilestoneStatus, setEditMilestoneStatus] = useState("pending");
 
-  // Resource creation
+  /* =========================================================
+     RESOURCE STATE
+     ========================================================= */
+
   const [showResourceForm, setShowResourceForm] = useState(false);
   const [creatingResource, setCreatingResource] = useState(false);
 
   const [resourceName, setResourceName] = useState("");
   const [resourceDescription, setResourceDescription] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
+  const [resourceFile, setResourceFile] = useState(null);
 
-  // Resource editing
   const [editingResourceId, setEditingResourceId] = useState(null);
   const [updatingResourceId, setUpdatingResourceId] = useState(null);
 
   const [editResourceName, setEditResourceName] = useState("");
   const [editResourceDescription, setEditResourceDescription] = useState("");
   const [editResourceUrl, setEditResourceUrl] = useState("");
+
+  /* =========================================================
+     LOAD PROJECT
+     ========================================================= */
 
   useEffect(() => {
     async function loadProjectOverview() {
@@ -93,7 +111,6 @@ function ProjectOverview() {
         setError("");
 
         const projectData = await getProjectById(projectId);
-
         setProject(projectData);
 
         const loadedTasks = await getProjectTasks(projectId);
@@ -125,14 +142,13 @@ function ProjectOverview() {
             setTeamMembers(Array.isArray(members) ? members : []);
           } catch (teamError) {
             console.error("Project team loading error:", teamError);
-
             setTeamMembers([]);
           }
         }
-      } catch (error) {
-        console.error("Project overview loading error:", error);
+      } catch (loadError) {
+        console.error("Project overview loading error:", loadError);
 
-        setError(error.message || "Failed to load project information.");
+        setError(loadError.message || "Failed to load project information.");
       } finally {
         setLoading(false);
       }
@@ -143,20 +159,221 @@ function ProjectOverview() {
     }
   }, [projectId]);
 
-  const completedTasks = tasks.filter(
-    (task) =>
-      task.status === "completed" ||
-      task.status === "complete" ||
-      task.status === "done",
-  ).length;
+  /* =========================================================
+     TASK CALCULATIONS
+     ========================================================= */
 
-  const pendingTasks = tasks.filter(
-    (task) => task.status === "pending" || task.status === "todo",
-  ).length;
+  const completedTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) =>
+          task.status === "completed" ||
+          task.status === "complete" ||
+          task.status === "done",
+      ),
+    [tasks],
+  );
 
-  // -----------------------------
-  // CREATE MILESTONE
-  // -----------------------------
+  const activeTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) =>
+          task.status !== "completed" &&
+          task.status !== "complete" &&
+          task.status !== "done",
+      ),
+    [tasks],
+  );
+
+  const progressPercentage =
+    tasks.length > 0
+      ? Math.round((completedTasks.length / tasks.length) * 100)
+      : 0;
+
+  const overdueTasks = useMemo(() => {
+    const today = new Date();
+
+    return tasks.filter((task) => {
+      if (!task.deadline) {
+        return false;
+      }
+
+      const deadline = new Date(task.deadline);
+
+      return (
+        deadline < today &&
+        task.status !== "completed" &&
+        task.status !== "complete" &&
+        task.status !== "done"
+      );
+    });
+  }, [tasks]);
+
+  /* =========================================================
+     PROJECT DATA
+     ========================================================= */
+
+  const projectStatus = project?.status || project?.project_status || "Active";
+
+  const projectDeadline =
+    project?.deadline || project?.due_date || project?.end_date || null;
+
+  const projectHealth = project?.health || project?.health_status || null;
+
+  const projectBudget = project?.budget || project?.budget_percentage || null;
+
+  const projectRisk = project?.risk || project?.risk_level || null;
+
+  const formattedDeadline = projectDeadline
+    ? new Date(projectDeadline).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+  /* =========================================================
+     MILESTONE HELPERS
+     ========================================================= */
+
+  function getMilestoneStatus(status) {
+    const normalized = String(status || "").toLowerCase();
+
+    if (
+      normalized === "completed" ||
+      normalized === "complete" ||
+      normalized === "done"
+    ) {
+      return "done";
+    }
+
+    if (
+      normalized === "in_progress" ||
+      normalized === "in-progress" ||
+      normalized === "active"
+    ) {
+      return "active";
+    }
+
+    return "pending";
+  }
+
+  function getMilestoneStatusLabel(status) {
+    const normalized = String(status || "").toLowerCase();
+
+    if (
+      normalized === "completed" ||
+      normalized === "complete" ||
+      normalized === "done"
+    ) {
+      return "Done";
+    }
+
+    if (normalized === "in_progress" || normalized === "in-progress") {
+      return "In Progress";
+    }
+
+    return "Pending";
+  }
+
+  /* =========================================================
+     TASK HELPERS
+     ========================================================= */
+
+  function getTaskStatusLabel(status) {
+    const normalized = String(status || "").toLowerCase();
+
+    if (
+      normalized === "completed" ||
+      normalized === "complete" ||
+      normalized === "done"
+    ) {
+      return "Done";
+    }
+
+    if (normalized === "in_progress" || normalized === "in-progress") {
+      return "In Progress";
+    }
+
+    if (normalized === "review") {
+      return "Review";
+    }
+
+    return "Pending";
+  }
+
+  function getTaskStatusClass(status) {
+    const normalized = String(status || "").toLowerCase();
+
+    if (
+      normalized === "completed" ||
+      normalized === "complete" ||
+      normalized === "done"
+    ) {
+      return "done";
+    }
+
+    if (normalized === "in_progress" || normalized === "in-progress") {
+      return "progress";
+    }
+
+    if (normalized === "review") {
+      return "review";
+    }
+
+    return "pending";
+  }
+
+  function formatTaskDeadline(deadline) {
+    if (!deadline) {
+      return "—";
+    }
+
+    const date = new Date(deadline);
+
+    if (Number.isNaN(date.getTime())) {
+      return "—";
+    }
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  function getMemberName(member) {
+    return (
+      member?.name ||
+      member?.full_name ||
+      member?.username ||
+      member?.email ||
+      "Member"
+    );
+  }
+
+  function getMemberInitials(member) {
+    const name = getMemberName(member);
+    const parts = name.trim().split(/\s+/);
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function getTaskAssignee(task) {
+    return (
+      task?.assigned_to_name ||
+      task?.assignee_name ||
+      task?.assigned_to_username ||
+      task?.assignee ||
+      "Unassigned"
+    );
+  }
+
+  /* =========================================================
+     CREATE MILESTONE
+     ========================================================= */
 
   async function handleCreateMilestone(event) {
     event.preventDefault();
@@ -181,39 +398,37 @@ function ProjectOverview() {
         status: milestoneStatus,
       });
 
-      setMilestones((currentMilestones) => [
-        ...currentMilestones,
-        newMilestone,
-      ]);
+      setMilestones((current) => [...current, newMilestone]);
 
       setMilestoneName("");
       setMilestoneDescription("");
       setMilestoneDeadline("");
       setMilestoneStatus("pending");
       setShowMilestoneForm(false);
-    } catch (error) {
-      console.error("Milestone creation error:", error);
+    } catch (createError) {
+      console.error("Milestone creation error:", createError);
 
-      setError(error.message || "Failed to create milestone.");
+      setError(createError.message || "Failed to create milestone.");
     } finally {
       setCreatingMilestone(false);
     }
   }
 
-  // -----------------------------
-  // EDIT MILESTONE
-  // -----------------------------
+  /* =========================================================
+     EDIT MILESTONE
+     ========================================================= */
 
   function startEditingMilestone(milestone) {
     setError("");
 
     setEditingMilestoneId(milestone.id);
-
     setEditMilestoneName(milestone.name || "");
     setEditMilestoneDescription(milestone.description || "");
+
     setEditMilestoneDeadline(
       milestone.deadline ? String(milestone.deadline).slice(0, 10) : "",
     );
+
     setEditMilestoneStatus(milestone.status || "pending");
   }
 
@@ -247,25 +462,25 @@ function ProjectOverview() {
         status: editMilestoneStatus,
       });
 
-      setMilestones((currentMilestones) =>
-        currentMilestones.map((milestone) =>
+      setMilestones((current) =>
+        current.map((milestone) =>
           milestone.id === milestoneId ? updatedMilestone : milestone,
         ),
       );
 
       cancelEditingMilestone();
-    } catch (error) {
-      console.error("Milestone update error:", error);
+    } catch (updateError) {
+      console.error("Milestone update error:", updateError);
 
-      setError(error.message || "Failed to update milestone.");
+      setError(updateError.message || "Failed to update milestone.");
     } finally {
       setUpdatingMilestoneId(null);
     }
   }
 
-  // -----------------------------
-  // DELETE MILESTONE
-  // -----------------------------
+  /* =========================================================
+     DELETE MILESTONE
+     ========================================================= */
 
   async function handleDeleteMilestone(milestoneId) {
     const confirmed = window.confirm(
@@ -282,21 +497,21 @@ function ProjectOverview() {
 
       await deleteMilestone(milestoneId);
 
-      setMilestones((currentMilestones) =>
-        currentMilestones.filter((milestone) => milestone.id !== milestoneId),
+      setMilestones((current) =>
+        current.filter((milestone) => milestone.id !== milestoneId),
       );
-    } catch (error) {
-      console.error("Milestone deletion error:", error);
+    } catch (deleteError) {
+      console.error("Milestone deletion error:", deleteError);
 
-      setError(error.message || "Failed to delete milestone.");
+      setError(deleteError.message || "Failed to delete milestone.");
     } finally {
       setUpdatingMilestoneId(null);
     }
   }
 
-  // -----------------------------
-  // CREATE RESOURCE
-  // -----------------------------
+  /* =========================================================
+     CREATE RESOURCE
+     ========================================================= */
 
   async function handleCreateResource(event) {
     event.preventDefault();
@@ -310,8 +525,8 @@ function ProjectOverview() {
       return;
     }
 
-    if (!url) {
-      setError("Please enter a resource URL.");
+    if (!url && !resourceFile) {
+      setError("Please provide a resource URL or choose a file.");
       return;
     }
 
@@ -323,27 +538,29 @@ function ProjectOverview() {
         name,
         description,
         url,
+        file: resourceFile,
         projectId: Number(projectId),
       });
 
-      setResources((currentResources) => [...currentResources, newResource]);
+      setResources((current) => [...current, newResource]);
 
       setResourceName("");
       setResourceDescription("");
       setResourceUrl("");
+      setResourceFile(null);
       setShowResourceForm(false);
-    } catch (error) {
-      console.error("Resource creation error:", error);
+    } catch (createError) {
+      console.error("Resource creation error:", createError);
 
-      setError(error.message || "Failed to create resource.");
+      setError(createError.message || "Failed to create resource.");
     } finally {
       setCreatingResource(false);
     }
   }
 
-  // -----------------------------
-  // RESOURCE OWNERSHIP
-  // -----------------------------
+  /* =========================================================
+     RESOURCE PERMISSION
+     ========================================================= */
 
   function canEditResource(resource) {
     if (!currentUser?.id || !resource?.uploaded_by) {
@@ -353,15 +570,14 @@ function ProjectOverview() {
     return Number(resource.uploaded_by) === Number(currentUser.id);
   }
 
-  // -----------------------------
-  // EDIT RESOURCE
-  // -----------------------------
+  /* =========================================================
+     EDIT RESOURCE
+     ========================================================= */
 
   function startEditingResource(resource) {
     setError("");
 
     setEditingResourceId(resource.id);
-
     setEditResourceName(resource.name || "");
     setEditResourceDescription(resource.description || "");
     setEditResourceUrl(resource.url || "");
@@ -401,25 +617,25 @@ function ProjectOverview() {
         url,
       });
 
-      setResources((currentResources) =>
-        currentResources.map((resource) =>
+      setResources((current) =>
+        current.map((resource) =>
           resource.id === resourceId ? updatedResource : resource,
         ),
       );
 
       cancelEditingResource();
-    } catch (error) {
-      console.error("Resource update error:", error);
+    } catch (updateError) {
+      console.error("Resource update error:", updateError);
 
-      setError(error.message || "Failed to update resource.");
+      setError(updateError.message || "Failed to update resource.");
     } finally {
       setUpdatingResourceId(null);
     }
   }
 
-  // -----------------------------
-  // DELETE RESOURCE
-  // -----------------------------
+  /* =========================================================
+     DELETE RESOURCE
+     ========================================================= */
 
   async function handleDeleteResource(resourceId) {
     const confirmed = window.confirm(
@@ -436,714 +652,955 @@ function ProjectOverview() {
 
       await deleteResource(resourceId);
 
-      setResources((currentResources) =>
-        currentResources.filter((resource) => resource.id !== resourceId),
+      setResources((current) =>
+        current.filter((resource) => resource.id !== resourceId),
       );
-    } catch (error) {
-      console.error("Resource deletion error:", error);
+    } catch (deleteError) {
+      console.error("Resource deletion error:", deleteError);
 
-      setError(error.message || "Failed to delete resource.");
+      setError(deleteError.message || "Failed to delete resource.");
     } finally {
       setUpdatingResourceId(null);
     }
   }
 
+  /* =========================================================
+     RENDER
+     ========================================================= */
+
   return (
     <div className="zyra-project-overview">
-      {/* Back to Projects */}
-      <button
-        type="button"
-        className="back-page-btn"
-        onClick={() => navigate("/projects")}
-      >
-        <ArrowLeft size={16} />
-        Back to Projects
-      </button>
+      {/* TOPBAR */}
 
-      {/* Error */}
-      {error && <div className="dashboard-error">{error}</div>}
+      <div className="project-page-topbar">
+        <button
+          type="button"
+          className="project-back-button"
+          onClick={() => navigate("/projects")}
+        >
+          <ArrowLeft size={16} />
+          Projects
+        </button>
 
-      {/* Project Header */}
-      <div className="project-overview-header">
-        <div className="project-overview-title">
-          <div className="project-overview-icon">
-            <FolderKanban size={22} />
+        <div className="project-topbar-title">
+          <FolderKanban size={17} />
+          <span>Project Workspace</span>
+        </div>
+      </div>
+
+      {error && <div className="project-overview-error">{error}</div>}
+
+      {/* HERO */}
+
+      <section className="project-hero-card">
+        <div className="project-hero-content">
+          <div className="project-hero-title-row">
+            <div>
+              <div className="project-hero-title-line">
+                <h1>
+                  {loading
+                    ? "Loading Project..."
+                    : project?.name || "Project Overview"}
+                </h1>
+
+                <span className="project-status-badge">
+                  {String(projectStatus).toUpperCase()}
+                  {tasks.length > 0 ? ` (${progressPercentage}%)` : ""}
+                </span>
+              </div>
+
+              <p>
+                {project?.description ||
+                  "Manage your project, tasks, milestones, team and resources from one workspace."}
+              </p>
+            </div>
           </div>
+        </div>
 
+        <div className="project-hero-actions">
+          <button
+            type="button"
+            className="project-action primary"
+            onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
+          >
+            <Plus size={16} />
+            Create Task
+          </button>
+
+          <button
+            type="button"
+            className="project-action secondary"
+            onClick={() => {
+              if (project?.team_id) {
+                navigate(`/teams/${project.team_id}`);
+              }
+            }}
+            disabled={!project?.team_id}
+          >
+            <UserPlus size={16} />
+            Invite Team
+          </button>
+
+          <button
+            type="button"
+            className="project-action secondary"
+            onClick={() => navigate(`/projects/${projectId}/tasks`)}
+          >
+            <Pencil size={15} />
+            Edit Project
+          </button>
+
+          <button
+            type="button"
+            className="project-action secondary disabled-action"
+            disabled
+            title="Project settings will be available later."
+          >
+            <Settings size={15} />
+            Project Settings
+          </button>
+        </div>
+      </section>
+
+      {/* MAIN GRID */}
+
+      <div className="project-dashboard-grid">
+        {/* MAIN COLUMN */}
+
+        <main className="project-main-column">
+          {/* SUMMARY */}
+
+          <section className="project-summary-grid">
+            <div className="project-progress-card">
+              <div
+                className="project-progress-ring"
+                style={{
+                  "--progress": `${progressPercentage * 3.6}deg`,
+                }}
+              >
+                <div className="project-progress-inner">
+                  <span>OVERALL PROGRESS</span>
+
+                  <strong>{loading ? "—" : `${progressPercentage}%`}</strong>
+
+                  <small>
+                    Completed: {completedTasks.length}/{tasks.length} Tasks
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <div className="project-metric-grid">
+              <div className="project-metric-card health">
+                <div className="metric-card-top">
+                  <span>Health:</span>
+                  <TrendingUp size={17} />
+                </div>
+
+                <strong>
+                  {projectHealth
+                    ? String(projectHealth).toUpperCase()
+                    : "ON TRACK"}
+                </strong>
+
+                <div className="metric-progress">
+                  <span
+                    style={{
+                      width: `${Math.max(progressPercentage, 10)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="project-metric-card budget">
+                <div className="metric-card-top">
+                  <span>Budget:</span>
+                  <FolderKanban size={16} />
+                </div>
+
+                <strong>
+                  {projectBudget !== null && projectBudget !== undefined
+                    ? `${projectBudget}%`
+                    : "—"}
+                </strong>
+
+                <div className="metric-progress">
+                  <span
+                    style={{
+                      width:
+                        projectBudget !== null && projectBudget !== undefined
+                          ? `${Math.min(Number(projectBudget) || 0, 100)}%`
+                          : "0%",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="project-metric-card risks">
+                <div className="metric-card-top">
+                  <span>Risks:</span>
+                  <AlertTriangle size={17} />
+                </div>
+
+                <strong>
+                  {projectRisk
+                    ? String(projectRisk).toUpperCase()
+                    : overdueTasks.length > 0
+                      ? `${overdueTasks.length} OVERDUE`
+                      : "LOW"}
+                </strong>
+              </div>
+
+              <div className="project-metric-card deadline">
+                <div className="metric-card-top">
+                  <span>Deadline:</span>
+                  <CalendarDays size={17} />
+                </div>
+
+                <strong>{formattedDeadline}</strong>
+              </div>
+            </div>
+          </section>
+
+          {/* ACTIVE TASKS */}
+
+          <section className="project-panel active-tasks-panel">
+            <div className="project-panel-header">
+              <div>
+                <h2>ACTIVE TASKS ({activeTasks.length})</h2>
+              </div>
+
+              <button
+                type="button"
+                className="sort-tasks-button"
+                onClick={() => navigate(`/projects/${projectId}/tasks`)}
+              >
+                View all
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {activeTasks.length === 0 ? (
+              <div className="project-empty-state compact">
+                <CheckSquare size={24} />
+                <span>No active tasks</span>
+              </div>
+            ) : (
+              <div className="active-task-list">
+                {activeTasks.slice(0, 6).map((task) => (
+                  <button
+                    type="button"
+                    className="active-task-row"
+                    key={task.id}
+                    onClick={() =>
+                      navigate(`/projects/${projectId}/tasks/${task.id}`)
+                    }
+                  >
+                    <div className="task-row-check">
+                      <span />
+                    </div>
+
+                    <div className="task-row-name">
+                      {task.title || task.name || "Untitled Task"}
+                    </div>
+
+                    <div className="task-row-assignee">
+                      <div className="task-mini-avatar">
+                        {getMemberInitials({
+                          name: getTaskAssignee(task),
+                        })}
+                      </div>
+
+                      <span>{getTaskAssignee(task)}</span>
+                    </div>
+
+                    <span
+                      className={`task-status-pill ${getTaskStatusClass(
+                        task.status,
+                      )}`}
+                    >
+                      {getTaskStatusLabel(task.status)}
+                    </span>
+
+                    <span className="task-row-deadline">
+                      {formatTaskDeadline(task.deadline || task.due_date)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+
+        {/* SIDE COLUMN */}
+
+        <aside className="project-side-column">
+          {/* TEAM — TOP */}
+
+          <section className="project-panel team-panel">
+            <div className="project-panel-header">
+              <h2>TEAM MEMBERS ({teamMembers.length})</h2>
+
+              <button
+                type="button"
+                className="panel-icon-button"
+                onClick={() => {
+                  if (project?.team_id) {
+                    navigate(`/teams/${project.team_id}`);
+                  }
+                }}
+                disabled={!project?.team_id}
+              >
+                <MoreHorizontal size={17} />
+              </button>
+            </div>
+
+            {teamMembers.length === 0 ? (
+              <div className="project-empty-state compact">
+                <Users size={22} />
+                <span>No team members</span>
+              </div>
+            ) : (
+              <div className="team-member-list">
+                {teamMembers.slice(0, 6).map((member) => (
+                  <div
+                    className="team-member-item"
+                    key={member.id || member.user_id || getMemberName(member)}
+                  >
+                    <div className="team-member-avatar">
+                      {getMemberInitials(member)}
+                    </div>
+
+                    <div className="team-member-info">
+                      <strong>{getMemberName(member)}</strong>
+
+                      {member.role && <span>{member.role}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {teamMembers.length > 6 && (
+              <button
+                type="button"
+                className="team-more-button"
+                onClick={() => navigate(`/teams/${project?.team_id}`)}
+              >
+                +{teamMembers.length - 6} more
+              </button>
+            )}
+          </section>
+
+          {/* ACTIVITY — SECOND */}
+
+          <section className="project-panel activity-panel">
+            <div className="project-panel-header">
+              <h2>RECENT ACTIVITY</h2>
+
+              <button type="button" className="panel-icon-button" disabled>
+                <MoreHorizontal size={17} />
+              </button>
+            </div>
+
+            {tasks.length === 0 ? (
+              <div className="project-empty-state compact">
+                <Clock3 size={22} />
+                <span>No recent activity</span>
+              </div>
+            ) : (
+              <div className="activity-list">
+                {tasks.slice(0, 4).map((task, index) => {
+                  const taskName = task.title || task.name || "Task";
+                  const status = getTaskStatusLabel(task.status);
+
+                  return (
+                    <div
+                      className="activity-item"
+                      key={task.id || `${taskName}-${index}`}
+                    >
+                      <span className={`activity-dot activity-${index % 3}`} />
+
+                      <div className="activity-content">
+                        <p>
+                          <strong>{getTaskAssignee(task)}</strong> — {taskName}
+                        </p>
+
+                        <span>{status}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
+
+      {/* =====================================================
+          PROJECT MANAGEMENT
+          ===================================================== */}
+
+      <section className="project-management-panel">
+        <div className="project-management-header">
           <div>
-            <p className="project-overview-eyebrow">PROJECT WORKSPACE</p>
+            <span className="management-eyebrow">PROJECT MANAGEMENT</span>
 
-            <h2>
-              {loading
-                ? "Loading Project..."
-                : project?.name || "Project Overview"}
-            </h2>
+            <h2>Milestones & Resources</h2>
 
             <p>
-              {project?.description ||
-                "View your project's progress, tasks, and team information."}
+              Manage the detailed project information without leaving the
+              workspace.
             </p>
           </div>
         </div>
 
-        {/* View Project Tasks */}
-        <button
-          type="button"
-          className="project-overview-tasks-btn"
-          onClick={() => navigate(`/projects/${projectId}/tasks`)}
-        >
-          <CheckSquare size={16} />
-          View Project Tasks
-          <ArrowRight size={15} />
-        </button>
-      </div>
+        {/* ===================================================
+            RESOURCES
+            =================================================== */}
 
-      {/* Project Information */}
-      <section className="project-overview-panel">
-        <div className="project-overview-panel-header">
-          <div>
-            <h3>Project Information</h3>
-
-            <p>Basic information about this project.</p>
-          </div>
-        </div>
-
-        <div className="project-overview-info">
-          <div className="project-info-item">
-            <span>Project Name</span>
-
-            <strong>{loading ? "Loading..." : project?.name || "—"}</strong>
-          </div>
-
-          <div className="project-info-item">
-            <span>Status</span>
-
-            <strong>Active</strong>
-          </div>
-
-          <div className="project-info-item">
-            <span>Project ID</span>
-
-            <strong>{projectId}</strong>
-          </div>
-
-          <div className="project-info-item">
-            <span>Description</span>
-
-            <strong>
-              {project?.description || "No description provided."}
-            </strong>
-          </div>
-        </div>
-      </section>
-
-      {/* Project Statistics */}
-      <div className="project-overview-summary">
-        <div className="project-overview-stat-card">
-          <div className="project-overview-stat-icon">
-            <CheckSquare size={19} />
-          </div>
-
-          <div>
-            <span>Total Tasks</span>
-
-            <strong>{loading ? "..." : tasks.length}</strong>
-          </div>
-        </div>
-
-        <div className="project-overview-stat-card">
-          <div className="project-overview-stat-icon">
-            <CircleCheck size={19} />
-          </div>
-
-          <div>
-            <span>Completed</span>
-
-            <strong>{loading ? "..." : completedTasks}</strong>
-          </div>
-        </div>
-
-        <div className="project-overview-stat-card">
-          <div className="project-overview-stat-icon">
-            <Clock3 size={19} />
-          </div>
-
-          <div>
-            <span>Pending</span>
-
-            <strong>{loading ? "..." : pendingTasks}</strong>
-          </div>
-        </div>
-
-        <div className="project-overview-stat-card">
-          <div className="project-overview-stat-icon">
-            <Users size={19} />
-          </div>
-
-          <div>
-            <span>Team Members</span>
-
-            <strong>{loading ? "..." : teamMembers.length}</strong>
-          </div>
-        </div>
-      </div>
-
-      {/* Project Details */}
-      <section className="project-overview-panel">
-        <div className="project-overview-panel-header">
-          <div>
-            <h3>Project Details</h3>
-
-            <p>Current project information and timeline.</p>
-          </div>
-        </div>
-
-        <div className="project-details-grid">
-          <div className="project-detail-card">
-            <CalendarDays size={18} />
-
+        <div className="resources-management">
+          <div className="resource-management-header">
             <div>
-              <span>Timeline</span>
+              <span className="management-eyebrow">RESOURCES</span>
 
-              <strong>Active Project</strong>
-            </div>
-          </div>
-
-          <div className="project-detail-card">
-            <Users size={18} />
-
-            <div>
-              <span>Collaborators</span>
-
-              <strong>
-                {loading ? "..." : `${teamMembers.length} Members`}
-              </strong>
-            </div>
-          </div>
-
-          <div className="project-detail-card">
-            <FolderKanban size={18} />
-
-            <div>
-              <span>Workspace</span>
-
-              <strong>ZYRA Workspace</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Project Milestones */}
-      <section className="project-overview-panel">
-        <div className="project-overview-panel-header">
-          <div>
-            <h3>Project Milestones</h3>
-
-            <p>Important checkpoints and goals for this project.</p>
-          </div>
-
-          {!showMilestoneForm && (
-            <button
-              type="button"
-              className="project-overview-tasks-btn"
-              onClick={() => {
-                setShowMilestoneForm(true);
-                setError("");
-              }}
-            >
-              <Plus size={16} />
-              Add Milestone
-            </button>
-          )}
-        </div>
-
-        {/* Create Milestone Form */}
-        {showMilestoneForm && (
-          <form className="task-subtask-form" onSubmit={handleCreateMilestone}>
-            <div className="form-group">
-              <label>Milestone Name</label>
-
-              <input
-                type="text"
-                placeholder="Enter milestone name"
-                value={milestoneName}
-                onChange={(event) => setMilestoneName(event.target.value)}
-                disabled={creatingMilestone}
-                autoFocus
-              />
+              <h3>Project Resources</h3>
             </div>
 
-            <div className="form-group">
-              <label>Description</label>
-
-              <textarea
-                placeholder="Enter milestone description"
-                value={milestoneDescription}
-                onChange={(event) =>
-                  setMilestoneDescription(event.target.value)
-                }
-                disabled={creatingMilestone}
-                rows="3"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Deadline</label>
-
-              <input
-                type="date"
-                value={milestoneDeadline}
-                onChange={(event) => setMilestoneDeadline(event.target.value)}
-                disabled={creatingMilestone}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Status</label>
-
-              <select
-                value={milestoneStatus}
-                onChange={(event) => setMilestoneStatus(event.target.value)}
-                disabled={creatingMilestone}
-              >
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-
-            <div className="task-subtask-form-actions">
+            {!showResourceForm && (
               <button
                 type="button"
-                className="cancel-form-btn"
+                className="management-secondary-button"
                 onClick={() => {
-                  setShowMilestoneForm(false);
-                  setMilestoneName("");
-                  setMilestoneDescription("");
-                  setMilestoneDeadline("");
-                  setMilestoneStatus("pending");
+                  setShowResourceForm(true);
                   setError("");
                 }}
-                disabled={creatingMilestone}
-              >
-                <X size={15} />
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                className="submit-project-btn"
-                disabled={creatingMilestone || !milestoneName.trim()}
               >
                 <Plus size={15} />
-
-                {creatingMilestone ? "Creating..." : "Create Milestone"}
+                Add Resource
               </button>
-            </div>
-          </form>
-        )}
-
-        {/* Milestone List */}
-        {milestones.length === 0 ? (
-          <div className="project-details-empty">
-            <FolderKanban size={28} />
-
-            <h3>No milestones yet</h3>
-
-            <p>Create milestones to track important stages of your project.</p>
-          </div>
-        ) : (
-          <div className="project-details-grid">
-            {milestones.map((milestone) =>
-              editingMilestoneId === milestone.id ? (
-                <form
-                  className="project-detail-card"
-                  key={milestone.id}
-                  onSubmit={(event) =>
-                    handleUpdateMilestone(event, milestone.id)
-                  }
-                >
-                  <CircleCheck size={18} />
-
-                  <div>
-                    <div className="form-group">
-                      <label>Milestone Name</label>
-
-                      <input
-                        type="text"
-                        value={editMilestoneName}
-                        onChange={(event) =>
-                          setEditMilestoneName(event.target.value)
-                        }
-                        disabled={updatingMilestoneId === milestone.id}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Description</label>
-
-                      <textarea
-                        rows="3"
-                        value={editMilestoneDescription}
-                        onChange={(event) =>
-                          setEditMilestoneDescription(event.target.value)
-                        }
-                        disabled={updatingMilestoneId === milestone.id}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Deadline</label>
-
-                      <input
-                        type="date"
-                        value={editMilestoneDeadline}
-                        onChange={(event) =>
-                          setEditMilestoneDeadline(event.target.value)
-                        }
-                        disabled={updatingMilestoneId === milestone.id}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Status</label>
-
-                      <select
-                        value={editMilestoneStatus}
-                        onChange={(event) =>
-                          setEditMilestoneStatus(event.target.value)
-                        }
-                        disabled={updatingMilestoneId === milestone.id}
-                      >
-                        <option value="pending">Pending</option>
-
-                        <option value="in_progress">In Progress</option>
-
-                        <option value="completed">Completed</option>
-                      </select>
-                    </div>
-
-                    <div className="task-subtask-form-actions">
-                      <button
-                        type="button"
-                        className="cancel-form-btn"
-                        onClick={cancelEditingMilestone}
-                        disabled={updatingMilestoneId === milestone.id}
-                      >
-                        <X size={15} />
-                        Cancel
-                      </button>
-
-                      <button
-                        type="submit"
-                        className="submit-project-btn"
-                        disabled={
-                          updatingMilestoneId === milestone.id ||
-                          !editMilestoneName.trim()
-                        }
-                      >
-                        <Save size={15} />
-
-                        {updatingMilestoneId === milestone.id
-                          ? "Saving..."
-                          : "Save Changes"}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              ) : (
-                <div className="project-detail-card" key={milestone.id}>
-                  <CircleCheck size={18} />
-
-                  <div>
-                    <span>{milestone.name}</span>
-
-                    <strong>{milestone.status || "Pending"}</strong>
-
-                    {milestone.description && (
-                      <small>{milestone.description}</small>
-                    )}
-
-                    {milestone.deadline && (
-                      <small>
-                        Deadline: {String(milestone.deadline).slice(0, 10)}
-                      </small>
-                    )}
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "8px",
-                        marginTop: "10px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="cancel-form-btn"
-                        onClick={() => startEditingMilestone(milestone)}
-                        disabled={updatingMilestoneId === milestone.id}
-                      >
-                        <Pencil size={14} />
-                        Edit
-                      </button>
-
-                      <button
-                        type="button"
-                        className="cancel-form-btn"
-                        onClick={() => handleDeleteMilestone(milestone.id)}
-                        disabled={updatingMilestoneId === milestone.id}
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ),
             )}
           </div>
-        )}
-      </section>
 
-      {/* Project Resources */}
-      <section className="project-overview-panel">
-        <div className="project-overview-panel-header">
-          <div>
-            <h3>Project Resources</h3>
-
-            <p>Useful links and resources shared for this project.</p>
-          </div>
-
-          {!showResourceForm && (
-            <button
-              type="button"
-              className="project-overview-tasks-btn"
-              onClick={() => {
-                setShowResourceForm(true);
-                setError("");
-              }}
+          {showResourceForm && (
+            <form
+              className="project-management-form"
+              onSubmit={handleCreateResource}
             >
-              <Plus size={16} />
-              Add Resource
-            </button>
-          )}
-        </div>
+              <div className="management-form-grid">
+                <div className="form-group">
+                  <label>Resource Name</label>
 
-        {/* Create Resource Form */}
-        {showResourceForm && (
-          <form className="task-subtask-form" onSubmit={handleCreateResource}>
-            <div className="form-group">
-              <label>Resource Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter resource name"
+                    value={resourceName}
+                    onChange={(event) => setResourceName(event.target.value)}
+                    disabled={creatingResource}
+                  />
+                </div>
 
-              <input
-                type="text"
-                placeholder="Enter resource name"
-                value={resourceName}
-                onChange={(event) => setResourceName(event.target.value)}
-                disabled={creatingResource}
-                autoFocus
-              />
-            </div>
+                <div className="form-group">
+                  <label>Choose File</label>
 
-            <div className="form-group">
-              <label>Description</label>
+                  <input
+                    type="file"
+                    onChange={(event) => {
+                      const selectedFile = event.target.files?.[0] || null;
+                      setResourceFile(selectedFile);
+                    }}
+                    disabled={creatingResource}
+                  />
 
-              <textarea
-                placeholder="Enter resource description"
-                value={resourceDescription}
-                onChange={(event) => setResourceDescription(event.target.value)}
-                disabled={creatingResource}
-                rows="3"
-              />
-            </div>
+                  {resourceFile && <small>Selected: {resourceFile.name}</small>}
+                </div>
 
-            <div className="form-group">
-              <label>Resource URL</label>
+                <div className="form-group">
+                  <label>Resource URL</label>
 
-              <input
-                type="url"
-                placeholder="https://example.com"
-                value={resourceUrl}
-                onChange={(event) => setResourceUrl(event.target.value)}
-                disabled={creatingResource}
-              />
-            </div>
+                  <input
+                    type="url"
+                    placeholder="https://example.com"
+                    value={resourceUrl}
+                    onChange={(event) => setResourceUrl(event.target.value)}
+                    disabled={creatingResource}
+                  />
+                </div>
 
-            <div className="task-subtask-form-actions">
-              <button
-                type="button"
-                className="cancel-form-btn"
-                onClick={() => {
-                  setShowResourceForm(false);
-                  setResourceName("");
-                  setResourceDescription("");
-                  setResourceUrl("");
-                  setError("");
-                }}
-                disabled={creatingResource}
-              >
-                <X size={15} />
-                Cancel
-              </button>
+                <div className="form-group full-width">
+                  <label>Description</label>
 
-              <button
-                type="submit"
-                className="submit-project-btn"
-                disabled={
-                  creatingResource ||
-                  !resourceName.trim() ||
-                  !resourceUrl.trim()
-                }
-              >
-                <Plus size={15} />
+                  <textarea
+                    rows="2"
+                    placeholder="Enter resource description"
+                    value={resourceDescription}
+                    onChange={(event) =>
+                      setResourceDescription(event.target.value)
+                    }
+                    disabled={creatingResource}
+                  />
+                </div>
+              </div>
 
-                {creatingResource ? "Adding..." : "Add Resource"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Resource List */}
-        {resources.length === 0 ? (
-          <div className="project-details-empty">
-            <Paperclip size={28} />
-
-            <h3>No resources yet</h3>
-
-            <p>Add useful links and resources for your project team.</p>
-          </div>
-        ) : (
-          <div className="project-details-grid">
-            {resources.map((resource) =>
-              editingResourceId === resource.id ? (
-                <form
-                  className="project-detail-card"
-                  key={resource.id}
-                  onSubmit={(event) => handleUpdateResource(event, resource.id)}
+              <div className="management-form-actions">
+                <button
+                  type="button"
+                  className="management-secondary-button"
+                  onClick={() => {
+                    setShowResourceForm(false);
+                    setResourceName("");
+                    setResourceDescription("");
+                    setResourceUrl("");
+                    setResourceFile(null);
+                    setError("");
+                  }}
+                  disabled={creatingResource}
                 >
-                  <Paperclip size={18} />
+                  <X size={15} />
+                  Cancel
+                </button>
 
-                  <div>
-                    <div className="form-group">
-                      <label>Resource Name</label>
+                <button
+                  type="submit"
+                  className="management-primary-button"
+                  disabled={
+                    creatingResource ||
+                    !resourceName.trim() ||
+                    (!resourceUrl.trim() && !resourceFile)
+                  }
+                >
+                  <Plus size={15} />
 
-                      <input
-                        type="text"
-                        value={editResourceName}
-                        onChange={(event) =>
-                          setEditResourceName(event.target.value)
-                        }
-                        disabled={updatingResourceId === resource.id}
-                      />
+                  {creatingResource ? "Adding..." : "Add Resource"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {resources.length === 0 ? (
+            <div className="project-empty-state">
+              <Paperclip size={24} />
+              <span>No resources added yet.</span>
+            </div>
+          ) : (
+            <div className="resource-list">
+              {resources.map((resource) =>
+                editingResourceId === resource.id ? (
+                  <form
+                    className="management-item editing"
+                    key={resource.id}
+                    onSubmit={(event) =>
+                      handleUpdateResource(event, resource.id)
+                    }
+                  >
+                    <div className="management-form-grid">
+                      <div className="form-group">
+                        <label>Name</label>
+
+                        <input
+                          type="text"
+                          value={editResourceName}
+                          onChange={(event) =>
+                            setEditResourceName(event.target.value)
+                          }
+                          disabled={updatingResourceId === resource.id}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>URL</label>
+
+                        <input
+                          type="url"
+                          value={editResourceUrl}
+                          onChange={(event) =>
+                            setEditResourceUrl(event.target.value)
+                          }
+                          disabled={updatingResourceId === resource.id}
+                        />
+                      </div>
+
+                      <div className="form-group full-width">
+                        <label>Description</label>
+
+                        <textarea
+                          rows="2"
+                          value={editResourceDescription}
+                          onChange={(event) =>
+                            setEditResourceDescription(event.target.value)
+                          }
+                          disabled={updatingResourceId === resource.id}
+                        />
+                      </div>
                     </div>
 
-                    <div className="form-group">
-                      <label>Description</label>
-
-                      <textarea
-                        rows="3"
-                        value={editResourceDescription}
-                        onChange={(event) =>
-                          setEditResourceDescription(event.target.value)
-                        }
-                        disabled={updatingResourceId === resource.id}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Resource URL</label>
-
-                      <input
-                        type="url"
-                        value={editResourceUrl}
-                        onChange={(event) =>
-                          setEditResourceUrl(event.target.value)
-                        }
-                        disabled={updatingResourceId === resource.id}
-                      />
-                    </div>
-
-                    <div className="task-subtask-form-actions">
+                    <div className="management-form-actions">
                       <button
                         type="button"
-                        className="cancel-form-btn"
+                        className="management-secondary-button"
                         onClick={cancelEditingResource}
                         disabled={updatingResourceId === resource.id}
                       >
-                        <X size={15} />
+                        <X size={14} />
                         Cancel
                       </button>
 
                       <button
                         type="submit"
-                        className="submit-project-btn"
+                        className="management-primary-button"
                         disabled={
                           updatingResourceId === resource.id ||
                           !editResourceName.trim() ||
                           !editResourceUrl.trim()
                         }
                       >
-                        <Save size={15} />
+                        <Save size={14} />
 
                         {updatingResourceId === resource.id
                           ? "Saving..."
                           : "Save Changes"}
                       </button>
                     </div>
-                  </div>
-                </form>
-              ) : (
-                <div className="project-detail-card" key={resource.id}>
-                  <Paperclip size={18} />
+                  </form>
+                ) : (
+                  <div className="management-item" key={resource.id}>
+                    <div className="management-item-info">
+                      <div className="management-item-icon">
+                        <Paperclip size={17} />
+                      </div>
 
-                  <div>
-                    <span>{resource.name}</span>
+                      <div>
+                        <strong>{resource.name}</strong>
 
-                    {resource.description && (
-                      <small>{resource.description}</small>
-                    )}
+                        {resource.description && <p>{resource.description}</p>}
 
-                    <a href={resource.url} target="_blank" rel="noreferrer">
-                      Open Resource
-                    </a>
+                        {resource.file_path ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/projects/${projectId}/file`, {
+                                state: {
+                                  fileUrl: `${RESOURCE_BASE_URL}${resource.file_path}`,
+                                  fileName: resource.file_name || resource.name,
+                                  projectId: Number(projectId),
+                                },
+                              })
+                            }
+                          >
+                            Open File
+                          </button>
+                        ) : resource.url ? (
+                          <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open Resource
+                          </a>
+                        ) : null}
+
+                        {resource.file_name && (
+                          <span>{resource.file_name}</span>
+                        )}
+                      </div>
+                    </div>
 
                     {canEditResource(resource) && (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          marginTop: "10px",
-                          flexWrap: "wrap",
-                        }}
-                      >
+                      <div className="management-item-actions">
                         <button
                           type="button"
-                          className="cancel-form-btn"
+                          className="management-icon-button"
                           onClick={() => startEditingResource(resource)}
                           disabled={updatingResourceId === resource.id}
                         >
                           <Pencil size={14} />
-                          Edit
                         </button>
 
                         <button
                           type="button"
-                          className="cancel-form-btn"
+                          className="management-icon-button danger"
                           onClick={() => handleDeleteResource(resource.id)}
                           disabled={updatingResourceId === resource.id}
                         >
                           <Trash2 size={14} />
-                          Delete
                         </button>
                       </div>
                     )}
                   </div>
-                </div>
-              ),
+                ),
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ===================================================
+            MILESTONES BELOW RESOURCES
+            =================================================== */}
+
+        <div className="milestones-management">
+          <div className="resource-management-header">
+            <div>
+              <span className="management-eyebrow">MILESTONES</span>
+
+              <h3>Project Milestones</h3>
+            </div>
+
+            {!showMilestoneForm && (
+              <button
+                type="button"
+                className="management-secondary-button"
+                onClick={() => {
+                  setShowMilestoneForm(true);
+                  setError("");
+                }}
+              >
+                <Plus size={15} />
+                Add Milestone
+              </button>
             )}
           </div>
-        )}
+
+          {showMilestoneForm && (
+            <form
+              className="project-management-form"
+              onSubmit={handleCreateMilestone}
+            >
+              <div className="management-form-grid">
+                <div className="form-group">
+                  <label>Milestone Name</label>
+
+                  <input
+                    type="text"
+                    placeholder="Enter milestone name"
+                    value={milestoneName}
+                    onChange={(event) => setMilestoneName(event.target.value)}
+                    disabled={creatingMilestone}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Deadline</label>
+
+                  <input
+                    type="date"
+                    value={milestoneDeadline}
+                    onChange={(event) =>
+                      setMilestoneDeadline(event.target.value)
+                    }
+                    disabled={creatingMilestone}
+                  />
+                </div>
+
+                <div className="form-group full-width">
+                  <label>Description</label>
+
+                  <textarea
+                    rows="3"
+                    placeholder="Enter milestone description"
+                    value={milestoneDescription}
+                    onChange={(event) =>
+                      setMilestoneDescription(event.target.value)
+                    }
+                    disabled={creatingMilestone}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Status</label>
+
+                  <select
+                    value={milestoneStatus}
+                    onChange={(event) => setMilestoneStatus(event.target.value)}
+                    disabled={creatingMilestone}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="management-form-actions">
+                <button
+                  type="button"
+                  className="management-secondary-button"
+                  onClick={() => {
+                    setShowMilestoneForm(false);
+                    setMilestoneName("");
+                    setMilestoneDescription("");
+                    setMilestoneDeadline("");
+                    setMilestoneStatus("pending");
+                    setError("");
+                  }}
+                  disabled={creatingMilestone}
+                >
+                  <X size={15} />
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="management-primary-button"
+                  disabled={creatingMilestone || !milestoneName.trim()}
+                >
+                  <Plus size={15} />
+
+                  {creatingMilestone ? "Creating..." : "Create Milestone"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {milestones.length === 0 ? (
+            <div className="project-empty-state">
+              <CircleCheck size={24} />
+
+              <span>No milestones added yet.</span>
+            </div>
+          ) : (
+            <div className="management-list">
+              {milestones.map((milestone) =>
+                editingMilestoneId === milestone.id ? (
+                  <form
+                    className="management-item editing"
+                    key={milestone.id}
+                    onSubmit={(event) =>
+                      handleUpdateMilestone(event, milestone.id)
+                    }
+                  >
+                    <div className="management-edit-grid">
+                      <div className="form-group">
+                        <label>Name</label>
+
+                        <input
+                          type="text"
+                          value={editMilestoneName}
+                          onChange={(event) =>
+                            setEditMilestoneName(event.target.value)
+                          }
+                          disabled={updatingMilestoneId === milestone.id}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>Deadline</label>
+
+                        <input
+                          type="date"
+                          value={editMilestoneDeadline}
+                          onChange={(event) =>
+                            setEditMilestoneDeadline(event.target.value)
+                          }
+                          disabled={updatingMilestoneId === milestone.id}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>Description</label>
+
+                        <textarea
+                          rows="2"
+                          value={editMilestoneDescription}
+                          onChange={(event) =>
+                            setEditMilestoneDescription(event.target.value)
+                          }
+                          disabled={updatingMilestoneId === milestone.id}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>Status</label>
+
+                        <select
+                          value={editMilestoneStatus}
+                          onChange={(event) =>
+                            setEditMilestoneStatus(event.target.value)
+                          }
+                          disabled={updatingMilestoneId === milestone.id}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="management-form-actions">
+                      <button
+                        type="button"
+                        className="management-secondary-button"
+                        onClick={cancelEditingMilestone}
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <X size={14} />
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="management-primary-button"
+                        disabled={
+                          updatingMilestoneId === milestone.id ||
+                          !editMilestoneName.trim()
+                        }
+                      >
+                        <Save size={14} />
+
+                        {updatingMilestoneId === milestone.id
+                          ? "Saving..."
+                          : "Save Changes"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="management-item" key={milestone.id}>
+                    <div className="management-item-info">
+                      <div className="management-item-icon">
+                        <CircleCheck size={17} />
+                      </div>
+
+                      <div>
+                        <strong>{milestone.name}</strong>
+
+                        {milestone.description && (
+                          <p>{milestone.description}</p>
+                        )}
+
+                        <span>
+                          {getMilestoneStatusLabel(milestone.status)}
+
+                          {milestone.deadline &&
+                            ` • ${formatTaskDeadline(milestone.deadline)}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="management-item-actions">
+                      <button
+                        type="button"
+                        className="management-icon-button"
+                        onClick={() => startEditingMilestone(milestone)}
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <Pencil size={14} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="management-icon-button danger"
+                        onClick={() => handleDeleteMilestone(milestone.id)}
+                        disabled={updatingMilestoneId === milestone.id}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

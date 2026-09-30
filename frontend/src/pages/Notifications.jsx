@@ -11,12 +11,15 @@ import {
   Settings,
   FileText,
   Activity,
+  Trash2,
 } from "lucide-react";
 
 import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  deleteNotification,
+  deleteAllNotifications,
 } from "../services/notificationService";
 
 import "../styles/notifications.css";
@@ -26,6 +29,8 @@ function Notifications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [deletingNotificationId, setDeletingNotificationId] = useState(null);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   async function loadNotifications() {
     try {
@@ -74,6 +79,48 @@ function Notifications() {
       );
     } catch (err) {
       setError(err.message || "Failed to mark all notifications as read");
+    }
+  }
+
+  async function handleDeleteNotification(notificationId) {
+    try {
+      setDeletingNotificationId(notificationId);
+      setError("");
+
+      await deleteNotification(notificationId);
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.filter(
+          (notification) => notification.id !== notificationId,
+        ),
+      );
+    } catch (err) {
+      setError(err.message || "Failed to delete notification");
+    } finally {
+      setDeletingNotificationId(null);
+    }
+  }
+
+  async function handleDeleteAllNotifications() {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete all notifications? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingAll(true);
+      setError("");
+
+      await deleteAllNotifications();
+
+      setNotifications([]);
+    } catch (err) {
+      setError(err.message || "Failed to delete all notifications");
+    } finally {
+      setDeletingAll(false);
     }
   }
 
@@ -527,6 +574,16 @@ function Notifications() {
                 <CheckCheck size={13} />
                 Mark all as read
               </button>
+
+              <button
+                type="button"
+                className="notifications-delete-all"
+                onClick={handleDeleteAllNotifications}
+                disabled={totalNotifications === 0 || deletingAll}
+              >
+                <Trash2 size={13} />
+                {deletingAll ? "Deleting..." : "Delete all"}
+              </button>
             </div>
           </div>
 
@@ -567,6 +624,8 @@ function Notifications() {
 
                 const CategoryIcon = category.icon;
 
+                const isDeleting = deletingNotificationId === notification.id;
+
                 return (
                   <article
                     className={
@@ -597,6 +656,19 @@ function Notifications() {
                         {!notification.is_read && (
                           <span className="notification-unread-dot" />
                         )}
+
+                        <button
+                          type="button"
+                          className="notification-delete-action"
+                          onClick={() =>
+                            handleDeleteNotification(notification.id)
+                          }
+                          disabled={isDeleting}
+                          aria-label="Delete notification"
+                          title="Delete notification"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
 
                       <div className="notification-card-content">
@@ -613,6 +685,12 @@ function Notifications() {
                         >
                           Mark as read
                         </button>
+                      )}
+
+                      {isDeleting && (
+                        <span className="notification-deleting-label">
+                          Deleting...
+                        </span>
                       )}
                     </div>
                   </article>

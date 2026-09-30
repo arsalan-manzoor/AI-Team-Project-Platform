@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { login } from "../services/authService";
 import "../styles/login.css";
 import zyraLogo from "../assets/zyra-logo.jpg";
@@ -9,6 +10,7 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -103,30 +105,42 @@ function Login() {
                 required
                 /* The Magic Combination */
                 readOnly={isReadOnly}
-                onMouseEnter={unlockFields} // Desktop: unlocks before click
-                onTouchStart={unlockFields} // Mobile: unlocks before tap
-                onFocus={unlockFields} // Fallback
+                onMouseEnter={unlockFields}
+                onTouchStart={unlockFields}
+                onFocus={unlockFields}
               />
             </div>
 
             <div className="form-group">
               <label htmlFor="password">Password</label>
 
-              <input
-                id="password"
-                type="password"
-                name="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                required
-                /* The Magic Combination */
-                readOnly={isReadOnly}
-                onMouseEnter={unlockFields}
-                onTouchStart={unlockFields}
-                onFocus={unlockFields}
-              />
+              <div className="password-input-wrapper">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                  /* The Magic Combination */
+                  readOnly={isReadOnly}
+                  onMouseEnter={unlockFields}
+                  onTouchStart={unlockFields}
+                  onFocus={unlockFields}
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
 
             {error && <p className="login-error">{error}</p>}

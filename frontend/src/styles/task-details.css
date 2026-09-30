@@ -1,0 +1,1162 @@
+/* =========================================================
+   ZYRA — TASK WORKSPACE
+   MISSION TASK
+   ========================================================= */
+
+.zyra-task-details {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 20px 24px 42px;
+  overflow: hidden;
+
+  color: #f3f7fb;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(48, 113, 145, 0.11),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 70%,
+      rgba(77, 67, 155, 0.07),
+      transparent 30%
+    ),
+    #09111d;
+}
+
+/* =========================================================
+   AMBIENT BACKGROUND
+   ========================================================= */
+
+.zyra-task-details::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(rgba(95, 130, 157, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 130, 157, 0.025) 1px, transparent 1px);
+
+  background-size: 42px 42px;
+
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+
+  animation: task-grid-drift 18s linear infinite;
+}
+
+.zyra-task-details::after {
+  content: "";
+
+  position: absolute;
+  width: 420px;
+  height: 420px;
+
+  top: -230px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background: rgba(44, 211, 215, 0.045);
+
+  filter: blur(70px);
+
+  pointer-events: none;
+
+  animation: task-ambient-pulse 7s ease-in-out infinite;
+}
+
+@keyframes task-grid-drift {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 42px 42px;
+  }
+}
+
+@keyframes task-ambient-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+
+/* Keep actual content above background */
+
+.zyra-task-details > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================================
+   BACK BUTTON
+   ========================================================= */
+
+.back-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  min-height: 34px;
+  padding: 0 12px;
+
+  color: #9ba9b9;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+
+  background: rgba(18, 29, 42, 0.72);
+
+  border: 1px solid rgba(119, 147, 173, 0.17);
+  border-radius: 7px;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.back-page-btn:hover:not(:disabled) {
+  color: #e8f8f8;
+
+  background: rgba(27, 43, 59, 0.9);
+
+  border-color: rgba(71, 216, 218, 0.34);
+
+  transform: translateX(-2px);
+}
+
+.back-page-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.dashboard-error {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  margin-top: 14px;
+  padding: 10px 13px;
+
+  color: #ffb9b9;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  background: rgba(174, 50, 50, 0.08);
+
+  border: 1px solid rgba(255, 104, 104, 0.2);
+  border-radius: 8px;
+
+  animation: task-error-in 0.25s ease both;
+}
+
+@keyframes task-error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   TASK HEADER
+   ========================================================= */
+
+.task-details-header {
+  display: grid;
+
+  grid-template-columns: 48px minmax(0, 1fr);
+
+  gap: 14px;
+
+  max-width: 1050px;
+
+  margin: 28px auto 0;
+  padding: 0 2px;
+
+  animation: task-header-in 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes task-header-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   TASK ICON
+   ========================================================= */
+
+.task-details-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 48px;
+  height: 48px;
+
+  color: #69e2e2;
+
+  background: linear-gradient(
+    145deg,
+    rgba(63, 206, 211, 0.15),
+    rgba(52, 87, 120, 0.14)
+  );
+
+  border: 1px solid rgba(78, 218, 219, 0.25);
+  border-radius: 11px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 0 25px rgba(48, 210, 214, 0.06);
+
+  animation: task-icon-glow 4s ease-in-out infinite;
+}
+
+@keyframes task-icon-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 0 18px rgba(48, 210, 214, 0.04);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 0 28px rgba(48, 210, 214, 0.1);
+  }
+}
+
+/* =========================================================
+   HEADER TEXT
+   ========================================================= */
+
+.task-details-eyebrow {
+  margin: 1px 0 5px;
+
+  color: #718093;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  letter-spacing: 0.12em;
+
+  text-transform: uppercase;
+}
+
+.task-details-header h2 {
+  margin: 0;
+
+  color: #f5f8fb;
+
+  font-size: clamp(25px, 3vw, 36px);
+  font-weight: 720;
+
+  line-height: 1.1;
+
+  letter-spacing: -0.035em;
+}
+
+.task-details-header > div:last-child > p:last-child {
+  margin: 8px 0 0;
+
+  max-width: 700px;
+
+  color: #8795a6;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   MAIN TASK PANEL
+   ========================================================= */
+
+.task-details-panel {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  max-width: 1050px;
+
+  margin: 22px auto 0;
+
+  overflow: hidden;
+
+  background: linear-gradient(
+    145deg,
+    rgba(22, 34, 48, 0.96),
+    rgba(12, 21, 33, 0.98)
+  );
+
+  border: 1px solid rgba(121, 149, 177, 0.17);
+  border-radius: 13px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 25px 70px rgba(0, 0, 0, 0.24);
+
+  animation: task-panel-in 0.65s 0.08s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes task-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   SECTIONS
+   ========================================================= */
+
+.task-details-section {
+  position: relative;
+
+  padding: 22px 24px;
+
+  border-bottom: 1px solid rgba(119, 147, 174, 0.12);
+}
+
+.task-details-section:last-child {
+  border-bottom: 0;
+}
+
+/* stagger sections */
+
+.task-details-section:nth-child(1) {
+  animation: section-reveal 0.5s 0.18s ease both;
+}
+
+.task-details-section:nth-child(2) {
+  animation: section-reveal 0.5s 0.27s ease both;
+}
+
+.task-details-section:nth-child(3) {
+  animation: section-reveal 0.5s 0.36s ease both;
+}
+
+@keyframes section-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+.task-details-section h3 {
+  margin: 0;
+
+  color: #edf3f8;
+
+  font-size: 14px;
+  font-weight: 650;
+
+  line-height: 1.3;
+}
+
+.task-details-section > p {
+  margin: 9px 0 0;
+
+  max-width: 880px;
+
+  color: #9aa8b8;
+
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+/* =========================================================
+   TASK INFORMATION
+   ========================================================= */
+
+.task-details-meta {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  margin-top: 17px;
+}
+
+.task-details-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  min-height: 31px;
+
+  padding: 0 11px;
+
+  color: #aebdca;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  background: rgba(34, 48, 64, 0.76);
+
+  border: 1px solid rgba(117, 145, 171, 0.17);
+  border-radius: 7px;
+
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.task-details-meta span:hover {
+  color: #e4fafa;
+
+  background: rgba(39, 57, 73, 0.86);
+
+  border-color: rgba(73, 214, 216, 0.25);
+
+  transform: translateY(-1px);
+}
+
+.task-details-meta svg {
+  color: #62d8d9;
+}
+
+/* =========================================================
+   SECTION HEADER
+   ========================================================= */
+
+.task-details-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  margin-bottom: 16px;
+}
+
+.task-details-section-header p {
+  margin: 5px 0 0;
+
+  color: #718092;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   ADD SUBTASK BUTTON
+   ========================================================= */
+
+.task-details-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  flex: 0 0 auto;
+
+  min-height: 34px;
+
+  padding: 0 12px;
+
+  color: #07171a;
+
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+
+  background: linear-gradient(135deg, #57d9dc, #67e1e3);
+
+  border: 1px solid rgba(119, 237, 238, 0.65);
+  border-radius: 7px;
+
+  box-shadow: 0 5px 20px rgba(57, 211, 214, 0.08);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.task-details-add-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+
+  filter: brightness(1.05);
+
+  box-shadow: 0 8px 25px rgba(57, 211, 214, 0.15);
+}
+
+.task-details-add-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.task-details-add-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* =========================================================
+   SUBTASK FORM
+   ========================================================= */
+
+.task-subtask-form {
+  padding: 15px;
+
+  margin-bottom: 14px;
+
+  background: linear-gradient(
+    145deg,
+    rgba(29, 43, 58, 0.78),
+    rgba(17, 29, 42, 0.82)
+  );
+
+  border: 1px solid rgba(74, 211, 215, 0.18);
+  border-radius: 9px;
+
+  animation: form-open 0.28s ease both;
+}
+
+@keyframes form-open {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   FORM GROUP
+   ========================================================= */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.form-group label {
+  color: #9daabb;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group textarea,
+.task-subtask-item input {
+  box-sizing: border-box;
+
+  width: 100%;
+
+  padding: 9px 11px;
+
+  color: #edf4f8;
+
+  font-family: inherit;
+  font-size: 11px;
+
+  background: rgba(8, 17, 27, 0.72);
+
+  border: 1px solid rgba(120, 147, 173, 0.2);
+  border-radius: 7px;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder,
+.task-subtask-item input::placeholder {
+  color: #637286;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.task-subtask-item input:focus {
+  background: rgba(10, 21, 32, 0.9);
+
+  border-color: rgba(71, 218, 220, 0.52);
+
+  box-shadow:
+    0 0 0 2px rgba(58, 211, 214, 0.07),
+    0 0 18px rgba(58, 211, 214, 0.035);
+}
+
+.form-group textarea {
+  min-height: 82px;
+
+  resize: vertical;
+
+  line-height: 1.6;
+}
+
+/* =========================================================
+   FORM ACTIONS
+   ========================================================= */
+
+.task-subtask-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 7px;
+
+  margin-top: 12px;
+}
+
+/* =========================================================
+   SHARED BUTTONS
+   ========================================================= */
+
+.cancel-form-btn,
+.submit-project-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 32px;
+
+  padding: 0 11px;
+
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 650;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.cancel-form-btn {
+  color: #aeb9c6;
+
+  background: rgba(39, 51, 64, 0.68);
+
+  border: 1px solid rgba(122, 148, 174, 0.18);
+}
+
+.cancel-form-btn:hover:not(:disabled) {
+  color: #e8eef4;
+
+  background: rgba(52, 66, 81, 0.88);
+
+  border-color: rgba(134, 158, 181, 0.3);
+
+  transform: translateY(-1px);
+}
+
+.submit-project-btn {
+  color: #061519;
+
+  background: #59dadd;
+
+  border: 1px solid rgba(114, 234, 236, 0.65);
+}
+
+.submit-project-btn:hover:not(:disabled) {
+  background: #6ce2e4;
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 5px 18px rgba(63, 216, 218, 0.1);
+}
+
+.cancel-form-btn:disabled,
+.submit-project-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+
+  transform: none;
+}
+
+/* =========================================================
+   SUBTASK LIST
+   ========================================================= */
+
+.task-subtask-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+/* =========================================================
+   SUBTASK / COMMENT ITEM
+   ========================================================= */
+
+.task-subtask-item {
+  position: relative;
+
+  min-height: 48px;
+
+  box-sizing: border-box;
+
+  padding: 8px 10px;
+
+  color: #b9c5d1;
+
+  background: linear-gradient(
+    145deg,
+    rgba(28, 42, 56, 0.76),
+    rgba(19, 31, 44, 0.78)
+  );
+
+  border: 1px solid rgba(118, 146, 173, 0.13);
+  border-radius: 8px;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.task-subtask-item:hover {
+  background: linear-gradient(
+    145deg,
+    rgba(32, 48, 63, 0.86),
+    rgba(21, 35, 49, 0.88)
+  );
+
+  border-color: rgba(74, 207, 210, 0.22);
+
+  transform: translateX(2px);
+
+  box-shadow: inset 2px 0 0 rgba(65, 216, 218, 0.4);
+}
+
+/* =========================================================
+   SUBTASK CHECK ICONS
+   ========================================================= */
+
+.task-subtask-item > button:first-child {
+  color: #647587;
+
+  border-radius: 50%;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.task-subtask-item > button:first-child:hover:not(:disabled) {
+  color: #62dcde;
+
+  transform: scale(1.08);
+}
+
+/* Completed icon */
+
+.task-subtask-item > button:first-child svg[data-lucide="check-circle-2"],
+.task-subtask-item > button:first-child svg {
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* =========================================================
+   SUBTASK TEXT
+   ========================================================= */
+
+.task-subtask-item > span {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: #c2ccd6;
+
+  font-size: 11px;
+  line-height: 1.4;
+
+  text-overflow: ellipsis;
+}
+
+/* =========================================================
+   INLINE EDIT INPUT
+   ========================================================= */
+
+.task-subtask-item form {
+  min-width: 0;
+}
+
+.task-subtask-item form input {
+  min-width: 0;
+}
+
+/* =========================================================
+   COMMENTS ICON
+   ========================================================= */
+
+.task-subtask-item > svg {
+  flex: 0 0 auto;
+
+  color: #64d8d9;
+}
+
+/* =========================================================
+   COMMENT TEXT
+   ========================================================= */
+
+.task-subtask-item span {
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   EMPTY STATES
+   ========================================================= */
+
+.task-details-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 180px;
+
+  padding: 28px 18px;
+
+  color: #728194;
+
+  text-align: center;
+
+  background: radial-gradient(
+    circle at center,
+    rgba(48, 119, 145, 0.05),
+    transparent 62%
+  );
+}
+
+.task-details-empty svg {
+  margin-bottom: 10px;
+
+  color: #4ebfc2;
+
+  opacity: 0.75;
+}
+
+.task-details-empty h3 {
+  margin: 0;
+
+  color: #c4ced8;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.task-details-empty p {
+  max-width: 400px;
+
+  margin: 6px 0 0;
+
+  color: #6e7c8e;
+
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* =========================================================
+   LOADING / EMPTY MAIN PAGE
+   ========================================================= */
+
+.zyra-task-details > .task-details-empty {
+  max-width: 600px;
+
+  margin: 80px auto 0;
+
+  min-height: 220px;
+
+  background: linear-gradient(
+    145deg,
+    rgba(20, 33, 47, 0.72),
+    rgba(12, 22, 34, 0.76)
+  );
+
+  border: 1px solid rgba(119, 147, 173, 0.14);
+  border-radius: 12px;
+
+  animation: task-empty-in 0.4s ease both;
+}
+
+@keyframes task-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   COMMENT COMPOSER
+   ========================================================= */
+
+.task-details-section:last-child .task-subtask-form {
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .zyra-task-details {
+    padding: 18px 18px 35px;
+  }
+
+  .task-details-header {
+    margin-top: 22px;
+  }
+
+  .task-details-panel {
+    margin-top: 18px;
+  }
+
+  .task-details-section {
+    padding: 20px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 650px) {
+  .zyra-task-details {
+    padding: 15px 13px 30px;
+  }
+
+  .task-details-header {
+    grid-template-columns: 40px minmax(0, 1fr);
+
+    gap: 10px;
+
+    margin-top: 20px;
+  }
+
+  .task-details-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .task-details-header h2 {
+    font-size: 24px;
+  }
+
+  .task-details-header > div:last-child > p:last-child {
+    font-size: 11px;
+  }
+
+  .task-details-panel {
+    margin-top: 16px;
+
+    border-radius: 10px;
+  }
+
+  .task-details-section {
+    padding: 17px 14px;
+  }
+
+  .task-details-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-details-add-btn {
+    align-self: flex-start;
+  }
+
+  .task-details-meta {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 6px;
+  }
+
+  .task-details-meta span {
+    width: 100%;
+
+    box-sizing: border-box;
+  }
+
+  .task-subtask-item {
+    gap: 7px !important;
+
+    align-items: flex-start !important;
+
+    min-height: 48px;
+
+    padding: 8px;
+  }
+
+  .task-subtask-item > span {
+    padding-top: 4px;
+  }
+
+  .task-subtask-item > .cancel-form-btn {
+    min-width: 31px;
+
+    padding: 0 7px;
+
+    font-size: 0;
+  }
+
+  .task-subtask-item > .cancel-form-btn svg {
+    margin: 0;
+  }
+
+  .task-subtask-form-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 430px) {
+  .zyra-task-details {
+    padding: 12px 10px 25px;
+  }
+
+  .back-page-btn {
+    min-height: 32px;
+
+    padding: 0 10px;
+
+    font-size: 10px;
+  }
+
+  .task-details-header {
+    margin-top: 17px;
+  }
+
+  .task-details-header h2 {
+    font-size: 21px;
+  }
+
+  .task-details-eyebrow {
+    font-size: 8px;
+  }
+
+  .task-details-panel {
+    border-radius: 9px;
+  }
+
+  .task-details-section {
+    padding: 15px 11px;
+  }
+
+  .task-details-section h3 {
+    font-size: 13px;
+  }
+
+  .task-subtask-item > span {
+    font-size: 10px;
+  }
+
+  .task-subtask-form-actions {
+    justify-content: stretch;
+  }
+
+  .task-subtask-form-actions button {
+    flex: 1;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .zyra-task-details::before,
+  .zyra-task-details::after,
+  .task-details-icon,
+  .task-details-header,
+  .task-details-panel,
+  .task-details-section,
+  .task-subtask-form,
+  .task-details-empty {
+    animation: none;
+  }
+
+  .back-page-btn,
+  .task-details-add-btn,
+  .task-details-meta span,
+  .task-subtask-item,
+  .cancel-form-btn,
+  .submit-project-btn {
+    transition: none;
+  }
+}

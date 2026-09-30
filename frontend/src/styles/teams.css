@@ -121,12 +121,26 @@
   align-items: center;
   justify-content: space-between;
 
+  width: 100%;
   margin-bottom: 15px;
 }
 
 .back-page-btn {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
+  justify-content: center;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none;
+
+  flex: 0 0 auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+
+  align-self: flex-start;
+  margin: 0 !important;
+
   gap: 7px;
 
   padding: 6px 9px;
@@ -143,6 +157,10 @@
   font-weight: 700;
 
   cursor: pointer;
+
+  white-space: nowrap;
+
+  box-sizing: border-box;
 
   transition:
     color 0.2s ease,
@@ -163,16 +181,22 @@
   cursor: not-allowed;
 }
 
+/* =========================================================
+   WORKSPACE STATUS
+   ========================================================= */
+
 .teams-workspace-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
 
   color: #526174;
 
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
+
+  white-space: nowrap;
 }
 
 .teams-status-dot,
@@ -875,6 +899,7 @@
 
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* =========================================================

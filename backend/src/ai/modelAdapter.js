@@ -5,7 +5,11 @@ const REQUEST_TIMEOUT_MS = 120000;
 const AI_SYSTEM_INSTRUCTION =
     "You are the ZYRA AI assistant. " +
     "Use only information returned by authorized tools. " +
-    "Never guess, speculate, or invent project, task, team, user, or permission information. " +
+    "Never guess, speculate, invent, or substitute information. " +
+    "When a tool returns available=true, treat the returned data as authoritative and use the exact values from that data in your answer. " +
+    "For example, if a team tool returns team.name, use that exact team name; never replace it with a generic name such as 'default', 'not provided', or 'unknown'. " +
+    "If a tool returns information about multiple entities, keep each entity's ID, name, and other fields associated with the correct entity. " +
+    "If the requested information is present in a successful tool result, do not claim that it is missing or not provided. " +
     "If a tool result contains available=false, do not speculate about deletion, visibility, authentication, or why the data is unavailable. " +
     "Simply tell the user that no authorized information is available for the requested item. " +
     "Do not reveal whether an inaccessible item exists.";
@@ -21,12 +25,6 @@ function convertToolDefinition(tool) {
         };
     }
 
-    const required = Object.entries(
-        tool.parameters || {}
-    )
-        .filter(([, definition]) => definition.required)
-        .map(([name]) => name);
-
     return {
         type: "function",
         function: {
@@ -35,7 +33,14 @@ function convertToolDefinition(tool) {
             parameters: {
                 type: "object",
                 properties,
-                required,
+                required: Object.entries(
+                    tool.parameters || {}
+                )
+                    .filter(
+                        ([, definition]) =>
+                            definition.required === true
+                    )
+                    .map(([name]) => name),
                 additionalProperties: false
             }
         }
@@ -141,36 +146,49 @@ async function generateResponse({
         }
 
         if (
-            Array.isArray(data.message.tool_calls) &&
+            Array.isArray(
+                data.message.tool_calls
+            ) &&
             data.message.tool_calls.length > 0
         ) {
-            const toolCall =
-                data.message.tool_calls[0];
+            const normalizedToolCalls =
+                data.message.tool_calls.map(
+                    (toolCall) => {
+                        if (
+                            !toolCall ||
+                            typeof toolCall !==
+                                "object" ||
+                            !toolCall.function ||
+                            typeof toolCall.function !==
+                                "object"
+                        ) {
+                            throw new Error(
+                                "Ollama returned an invalid tool call"
+                            );
+                        }
 
-            if (
-                !toolCall ||
-                typeof toolCall !== "object" ||
-                !toolCall.function ||
-                typeof toolCall.function !== "object"
-            ) {
-                throw new Error(
-                    "Ollama returned an invalid tool call"
+                        const normalizedToolCall = {
+                            name:
+                                toolCall.function
+                                    .name,
+                            arguments:
+                                toolCall.function
+                                    .arguments
+                        };
+
+                        validateToolCall(
+                            normalizedToolCall
+                        );
+
+                        return normalizedToolCall;
+                    }
                 );
-            }
-
-            const normalizedToolCall = {
-                name: toolCall.function.name,
-                arguments:
-                    toolCall.function.arguments
-            };
-
-            validateToolCall(
-                normalizedToolCall
-            );
 
             return {
-                tool_call: normalizedToolCall,
-                assistant_message: data.message
+                tool_calls:
+                    normalizedToolCalls,
+                assistant_message:
+                    data.message
             };
         }
 
@@ -180,7 +198,8 @@ async function generateResponse({
                 "string"
                     ? data.message.content
                     : "",
-            assistant_message: data.message
+            assistant_message:
+                data.message
         };
     } catch (error) {
         if (error.name === "AbortError") {

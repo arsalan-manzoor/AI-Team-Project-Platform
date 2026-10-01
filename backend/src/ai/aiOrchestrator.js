@@ -72,6 +72,21 @@ function buildToolDefinitions() {
     }));
 }
 
+function normalizeToolCalls(modelResponse) {
+    if (
+        Array.isArray(modelResponse.tool_calls) &&
+        modelResponse.tool_calls.length > 0
+    ) {
+        return modelResponse.tool_calls;
+    }
+
+    if (modelResponse.tool_call) {
+        return [modelResponse.tool_call];
+    }
+
+    return [];
+}
+
 async function runAIRequest({
     messages,
     userId
@@ -84,7 +99,9 @@ async function runAIRequest({
         );
     }
 
-    const toolDefinitions = buildToolDefinitions();
+    const toolDefinitions =
+        buildToolDefinitions();
+
     const conversation = [...messages];
 
     for (
@@ -107,31 +124,13 @@ async function runAIRequest({
             );
         }
 
-        if (!modelResponse.tool_call) {
-            return {
-                content: modelResponse.content || ""
-            };
-        }
+        const toolCalls =
+            normalizeToolCalls(modelResponse);
 
-        const {
-            name,
-            arguments: toolArguments
-        } = modelResponse.tool_call;
-
-        const toolResult = await executeTool(
-            name,
-            toolArguments,
-            userId
-        );
-
-        if (
-            toolResult &&
-            typeof toolResult === "object" &&
-            toolResult.available === false
-        ) {
+        if (toolCalls.length === 0) {
             return {
                 content:
-                    "No authorized information is available for the requested item."
+                    modelResponse.content || ""
             };
         }
 
@@ -143,16 +142,43 @@ async function runAIRequest({
 
         conversation.push({
             role: "assistant",
-            content: assistantMessage.content || "",
+            content:
+                assistantMessage.content || "",
             tool_calls:
                 assistantMessage.tool_calls || []
         });
 
-        conversation.push({
-            role: "tool",
-            tool_name: name,
-            content: JSON.stringify(toolResult)
-        });
+        for (const toolCall of toolCalls) {
+            const {
+                name,
+                arguments: toolArguments
+            } = toolCall;
+
+            const toolResult =
+                await executeTool(
+                    name,
+                    toolArguments,
+                    userId
+                );
+
+            if (
+                toolResult &&
+                typeof toolResult === "object" &&
+                toolResult.available === false
+            ) {
+                return {
+                    content:
+                        "No authorized information is available for the requested item."
+                };
+            }
+
+            conversation.push({
+                role: "tool",
+                tool_name: name,
+                content:
+                    JSON.stringify(toolResult)
+            });
+        }
     }
 
     throw new Error(
@@ -164,5 +190,6 @@ module.exports = {
     runAIRequest,
     buildToolDefinitions,
     validateMessages,
-    validateClientMessages
+    validateClientMessages,
+    normalizeToolCalls
 };

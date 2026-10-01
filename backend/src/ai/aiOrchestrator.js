@@ -3,6 +3,10 @@ const tools = require("./toolRegistry");
 const { executeTool } = require("./toolExecutor");
 
 const {
+    createConfirmation
+} = require("../services/aiConfirmation.service");
+
+const {
     getConversation,
     getMessages,
     addMessage
@@ -155,6 +159,33 @@ async function persistUserMessages({
     }
 }
 
+async function createWriteConfirmation({
+    toolName,
+    toolArguments,
+    userId,
+    conversationId
+}) {
+    const confirmation =
+        createConfirmation({
+            userId,
+            conversationId,
+            toolName,
+            toolArguments
+        });
+
+    return {
+        requires_confirmation: true,
+        confirmation_id:
+            confirmation.confirmationId,
+        tool_name:
+            confirmation.toolName,
+        tool_arguments:
+            confirmation.toolArguments,
+        message:
+            `The AI wants to perform the action "${toolName}". Explicit confirmation is required before it can be executed.`
+    };
+}
+
 async function runAIRequest({
     messages,
     userId,
@@ -263,6 +294,60 @@ async function runAIRequest({
                 assistantMessage.tool_calls || []
         });
 
+        /*
+         * Check for write tools BEFORE executing
+         * any tool call.
+         *
+         * Write tools are never executed automatically.
+         * They create a server-side confirmation instead.
+         */
+        for (const toolCall of toolCalls) {
+            const {
+                name,
+                arguments: toolArguments
+            } = toolCall;
+
+            const tool = tools[name];
+
+            if (!tool) {
+                throw new Error(
+                    "Unknown AI tool"
+                );
+            }
+
+            if (tool.type === "write") {
+                const confirmation =
+                    await createWriteConfirmation({
+                        toolName: name,
+                        toolArguments:
+                            toolArguments || {},
+                        userId,
+                        conversationId
+                    });
+
+                if (
+                    conversationId !== null
+                ) {
+                    await addMessage({
+                        conversationId,
+                        role: "assistant",
+                        content:
+                            confirmation.message,
+                        toolName: name,
+                        toolArguments:
+                            toolArguments || {},
+                        toolResult:
+                            confirmation
+                    });
+                }
+
+                return confirmation;
+            }
+        }
+
+        /*
+         * Only read tools reach executeTool().
+         */
         for (const toolCall of toolCalls) {
             const {
                 name,

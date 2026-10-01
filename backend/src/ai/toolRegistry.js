@@ -132,6 +132,45 @@ const tools = {
         },
         returns:
             "Authorized details for the specified resource, including its project, description, URL, uploader, and creation date."
+    },
+
+    create_task: {
+        name: "create_task",
+        type: "write",
+        description:
+            "Create ONE task in a specific project. Use this only when the user explicitly asks to create or add a task and provides the required task information.",
+        parameters: {
+            title: {
+                type: "string",
+                required: true
+            },
+            description: {
+                type: "string",
+                required: false
+            },
+            project_id: {
+                type: "integer",
+                required: true
+            },
+            assigned_to: {
+                type: "integer",
+                required: false
+            },
+            status: {
+                type: "string",
+                required: false
+            },
+            priority: {
+                type: "string",
+                required: false
+            },
+            deadline: {
+                type: "string",
+                required: false
+            }
+        },
+        returns:
+            "The newly created task after authorization and database validation."
     }
 };
 

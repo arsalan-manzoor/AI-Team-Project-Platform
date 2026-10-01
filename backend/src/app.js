@@ -1,6 +1,7 @@
 const aiContextRoutes = require("./routes/aiContextRoutes");
 const aiChatRoutes = require("./routes/aiChatRoutes");
 const aiConversationRoutes = require("./routes/aiConversationRoutes");
+const aiConfirmationRoutes = require("./routes/aiConfirmationRoutes");
 
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
@@ -48,6 +49,11 @@ app.use(
 app.use(
     "/api/ai/conversations",
     aiConversationRoutes
+);
+
+app.use(
+    "/api/ai/confirm",
+    aiConfirmationRoutes
 );
 
 module.exports = app;

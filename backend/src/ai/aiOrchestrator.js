@@ -2,6 +2,12 @@ const modelAdapter = require("./modelAdapter");
 const tools = require("./toolRegistry");
 const { executeTool } = require("./toolExecutor");
 
+const {
+    getConversation,
+    getMessages,
+    addMessage
+} = require("../services/aiConversation.service");
+
 const MAX_TOOL_ROUNDS = 5;
 
 const ALLOWED_MESSAGE_ROLES = new Set([
@@ -87,9 +93,72 @@ function normalizeToolCalls(modelResponse) {
     return [];
 }
 
+function buildConversationMessages(
+    storedMessages
+) {
+    return storedMessages.map((message) => {
+        if (message.role === "tool") {
+            return {
+                role: "tool",
+                content: message.content
+            };
+        }
+
+        return {
+            role: message.role,
+            content: message.content
+        };
+    });
+}
+
+async function loadConversationHistory(
+    conversationId,
+    userId
+) {
+    const conversation =
+        await getConversation(
+            conversationId,
+            userId
+        );
+
+    if (!conversation) {
+        throw new Error(
+            "AI conversation was not found"
+        );
+    }
+
+    const storedMessages =
+        await getMessages(
+            conversationId,
+            userId
+        );
+
+    return buildConversationMessages(
+        storedMessages || []
+    );
+}
+
+async function persistUserMessages({
+    conversationId,
+    messages
+}) {
+    for (const message of messages) {
+        if (message.role !== "user") {
+            continue;
+        }
+
+        await addMessage({
+            conversationId,
+            role: "user",
+            content: message.content
+        });
+    }
+}
+
 async function runAIRequest({
     messages,
-    userId
+    userId,
+    conversationId = null
 }) {
     validateMessages(messages);
 
@@ -99,10 +168,46 @@ async function runAIRequest({
         );
     }
 
+    if (
+        conversationId !== null &&
+        !Number.isInteger(conversationId)
+    ) {
+        throw new Error(
+            "AI conversation ID must be a valid integer"
+        );
+    }
+
     const toolDefinitions =
         buildToolDefinitions();
 
-    const conversation = [...messages];
+    let conversation;
+
+    if (conversationId !== null) {
+        conversation =
+            await loadConversationHistory(
+                conversationId,
+                userId
+            );
+
+        await persistUserMessages({
+            conversationId,
+            messages
+        });
+
+        conversation.push(
+            ...messages
+                .filter(
+                    (message) =>
+                        message.role === "user"
+                )
+                .map((message) => ({
+                    role: "user",
+                    content: message.content
+                }))
+        );
+    } else {
+        conversation = [...messages];
+    }
 
     for (
         let round = 0;
@@ -128,9 +233,19 @@ async function runAIRequest({
             normalizeToolCalls(modelResponse);
 
         if (toolCalls.length === 0) {
+            const content =
+                modelResponse.content || "";
+
+            if (conversationId !== null) {
+                await addMessage({
+                    conversationId,
+                    role: "assistant",
+                    content
+                });
+            }
+
             return {
-                content:
-                    modelResponse.content || ""
+                content
             };
         }
 
@@ -162,13 +277,43 @@ async function runAIRequest({
                 );
 
             if (
+                conversationId !== null
+            ) {
+                await addMessage({
+                    conversationId,
+                    role: "tool",
+                    content:
+                        JSON.stringify(
+                            toolResult
+                        ),
+                    toolName: name,
+                    toolArguments:
+                        toolArguments,
+                    toolResult:
+                        toolResult
+                });
+            }
+
+            if (
                 toolResult &&
                 typeof toolResult === "object" &&
                 toolResult.available === false
             ) {
+                const content =
+                    "No authorized information is available for the requested item.";
+
+                if (
+                    conversationId !== null
+                ) {
+                    await addMessage({
+                        conversationId,
+                        role: "assistant",
+                        content
+                    });
+                }
+
                 return {
-                    content:
-                        "No authorized information is available for the requested item."
+                    content
                 };
             }
 
@@ -176,7 +321,9 @@ async function runAIRequest({
                 role: "tool",
                 tool_name: name,
                 content:
-                    JSON.stringify(toolResult)
+                    JSON.stringify(
+                        toolResult
+                    )
             });
         }
     }

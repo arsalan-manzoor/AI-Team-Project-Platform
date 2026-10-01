@@ -1,5 +1,7 @@
 const aiContextRoutes = require("./routes/aiContextRoutes");
 const aiChatRoutes = require("./routes/aiChatRoutes");
+const aiConversationRoutes = require("./routes/aiConversationRoutes");
+
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
@@ -32,7 +34,20 @@ app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/resources", resourceRoutes);
-app.use("/api/ai/context", aiContextRoutes);
-app.use("/api/ai/chat", aiChatRoutes);
+
+app.use(
+    "/api/ai/context",
+    aiContextRoutes
+);
+
+app.use(
+    "/api/ai/chat",
+    aiChatRoutes
+);
+
+app.use(
+    "/api/ai/conversations",
+    aiConversationRoutes
+);
 
 module.exports = app;

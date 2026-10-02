@@ -271,6 +271,29 @@ const toolRegistry = {
             "The created milestone after project membership validation."
     },
 
+    create_comment: {
+        name: "create_comment",
+        type: "write",
+        description:
+            "Create ONE comment on an authorized task or project when the user explicitly asks to add or post a comment. The comment must contain text and must target either a task or a project. Creating a comment requires explicit confirmation before execution.",
+        parameters: {
+            content: {
+                type: "string",
+                required: true
+            },
+            task_id: {
+                type: "integer",
+                required: false
+            },
+            project_id: {
+                type: "integer",
+                required: false
+            }
+        },
+        returns:
+            "The created comment after authorization and database validation."
+    },
+
     delete_task: {
         name: "delete_task",
         type: "write",

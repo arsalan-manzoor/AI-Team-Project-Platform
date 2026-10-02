@@ -23,6 +23,10 @@ const {
     createMilestone
 } = require("../services/milestone.service");
 
+const {
+    createComment
+} = require("../services/comment.service");
+
 const router = express.Router();
 
 router.post("/", authMiddleware, async (req, res) => {
@@ -194,6 +198,35 @@ router.post("/", authMiddleware, async (req, res) => {
             });
         }
 
+        // CREATE COMMENT
+        if (
+            confirmation.toolName ===
+            "create_comment"
+        ) {
+            const comment =
+                await createComment({
+                    content:
+                        args.content,
+                    taskId:
+                        args.task_id,
+                    projectId:
+                        args.project_id,
+                    userId:
+                        req.user.id
+                });
+
+            deleteConfirmation(
+                confirmationId,
+                req.user.id
+            );
+
+            return res.status(201).json({
+                message:
+                    "AI action confirmed and executed successfully",
+                comment
+            });
+        }
+
         // DELETE TASK
         if (
             confirmation.toolName ===
@@ -314,6 +347,17 @@ router.post("/", authMiddleware, async (req, res) => {
 
         if (
             error.message ===
+                "Task not found or you are not a team member" ||
+            error.message ===
+                "Project not found or you are not a team member"
+        ) {
+            return res.status(404).json({
+                error: error.message
+            });
+        }
+
+        if (
+            error.message ===
             "Task not found"
         ) {
             return res.status(404).json({
@@ -344,6 +388,19 @@ router.post("/", authMiddleware, async (req, res) => {
             "Project not found or you are not the creator"
         ) {
             return res.status(403).json({
+                error: error.message
+            });
+        }
+
+        if (
+            error.message ===
+                "Comment content is required" ||
+            error.message ===
+                "Task ID or project ID is required" ||
+            error.message ===
+                "Provide either a task ID or project ID, not both"
+        ) {
+            return res.status(400).json({
                 error: error.message
             });
         }

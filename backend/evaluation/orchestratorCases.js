@@ -238,6 +238,45 @@ const cases = [
         ],
         expected_error:
             "AI model returned an invalid response"
+    },
+
+    {
+        name: "update_task_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "update_task",
+                    arguments: {
+                        task_id: 2,
+                        title: "Updated task title",
+                        description:
+                            "Updated task description",
+                        assigned_to: 6,
+                        status: "in_progress",
+                        priority: "high",
+                        deadline: "2026-10-15"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "update_task",
+            arguments: {
+                task_id: 2,
+                title: "Updated task title",
+                description:
+                    "Updated task description",
+                assigned_to: 6,
+                status: "in_progress",
+                priority: "high",
+                deadline: "2026-10-15"
+            }
+        }
     }
 ];
 
@@ -317,6 +356,45 @@ async function runCase(testCase) {
             ],
             userId: testCase.user_id
         });
+
+        if (testCase.expected_confirmation) {
+            const expected =
+                testCase.expected_confirmation;
+
+            const passed =
+                result &&
+                result.requires_confirmation === true &&
+                result.tool_name ===
+                    expected.tool_name &&
+                JSON.stringify(
+                    result.tool_arguments
+                ) ===
+                    JSON.stringify(
+                        expected.arguments
+                    ) &&
+                typeof result.confirmation_id ===
+                    "string" &&
+                result.confirmation_id.length > 0;
+
+            console.log(
+                (passed ? "PASS" : "FAIL") +
+                ": " +
+                testCase.name
+            );
+
+            if (!passed) {
+                console.log(
+                    "  Received:",
+                    JSON.stringify(
+                        result,
+                        null,
+                        2
+                    )
+                );
+            }
+
+            return passed;
+        }
 
         if (testCase.expected_content) {
             const actualContent =

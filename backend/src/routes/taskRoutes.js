@@ -1,7 +1,12 @@
 const express = require("express");
 const pool = require("../config/db");
 const authMiddleware = require("../middleware/authMiddleware");
-const { createTask } = require("../services/task.service");
+
+const {
+    createTask,
+    updateTask,
+    deleteTask
+} = require("../services/task.service");
 
 const router = express.Router();
 
@@ -142,120 +147,49 @@ router.put("/:id", authMiddleware, async (req, res) => {
         });
     }
 
-    const client = await pool.connect();
-
     try {
-        await client.query("BEGIN");
+        const task = await updateTask({
+            taskId: req.params.id,
+            title,
+            description: description || null,
+            assignedTo: assignedTo || null,
+            status: status || "pending",
+            priority: priority || "medium",
+            deadline: deadline || null,
+            userId: req.user.id
+        });
 
-        const taskResult = await client.query(
-            `SELECT tasks.id, tasks.project_id, tasks.assigned_to
-             FROM tasks
-             JOIN projects
-                ON tasks.project_id = projects.id
-             JOIN team_members
-                ON projects.team_id = team_members.team_id
-             WHERE tasks.id = $1
-               AND team_members.user_id = $2`,
-            [req.params.id, req.user.id]
-        );
+        res.json(task);
+    } catch (error) {
+        console.error("Task update error:", error.message);
 
-        if (taskResult.rows.length === 0) {
-            await client.query("ROLLBACK");
-
+        if (error.message === "Task not found") {
             return res.status(404).json({
-                error: "Task not found"
+                error: error.message
             });
         }
-
-        const projectId = taskResult.rows[0].project_id;
-        const oldAssignedTo = taskResult.rows[0].assigned_to;
-
-        if (assignedTo) {
-            const memberResult = await client.query(
-                `SELECT team_members.user_id
-                 FROM team_members
-                 JOIN projects
-                    ON team_members.team_id = projects.team_id
-                 WHERE projects.id = $1
-                   AND team_members.user_id = $2`,
-                [projectId, assignedTo]
-            );
-
-            if (memberResult.rows.length === 0) {
-                await client.query("ROLLBACK");
-
-                return res.status(400).json({
-                    error:
-                        "Assigned user is not a member of the project team"
-                });
-            }
-        }
-
-        const result = await client.query(
-            `UPDATE tasks
-             SET title = $1,
-                 description = $2,
-                 assigned_to = $3,
-                 status = $4,
-                 priority = $5,
-                 deadline = $6
-             WHERE id = $7
-               AND created_by = $8
-             RETURNING *`,
-            [
-                title,
-                description || null,
-                assignedTo || null,
-                status || "pending",
-                priority || "medium",
-                deadline || null,
-                req.params.id,
-                req.user.id
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            await client.query("ROLLBACK");
-
-            return res.status(404).json({
-                error:
-                    "Task not found or you are not the creator"
-            });
-        }
-
-        const newAssignedTo = assignedTo
-            ? Number(assignedTo)
-            : null;
 
         if (
-            newAssignedTo &&
-            newAssignedTo !== Number(oldAssignedTo)
+            error.message ===
+            "Task not found or you are not the creator"
         ) {
-            await client.query(
-                `INSERT INTO notifications
-                 (user_id, title, message)
-                 VALUES ($1, $2, $3)`,
-                [
-                    newAssignedTo,
-                    "New Task Assigned",
-                    `You have been assigned a new task: ${title}`
-                ]
-            );
+            return res.status(403).json({
+                error: error.message
+            });
         }
 
-        await client.query("COMMIT");
-
-        res.json(result.rows[0]);
-    } catch (error) {
-        await client.query("ROLLBACK");
-
-        console.error("Task update error:", error.message);
+        if (
+            error.message ===
+            "Assigned user is not a member of the project team"
+        ) {
+            return res.status(400).json({
+                error: error.message
+            });
+        }
 
         res.status(500).json({
             error: "Database error"
         });
-    } finally {
-        client.release();
     }
 });
 
@@ -263,27 +197,32 @@ router.put("/:id", authMiddleware, async (req, res) => {
 // DELETE TASK
 router.delete("/:id", authMiddleware, async (req, res) => {
     try {
-        const result = await pool.query(
-            `DELETE FROM tasks
-             WHERE id = $1
-               AND created_by = $2
-             RETURNING *`,
-            [req.params.id, req.user.id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                error:
-                    "Task not found or you are not the creator"
-            });
-        }
+        const task = await deleteTask({
+            taskId: req.params.id,
+            userId: req.user.id
+        });
 
         res.json({
             message: "Task deleted successfully",
-            task: result.rows[0]
+            task
         });
     } catch (error) {
         console.error("Task deletion error:", error.message);
+
+        if (error.message === "Task not found") {
+            return res.status(404).json({
+                error: error.message
+            });
+        }
+
+        if (
+            error.message ===
+            "Task not found or you are not the creator"
+        ) {
+            return res.status(404).json({
+                error: error.message
+            });
+        }
 
         res.status(500).json({
             error: "Database error"

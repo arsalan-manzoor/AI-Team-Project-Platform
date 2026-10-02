@@ -1,4 +1,4 @@
-const tools = {
+const toolRegistry = {
     get_projects: {
         name: "get_projects",
         type: "read",
@@ -21,17 +21,22 @@ const tools = {
             }
         },
         returns:
-            "Authorized details for the specified project, including tasks and milestones."
+            "The requested project if the authenticated user is authorized to access it."
     },
 
     get_tasks: {
         name: "get_tasks",
         type: "read",
         description:
-            "Get the tasks that the authenticated user is authorized to access. Use this for general task-list requests.",
-        parameters: {},
+            "Get tasks the authenticated user is authorized to access. If a project ID is provided, return tasks from that specific authorized project. If no project ID is provided, return the authenticated user's authorized tasks.",
+        parameters: {
+            project_id: {
+                type: "integer",
+                required: false
+            }
+        },
         returns:
-            "Authorized tasks for the authenticated user."
+            "Tasks authorized for the authenticated user, optionally filtered by project."
     },
 
     get_task: {
@@ -46,14 +51,14 @@ const tools = {
             }
         },
         returns:
-            "Authorized details for the specified task, including subtasks, comments, and related context."
+            "The requested task if the authenticated user is authorized to access it."
     },
 
     get_team_members: {
         name: "get_team_members",
         type: "read",
         description:
-            "Get members of ONE SPECIFIC team when the user provides a team ID and is authorized to access that team.",
+            "Get members of ONE SPECIFIC team when the user provides a team ID.",
         parameters: {
             team_id: {
                 type: "integer",
@@ -61,7 +66,7 @@ const tools = {
             }
         },
         returns:
-            "Authorized team details and member information."
+            "Members of the requested authorized team."
     },
 
     get_milestones: {
@@ -76,14 +81,14 @@ const tools = {
             }
         },
         returns:
-            "Authorized milestone details and related project task context."
+            "The requested milestone if the authenticated user is authorized to access it."
     },
 
     get_notifications: {
         name: "get_notifications",
         type: "read",
         description:
-            "Get notifications belonging to the authenticated user. Use this for general notification requests.",
+            "Get notifications belonging to the authenticated user.",
         parameters: {},
         returns:
             "Notifications belonging to the authenticated user."
@@ -93,7 +98,7 @@ const tools = {
         name: "get_recent_activity",
         type: "read",
         description:
-            "Get recent activity for ONE SPECIFIC authorized project when the user provides a project ID.",
+            "Get recent activity for ONE SPECIFIC project when the user provides a project ID.",
         parameters: {
             project_id: {
                 type: "integer",
@@ -101,7 +106,7 @@ const tools = {
             }
         },
         returns:
-            "Recent activity for the specified authorized project."
+            "Recent activity from the requested authorized project."
     },
 
     get_project_summary_data: {
@@ -116,14 +121,14 @@ const tools = {
             }
         },
         returns:
-            "Authorized project details, tasks, and milestones needed for summary generation."
+            "Structured summary data for the requested authorized project."
     },
 
     get_resource: {
         name: "get_resource",
         type: "read",
         description:
-            "Get ONE SPECIFIC resource when the user provides a resource ID and is authorized to access the resource through its project.",
+            "Get ONE SPECIFIC resource when the user provides a resource ID.",
         parameters: {
             resource_id: {
                 type: "integer",
@@ -131,15 +136,19 @@ const tools = {
             }
         },
         returns:
-            "Authorized details for the specified resource, including its project, description, URL, uploader, and creation date."
+            "The requested resource if the authenticated user is authorized to access it."
     },
 
     create_task: {
         name: "create_task",
         type: "write",
         description:
-            "Create ONE task in a specific project. Use this only when the user explicitly asks to create or add a task and provides the required task information.",
+            "Create ONE new task inside an authorized project when the user explicitly asks to create a task. Creating a task requires explicit confirmation before execution.",
         parameters: {
+            project_id: {
+                type: "integer",
+                required: true
+            },
             title: {
                 type: "string",
                 required: true
@@ -147,10 +156,6 @@ const tools = {
             description: {
                 type: "string",
                 required: false
-            },
-            project_id: {
-                type: "integer",
-                required: true
             },
             assigned_to: {
                 type: "integer",
@@ -170,8 +175,165 @@ const tools = {
             }
         },
         returns:
-            "The newly created task after authorization and database validation."
+            "The created task after authorization and database validation."
+    },
+
+    update_task: {
+        name: "update_task",
+        type: "write",
+        description:
+            "Update ONE existing task when the user explicitly asks to change a task. The task must be identified by task ID. Updating a task requires explicit confirmation before execution.",
+        parameters: {
+            task_id: {
+                type: "integer",
+                required: true
+            },
+            title: {
+                type: "string",
+                required: true
+            },
+            description: {
+                type: "string",
+                required: false
+            },
+            assigned_to: {
+                type: "integer",
+                required: false
+            },
+            status: {
+                type: "string",
+                required: false
+            },
+            priority: {
+                type: "string",
+                required: false
+            },
+            deadline: {
+                type: "string",
+                required: false
+            }
+        },
+        returns:
+            "The updated task after authorization and database validation."
+    },
+
+    create_project: {
+        name: "create_project",
+        type: "write",
+        description:
+            "Create ONE new project inside a team when the user explicitly asks to create a project. The authenticated user must be a member of the team. Creating a project requires explicit confirmation before execution.",
+        parameters: {
+            name: {
+                type: "string",
+                required: true
+            },
+            description: {
+                type: "string",
+                required: false
+            },
+            team_id: {
+                type: "integer",
+                required: true
+            }
+        },
+        returns:
+            "The created project after team membership validation."
+    },
+
+    create_milestone: {
+        name: "create_milestone",
+        type: "write",
+        description:
+            "Create ONE new milestone inside a project when the user explicitly asks to create a milestone. The authenticated user must be a member of the project's team. Creating a milestone requires explicit confirmation before execution.",
+        parameters: {
+            name: {
+                type: "string",
+                required: true
+            },
+            description: {
+                type: "string",
+                required: false
+            },
+            project_id: {
+                type: "integer",
+                required: true
+            },
+            deadline: {
+                type: "string",
+                required: false
+            },
+            status: {
+                type: "string",
+                required: false
+            }
+        },
+        returns:
+            "The created milestone after project membership validation."
+    },
+
+    delete_task: {
+        name: "delete_task",
+        type: "write",
+        description:
+            "Delete ONE existing task when the user explicitly asks to delete a task. The task must be identified by task ID, and the authenticated user must be the task creator. Deleting a task requires explicit confirmation before execution.",
+        parameters: {
+            task_id: {
+                type: "integer",
+                required: true
+            }
+        },
+        returns:
+            "The deleted task after authorization and database validation."
+    },
+
+    delete_project: {
+        name: "delete_project",
+        type: "write",
+        description:
+            "Delete ONE existing project when the user explicitly asks to delete a project. The project must be identified by project ID, and the authenticated user must be the project creator. Deleting a project requires explicit confirmation before execution.",
+        parameters: {
+            project_id: {
+                type: "integer",
+                required: true
+            }
+        },
+        returns:
+            "The deleted project after authorization and database validation."
+    },
+
+    bulk_update_tasks: {
+        name: "bulk_update_tasks",
+        type: "write",
+        description:
+            "Update MULTIPLE existing tasks with the same requested changes when the user explicitly asks to bulk update tasks. Each task must be identified by task ID. The authenticated user must be authorized to update every selected task. This is a sensitive action and requires explicit confirmation before execution.",
+        parameters: {
+            task_ids: {
+                type: "array",
+                required: true,
+                items: {
+                    type: "integer"
+                }
+            },
+            status: {
+                type: "string",
+                required: false
+            },
+            priority: {
+                type: "string",
+                required: false
+            },
+            assigned_to: {
+                type: "integer",
+                required: false
+            },
+            deadline: {
+                type: "string",
+                required: false
+            }
+        },
+        returns:
+            "The updated tasks after authorization and database validation."
     }
 };
 
-module.exports = tools;
+module.exports = toolRegistry;

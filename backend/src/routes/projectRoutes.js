@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../config/db");
 const authMiddleware = require("../middleware/authMiddleware");
+const { createProject } = require("../services/project.service");
 
 const router = express.Router();
 
@@ -14,30 +15,22 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 
     try {
-    const teamResult = await pool.query(
-        `SELECT team_members.team_id
-         FROM team_members
-         WHERE team_members.team_id = $1
-           AND team_members.user_id = $2`,
-        [teamId, req.user.id]
-    );
-
-    if (teamResult.rows.length === 0) {
-        return res.status(403).json({
-            error: "You are not a member of this team"
+        const project = await createProject({
+            name,
+            description,
+            teamId: Number(teamId),
+            userId: req.user.id
         });
-    }
 
-    const result = await pool.query(
-        `INSERT INTO projects (name, description, team_id, created_by)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [name, description || null, teamId, req.user.id]
-    );
-
-        res.status(201).json(result.rows[0]);
+        res.status(201).json(project);
     } catch (error) {
         console.error("Project creation error:", error.message);
+
+        if (error.message === "You are not a member of this team") {
+            return res.status(403).json({
+                error: error.message
+            });
+        }
 
         if (error.code === "23503") {
             return res.status(404).json({
@@ -101,6 +94,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
         });
     }
 });
+
 router.put("/:id", authMiddleware, async (req, res) => {
     const { name, description } = req.body;
 
@@ -135,6 +129,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
         });
     }
 });
+
 router.delete("/:id", authMiddleware, async (req, res) => {
     try {
         const result = await pool.query(
@@ -163,4 +158,5 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         });
     }
 });
+
 module.exports = router;

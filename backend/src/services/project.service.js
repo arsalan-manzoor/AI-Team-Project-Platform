@@ -42,6 +42,48 @@ async function createProject({
     return result.rows[0];
 }
 
+async function updateProject({
+    projectId,
+    name,
+    description = null,
+    userId
+}) {
+    if (!Number.isInteger(userId)) {
+        throw new Error("Invalid user ID");
+    }
+
+    if (!Number.isInteger(projectId)) {
+        throw new Error("Invalid project ID");
+    }
+
+    if (!name) {
+        throw new Error("Project name is required");
+    }
+
+    const result = await pool.query(
+        `UPDATE projects
+         SET name = $1,
+             description = $2
+         WHERE id = $3
+           AND created_by = $4
+         RETURNING *`,
+        [
+            name,
+            description || null,
+            projectId,
+            userId
+        ]
+    );
+
+    if (result.rows.length === 0) {
+        throw new Error(
+            "Project not found or you are not the creator"
+        );
+    }
+
+    return result.rows[0];
+}
+
 async function deleteProject({
     projectId,
     userId
@@ -96,5 +138,6 @@ async function deleteProject({
 
 module.exports = {
     createProject,
+    updateProject,
     deleteProject
 };

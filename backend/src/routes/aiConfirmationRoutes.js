@@ -16,6 +16,7 @@ const {
 
 const {
     createProject,
+    updateProject,
     deleteProject
 } = require("../services/project.service");
 
@@ -159,6 +160,35 @@ router.post("/", authMiddleware, async (req, res) => {
             );
 
             return res.status(201).json({
+                message:
+                    "AI action confirmed and executed successfully",
+                project
+            });
+        }
+
+        // UPDATE PROJECT
+        if (
+            confirmation.toolName ===
+            "update_project"
+        ) {
+            const project =
+                await updateProject({
+                    projectId:
+                        args.project_id,
+                    name:
+                        args.name,
+                    description:
+                        args.description || null,
+                    userId:
+                        req.user.id
+                });
+
+            deleteConfirmation(
+                confirmationId,
+                req.user.id
+            );
+
+            return res.status(200).json({
                 message:
                     "AI action confirmed and executed successfully",
                 project
@@ -408,6 +438,10 @@ router.post("/", authMiddleware, async (req, res) => {
         if (
             error.message ===
                 "Project name and team ID are required" ||
+            error.message ===
+                "Project name is required" ||
+            error.message ===
+                "Invalid project ID" ||
             error.message ===
                 "Milestone name and project ID are required" ||
             error.message ===

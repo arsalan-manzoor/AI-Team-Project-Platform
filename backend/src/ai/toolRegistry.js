@@ -240,6 +240,29 @@ const toolRegistry = {
             "The created project after team membership validation."
     },
 
+    update_project: {
+        name: "update_project",
+        type: "write",
+        description:
+            "Update ONE existing project when the user explicitly asks to change a project's name or description. The project must be identified by project ID, and the authenticated user must be the project creator. Updating a project requires explicit confirmation before execution.",
+        parameters: {
+            project_id: {
+                type: "integer",
+                required: true
+            },
+            name: {
+                type: "string",
+                required: true
+            },
+            description: {
+                type: "string",
+                required: false
+            }
+        },
+        returns:
+            "The updated project after creator authorization and database validation."
+    },
+
     create_milestone: {
         name: "create_milestone",
         type: "write",

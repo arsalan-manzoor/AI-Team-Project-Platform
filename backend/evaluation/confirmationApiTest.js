@@ -1,4 +1,5 @@
-require("dotenv").config();
+const dotenv = require("dotenv");
+dotenv.config();
 
 const http = require("http");
 const jwt = require("jsonwebtoken");
@@ -27,8 +28,7 @@ async function sendRequest({
                 path: "/api/ai/confirm",
                 method: "POST",
                 headers: {
-                    "Content-Type":
-                        "application/json",
+                    "Content-Type": "application/json",
                     "Authorization":
                         "Bearer " + token,
                     "Content-Length":
@@ -38,40 +38,31 @@ async function sendRequest({
             (response) => {
                 let data = "";
 
-                response.on(
-                    "data",
-                    (chunk) => {
-                        data += chunk;
+                response.on("data", (chunk) => {
+                    data += chunk;
+                });
+
+                response.on("end", () => {
+                    let parsed;
+
+                    try {
+                        parsed = JSON.parse(data);
+                    } catch {
+                        parsed = {
+                            raw: data
+                        };
                     }
-                );
 
-                response.on(
-                    "end",
-                    () => {
-                        let parsed;
-
-                        try {
-                            parsed = JSON.parse(data);
-                        } catch {
-                            parsed = {
-                                raw: data
-                            };
-                        }
-
-                        resolve({
-                            status:
-                                response.statusCode,
-                            body: parsed
-                        });
-                    }
-                );
+                    resolve({
+                        status:
+                            response.statusCode,
+                        body: parsed
+                    });
+                });
             }
         );
 
-        request.on(
-            "error",
-            reject
-        );
+        request.on("error", reject);
 
         request.write(body);
         request.end();
@@ -100,21 +91,14 @@ async function runTest() {
             }
         );
 
-        server = app.listen(
-            5001,
-            () => {
-                console.log(
-                    "Test API server started on port 5001"
-                );
-            }
-        );
+        server = app.listen(5001, () => {
+            console.log(
+                "Test API server started on port 5001"
+            );
+        });
 
-        await new Promise(
-            (resolve) =>
-                server.once(
-                    "listening",
-                    resolve
-                )
+        await new Promise((resolve) =>
+            server.once("listening", resolve)
         );
 
         /*
@@ -351,10 +335,6 @@ async function runTest() {
             "PASS: Confirmed AI action updated the task"
         );
 
-        /*
-         * UPDATE CONFIRMATION SINGLE-USE TEST
-         */
-
         console.log("");
 
         console.log(
@@ -468,10 +448,6 @@ async function runTest() {
         );
 
         taskId = null;
-
-        /*
-         * DELETE CONFIRMATION SINGLE-USE TEST
-         */
 
         console.log("");
 
@@ -604,10 +580,6 @@ async function runTest() {
             "PASS: Confirmed AI action created the project"
         );
 
-        /*
-         * CREATE PROJECT CONFIRMATION SINGLE-USE TEST
-         */
-
         console.log("");
 
         console.log(
@@ -642,6 +614,148 @@ async function runTest() {
 
         console.log(
             "PASS: create_project confirmation cannot be reused"
+        );
+
+        /*
+         * UPDATE PROJECT CONFIRMATION
+         */
+
+        const updatedProjectName =
+            "Updated AI Confirmation Project " +
+            Date.now();
+
+        const updatedProjectDescription =
+            "Updated by update_project confirmation API evaluation";
+
+        console.log("");
+
+        console.log(
+            "Creating update_project confirmation..."
+        );
+
+        const updateProjectConfirmationRequest =
+            createConfirmation({
+                userId,
+                conversationId: null,
+                toolName: "update_project",
+                toolArguments: {
+                    project_id: projectId,
+                    name: updatedProjectName,
+                    description:
+                        updatedProjectDescription
+                }
+            });
+
+        console.log(
+            "PASS: Test update_project confirmation created"
+        );
+
+        console.log("");
+
+        console.log(
+            "Sending update_project confirmation request..."
+        );
+
+        const updateProjectResponse =
+            await sendRequest({
+                token,
+                confirmationId:
+                    updateProjectConfirmationRequest.confirmationId,
+                port: 5001
+            });
+
+        console.log(
+            "HTTP status:",
+            updateProjectResponse.status
+        );
+
+        console.log(
+            "Response:",
+            updateProjectResponse.body
+        );
+
+        if (
+            updateProjectResponse.status !== 200
+        ) {
+            throw new Error(
+                "Update project confirmation API request failed"
+            );
+        }
+
+        if (
+            !updateProjectResponse.body ||
+            !updateProjectResponse.body.project
+        ) {
+            throw new Error(
+                "Update project confirmation API did not return the updated project"
+            );
+        }
+
+        if (
+            updateProjectResponse.body.project.id !==
+            projectId
+        ) {
+            throw new Error(
+                "Updated project has the wrong project ID"
+            );
+        }
+
+        if (
+            updateProjectResponse.body.project.name !==
+            updatedProjectName
+        ) {
+            throw new Error(
+                "Updated project has the wrong name"
+            );
+        }
+
+        if (
+            updateProjectResponse.body.project.description !==
+            updatedProjectDescription
+        ) {
+            throw new Error(
+                "Updated project has the wrong description"
+            );
+        }
+
+        console.log(
+            "PASS: Confirmed AI action updated the project"
+        );
+
+        console.log("");
+
+        console.log(
+            "Testing update_project confirmation single-use behavior..."
+        );
+
+        const secondUpdateProjectResponse =
+            await sendRequest({
+                token,
+                confirmationId:
+                    updateProjectConfirmationRequest.confirmationId,
+                port: 5001
+            });
+
+        console.log(
+            "Second update project HTTP status:",
+            secondUpdateProjectResponse.status
+        );
+
+        console.log(
+            "Second update project response:",
+            secondUpdateProjectResponse.body
+        );
+
+        if (
+            secondUpdateProjectResponse.status !== 404
+        ) {
+            throw new Error(
+                "Update project confirmation was reusable"
+            );
+        }
+
+        console.log(
+            "PASS: update_project confirmation cannot be reused"
         );
 
         /*
@@ -723,10 +837,6 @@ async function runTest() {
         );
 
         projectId = null;
-
-        /*
-         * DELETE PROJECT CONFIRMATION SINGLE-USE TEST
-         */
 
         console.log("");
 
@@ -871,10 +981,6 @@ async function runTest() {
         console.log(
             "PASS: Confirmed AI action created the milestone"
         );
-
-        /*
-         * CREATE MILESTONE CONFIRMATION SINGLE-USE TEST
-         */
 
         console.log("");
 
@@ -1098,10 +1204,6 @@ async function runTest() {
         console.log(
             "PASS: Confirmed AI action updated multiple tasks"
         );
-
-        /*
-         * BULK UPDATE CONFIRMATION SINGLE-USE TEST
-         */
 
         console.log("");
 

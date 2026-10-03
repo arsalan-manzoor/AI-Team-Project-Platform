@@ -1,6 +1,7 @@
 const pendingConfirmations = new Map();
 
-const CONFIRMATION_EXPIRY_MS = 5 * 60 * 1000;
+const CONFIRMATION_EXPIRY_MS =
+    5 * 60 * 1000;
 
 function createConfirmation({
     userId,
@@ -14,7 +15,10 @@ function createConfirmation({
         );
     }
 
-    if (typeof toolName !== "string" || !toolName) {
+    if (
+        typeof toolName !== "string" ||
+        !toolName
+    ) {
         throw new Error(
             "AI confirmation tool name is required"
         );
@@ -31,7 +35,9 @@ function createConfirmation({
         conversationId,
         toolName,
         toolArguments,
-        createdAt: new Date().toISOString()
+        createdAt:
+            new Date().toISOString(),
+        executing: false
     };
 
     pendingConfirmations.set(
@@ -87,10 +93,14 @@ function getConfirmation(
         return null;
     }
 
+    if (confirmation.executing) {
+        return null;
+    }
+
     return confirmation;
 }
 
-function consumeConfirmation(
+function claimConfirmation(
     confirmationId,
     userId
 ) {
@@ -101,6 +111,82 @@ function consumeConfirmation(
         );
 
     if (!confirmation) {
+        return null;
+    }
+
+    confirmation.executing = true;
+
+    return confirmation;
+}
+
+function releaseConfirmation(
+    confirmationId,
+    userId
+) {
+    const confirmation =
+        pendingConfirmations.get(
+            confirmationId
+        );
+
+    if (!confirmation) {
+        return false;
+    }
+
+    if (
+        confirmation.userId !== userId
+    ) {
+        return false;
+    }
+
+    if (
+        isConfirmationExpired(
+            confirmation
+        )
+    ) {
+        pendingConfirmations.delete(
+            confirmationId
+        );
+
+        return false;
+    }
+
+    confirmation.executing = false;
+
+    return true;
+}
+
+function consumeConfirmation(
+    confirmationId,
+    userId
+) {
+    const confirmation =
+        pendingConfirmations.get(
+            confirmationId
+        );
+
+    if (!confirmation) {
+        return null;
+    }
+
+    if (
+        confirmation.userId !== userId
+    ) {
+        return null;
+    }
+
+    if (
+        isConfirmationExpired(
+            confirmation
+        )
+    ) {
+        pendingConfirmations.delete(
+            confirmationId
+        );
+
+        return null;
+    }
+
+    if (confirmation.executing) {
         return null;
     }
 
@@ -116,12 +202,17 @@ function deleteConfirmation(
     userId
 ) {
     const confirmation =
-        getConfirmation(
-            confirmationId,
-            userId
+        pendingConfirmations.get(
+            confirmationId
         );
 
     if (!confirmation) {
+        return false;
+    }
+
+    if (
+        confirmation.userId !== userId
+    ) {
         return false;
     }
 
@@ -135,6 +226,8 @@ function deleteConfirmation(
 module.exports = {
     createConfirmation,
     getConfirmation,
+    claimConfirmation,
+    releaseConfirmation,
     consumeConfirmation,
     deleteConfirmation
 };

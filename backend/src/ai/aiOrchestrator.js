@@ -12,6 +12,14 @@ const {
     addMessage
 } = require("../services/aiConversation.service");
 
+const {
+    getProjectListContext
+} = require("../services/projectListContext.service");
+
+const {
+    getTaskListContext
+} = require("../services/taskListContext.service");
+
 const MAX_TOOL_ROUNDS = 5;
 
 const ALLOWED_MESSAGE_ROLES = new Set([
@@ -159,6 +167,242 @@ async function persistUserMessages({
     }
 }
 
+function normalizeText(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+}
+
+function getUserMessageText(messages) {
+    return messages
+        .filter(
+            (message) =>
+                message.role === "user"
+        )
+        .map(
+            (message) =>
+                message.content
+        )
+        .join(" ");
+}
+
+async function resolveProjectIdFromUserMessage({
+    messages,
+    userId
+}) {
+    const userMessage =
+        normalizeText(
+            getUserMessageText(messages)
+        );
+
+    if (!userMessage) {
+        return null;
+    }
+
+    const projectContext =
+        await getProjectListContext(userId);
+
+    const projects =
+        Array.isArray(projectContext?.projects)
+            ? projectContext.projects
+            : [];
+
+    if (projects.length === 0) {
+        return null;
+    }
+
+    const matchingProjects =
+        projects.filter((project) => {
+            const projectName =
+                normalizeText(project.name);
+
+            if (!projectName) {
+                return false;
+            }
+
+            return userMessage.includes(
+                projectName
+            );
+        });
+
+    if (matchingProjects.length !== 1) {
+        return null;
+    }
+
+    return matchingProjects[0].id;
+}
+
+async function resolveTaskIdFromUserMessage({
+    messages,
+    userId
+}) {
+    const userMessage =
+        getUserMessageText(messages).trim();
+
+    if (!userMessage) {
+        return null;
+    }
+
+    const taskContext =
+        await getTaskListContext(userId);
+
+    const tasks =
+        Array.isArray(taskContext?.tasks)
+            ? taskContext.tasks
+            : [];
+
+    if (tasks.length === 0) {
+        return null;
+    }
+
+    /*
+     * For requests such as:
+     *
+     * Change the title of my task
+     * "OLD TITLE" to "NEW TITLE".
+     *
+     * The first quoted value is the task title.
+     */
+    const quotedValues = [
+        ...userMessage.matchAll(/"([^"]+)"/g)
+    ].map(
+        (match) => match[1].trim()
+    );
+
+    let requestedTaskTitle = null;
+
+    if (quotedValues.length >= 1) {
+        requestedTaskTitle =
+            normalizeText(
+                quotedValues[0]
+            );
+    }
+
+    if (requestedTaskTitle) {
+        const matchingQuotedTasks =
+            tasks.filter((task) => {
+                const taskTitle =
+                    normalizeText(task.title);
+
+                return (
+                    taskTitle ===
+                    requestedTaskTitle
+                );
+            });
+
+        if (
+            matchingQuotedTasks.length === 1
+        ) {
+            return matchingQuotedTasks[0].id;
+        }
+
+        /*
+         * Never guess between zero or multiple
+         * authorized task matches.
+         */
+        return null;
+    }
+
+    /*
+     * Fallback for requests without quotation marks.
+     */
+    const normalizedMessage =
+        normalizeText(userMessage);
+
+    const matchingTasks =
+        tasks.filter((task) => {
+            const taskTitle =
+                normalizeText(task.title);
+
+            if (!taskTitle) {
+                return false;
+            }
+
+            return normalizedMessage.includes(
+                taskTitle
+            );
+        });
+
+    if (
+        matchingTasks.length !== 1
+    ) {
+        return null;
+    }
+
+    return matchingTasks[0].id;
+}
+
+async function resolveWriteArguments({
+    toolName,
+    toolArguments,
+    messages,
+    userId
+}) {
+    const resolvedArguments = {
+        ...(toolArguments || {})
+    };
+
+    if (
+        toolName === "create_task"
+    ) {
+        const resolvedProjectId =
+            await resolveProjectIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (
+            Number.isInteger(
+                resolvedProjectId
+            )
+        ) {
+            resolvedArguments.project_id =
+                resolvedProjectId;
+        }
+    }
+
+    if (
+        toolName === "update_task"
+    ) {
+        const resolvedTaskId =
+            await resolveTaskIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (
+            Number.isInteger(
+                resolvedTaskId
+            )
+        ) {
+            resolvedArguments.task_id =
+                resolvedTaskId;
+        }
+    }
+
+    if (
+        toolName === "update_project"
+    ) {
+        const resolvedProjectId =
+            await resolveProjectIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (
+            Number.isInteger(
+                resolvedProjectId
+            )
+        ) {
+            resolvedArguments.project_id =
+                resolvedProjectId;
+        }
+    }
+
+    return resolvedArguments;
+}
+
 async function createWriteConfirmation({
     toolName,
     toolArguments,
@@ -295,11 +539,8 @@ async function runAIRequest({
         });
 
         /*
-         * Check for write tools BEFORE executing
-         * any tool call.
-         *
-         * Write tools are never executed automatically.
-         * They create a server-side confirmation instead.
+         * Write tools are intercepted before execution.
+         * No write action can execute automatically.
          */
         for (const toolCall of toolCalls) {
             const {
@@ -316,11 +557,59 @@ async function runAIRequest({
             }
 
             if (tool.type === "write") {
+                const resolvedArguments =
+                    await resolveWriteArguments({
+                        toolName: name,
+                        toolArguments:
+                            toolArguments || {},
+                        messages,
+                        userId
+                    });
+
+                /*
+                 * If the server could not resolve a required
+                 * resource identifier from authorized data,
+                 * do not allow the model's guessed identifier
+                 * to reach confirmation.
+                 */
+                if (
+                    name === "update_task" &&
+                    !Number.isInteger(
+                        resolvedArguments.task_id
+                    )
+                ) {
+                    throw new Error(
+                        "Unable to resolve the requested task from authorized task data"
+                    );
+                }
+
+                if (
+                    name === "create_task" &&
+                    !Number.isInteger(
+                        resolvedArguments.project_id
+                    )
+                ) {
+                    throw new Error(
+                        "Unable to resolve the requested project from authorized project data"
+                    );
+                }
+
+                if (
+                    name === "update_project" &&
+                    !Number.isInteger(
+                        resolvedArguments.project_id
+                    )
+                ) {
+                    throw new Error(
+                        "Unable to resolve the requested project from authorized project data"
+                    );
+                }
+
                 const confirmation =
                     await createWriteConfirmation({
                         toolName: name,
                         toolArguments:
-                            toolArguments || {},
+                            resolvedArguments,
                         userId,
                         conversationId
                     });
@@ -335,7 +624,7 @@ async function runAIRequest({
                             confirmation.message,
                         toolName: name,
                         toolArguments:
-                            toolArguments || {},
+                            resolvedArguments,
                         toolResult:
                             confirmation
                     });

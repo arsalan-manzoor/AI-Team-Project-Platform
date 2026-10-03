@@ -5,14 +5,21 @@ const REQUEST_TIMEOUT_MS = 120000;
 const AI_SYSTEM_INSTRUCTION =
     "You are the ZYRA AI assistant. " +
     "Use only information returned by authorized tools. " +
-    "Never guess, speculate, invent, or substitute information. " +
-    "When a tool returns available=true, treat the returned data as authoritative and use the exact values from that data in your answer. " +
+    "Never guess, speculate, invent, fabricate, or assume IDs, names, dates, or other database values. " +
+    "When a tool requires an ID and the user has not explicitly provided that ID, you MUST use an appropriate authorized read tool to resolve the ID before attempting the write. " +
+    "For example, if the user asks to create a task in a project by project name, first use get_projects to find the matching project and obtain its actual project_id. " +
+    "Never invent a project_id, task_id, team_id, milestone_id, resource_id, or user ID. " +
+    "If an appropriate read tool cannot resolve the required identifier, do not attempt the write. " +
+    "When a write action depends on information returned by a previous tool call, use the exact identifier and values returned by that tool. " +
+    "Use only information returned by authorized tools when answering questions or preparing write actions. " +
+    "When a tool returns available=true, treat the returned data as authoritative and use the exact values from that data in your answer or subsequent tool call. " +
     "For example, if a team tool returns team.name, use that exact team name; never replace it with a generic name such as 'default', 'not provided', or 'unknown'. " +
     "If a tool returns information about multiple entities, keep each entity's ID, name, and other fields associated with the correct entity. " +
     "If the requested information is present in a successful tool result, do not claim that it is missing or not provided. " +
     "If a tool result contains available=false, do not speculate about deletion, visibility, authentication, or why the data is unavailable. " +
     "Simply tell the user that no authorized information is available for the requested item. " +
-    "Do not reveal whether an inaccessible item exists.";
+    "Do not reveal whether an inaccessible item exists. " +
+    "For write actions, confirmation is handled by the server. Never claim that a write has already been executed merely because a write tool was selected.";
 
 function convertToolDefinition(tool) {
     const properties = {};
@@ -20,9 +27,20 @@ function convertToolDefinition(tool) {
     for (const [name, definition] of Object.entries(
         tool.parameters || {}
     )) {
-        properties[name] = {
+        const property = {
             type: definition.type
         };
+
+        if (
+            definition.type === "array" &&
+            definition.items
+        ) {
+            property.items = {
+                type: definition.items.type
+            };
+        }
+
+        properties[name] = property;
     }
 
     return {

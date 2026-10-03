@@ -306,6 +306,192 @@ const cases = [
                 project_id: 6
             }
         }
+    },
+
+    {
+        name: "create_task_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_task",
+                    arguments: {
+                        title: "AI-created task",
+                        description:
+                            "Created through AI confirmation flow",
+                        project_id: 6,
+                        assigned_to: 6,
+                        status: "pending",
+                        priority: "medium",
+                        deadline: "2026-10-20"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_task",
+            arguments: {
+                title: "AI-created task",
+                description:
+                    "Created through AI confirmation flow",
+                project_id: 6,
+                assigned_to: 6,
+                status: "pending",
+                priority: "medium",
+                deadline: "2026-10-20"
+            }
+        }
+    },
+
+    {
+        name: "create_project_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_project",
+                    arguments: {
+                        name: "AI-created project",
+                        description:
+                            "Created through AI confirmation flow",
+                        team_id: 5
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_project",
+            arguments: {
+                name: "AI-created project",
+                description:
+                    "Created through AI confirmation flow",
+                team_id: 5
+            }
+        }
+    },
+
+    {
+        name: "delete_task_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "delete_task",
+                    arguments: {
+                        task_id: 2
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "delete_task",
+            arguments: {
+                task_id: 2
+            }
+        }
+    },
+
+    {
+        name: "delete_project_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "delete_project",
+                    arguments: {
+                        project_id: 2
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "delete_project",
+            arguments: {
+                project_id: 2
+            }
+        }
+    },
+
+    {
+        name: "create_milestone_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_milestone",
+                    arguments: {
+                        name: "AI milestone",
+                        description:
+                            "Created through AI confirmation flow",
+                        project_id: 6,
+                        deadline: "2026-10-25",
+                        status: "pending"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_milestone",
+            arguments: {
+                name: "AI milestone",
+                description:
+                    "Created through AI confirmation flow",
+                project_id: 6,
+                deadline: "2026-10-25",
+                status: "pending"
+            }
+        }
+    },
+
+    {
+        name: "bulk_update_tasks_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "bulk_update_tasks",
+                    arguments: {
+                        task_ids: [2, 3],
+                        status: "in_progress",
+                        priority: "high",
+                        deadline: "2026-10-26"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "bulk_update_tasks",
+            arguments: {
+                task_ids: [2, 3],
+                status: "in_progress",
+                priority: "high",
+                deadline: "2026-10-26"
+            }
+        }
     }
 ];
 

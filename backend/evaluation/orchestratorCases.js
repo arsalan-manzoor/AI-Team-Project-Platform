@@ -277,6 +277,35 @@ const cases = [
                 deadline: "2026-10-15"
             }
         }
+    },
+
+    {
+        name: "create_comment_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_comment",
+                    arguments: {
+                        content:
+                            "Test comment from AI orchestrator",
+                        project_id: 6
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_comment",
+            arguments: {
+                content:
+                    "Test comment from AI orchestrator",
+                project_id: 6
+            }
+        }
     }
 ];
 

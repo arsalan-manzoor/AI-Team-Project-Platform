@@ -73,6 +73,7 @@ async function runTest() {
     let taskId = null;
     let projectId = null;
     let milestoneId = null;
+    let commentId = null;
     let bulkTaskIds = [];
     let server = null;
 
@@ -1019,6 +1020,146 @@ async function runTest() {
         );
 
         /*
+         * CREATE COMMENT CONFIRMATION
+         */
+
+        console.log("");
+
+        console.log(
+            "Creating create_comment confirmation..."
+        );
+
+        const createCommentConfirmationRequest =
+            createConfirmation({
+                userId,
+                conversationId: null,
+                toolName: "create_comment",
+                toolArguments: {
+                    content:
+                        "Created by create_comment confirmation API evaluation",
+                    project_id: 6
+                }
+            });
+
+        console.log(
+            "PASS: Test create_comment confirmation created"
+        );
+
+        console.log("");
+
+        console.log(
+            "Sending create_comment confirmation request..."
+        );
+
+        const createCommentResponse =
+            await sendRequest({
+                token,
+                confirmationId:
+                    createCommentConfirmationRequest.confirmationId,
+                port: 5001
+            });
+
+        console.log(
+            "HTTP status:",
+            createCommentResponse.status
+        );
+
+        console.log(
+            "Response:",
+            createCommentResponse.body
+        );
+
+        if (
+            createCommentResponse.status !== 201
+        ) {
+            throw new Error(
+                "Create comment confirmation API request failed"
+            );
+        }
+
+        if (
+            !createCommentResponse.body ||
+            !createCommentResponse.body.comment
+        ) {
+            throw new Error(
+                "Create comment confirmation API did not return the created comment"
+            );
+        }
+
+        const createdComment =
+            createCommentResponse.body.comment;
+
+        commentId =
+            createdComment.id;
+
+        if (
+            createdComment.content !==
+            "Created by create_comment confirmation API evaluation"
+        ) {
+            throw new Error(
+                "Created comment has the wrong content"
+            );
+        }
+
+        if (
+            createdComment.project_id !==
+            6
+        ) {
+            throw new Error(
+                "Created comment has the wrong project ID"
+            );
+        }
+
+        if (
+            createdComment.user_id !==
+            userId
+        ) {
+            throw new Error(
+                "Created comment has the wrong user ID"
+            );
+        }
+
+        console.log(
+            "PASS: Confirmed AI action created the comment"
+        );
+
+        console.log("");
+
+        console.log(
+            "Testing create_comment confirmation single-use behavior..."
+        );
+
+        const secondCreateCommentResponse =
+            await sendRequest({
+                token,
+                confirmationId:
+                    createCommentConfirmationRequest.confirmationId,
+                port: 5001
+            });
+
+        console.log(
+            "Second comment HTTP status:",
+            secondCreateCommentResponse.status
+        );
+
+        console.log(
+            "Second comment response:",
+            secondCreateCommentResponse.body
+        );
+
+        if (
+            secondCreateCommentResponse.status !== 404
+        ) {
+            throw new Error(
+                "Create comment confirmation was reusable"
+            );
+        }
+
+        console.log(
+            "PASS: create_comment confirmation cannot be reused"
+        );
+
+        /*
          * BULK UPDATE TASKS CONFIRMATION
          */
 
@@ -1259,6 +1400,20 @@ async function runTest() {
 
         process.exitCode = 1;
     } finally {
+        if (commentId) {
+            await pool.query(
+                `
+                DELETE FROM comments
+                WHERE id = $1
+                `,
+                [commentId]
+            );
+
+            console.log(
+                "Test comment cleaned up."
+            );
+        }
+
         if (milestoneId) {
             await pool.query(
                 `

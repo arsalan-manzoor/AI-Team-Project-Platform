@@ -1,5 +1,7 @@
 const pendingConfirmations = new Map();
 
+const CONFIRMATION_EXPIRY_MS = 5 * 60 * 1000;
+
 function createConfirmation({
     userId,
     conversationId = null,
@@ -40,6 +42,20 @@ function createConfirmation({
     return confirmation;
 }
 
+function isConfirmationExpired(
+    confirmation
+) {
+    const createdAt =
+        new Date(
+            confirmation.createdAt
+        ).getTime();
+
+    return (
+        Date.now() - createdAt >=
+        CONFIRMATION_EXPIRY_MS
+    );
+}
+
 function getConfirmation(
     confirmationId,
     userId
@@ -56,6 +72,18 @@ function getConfirmation(
     if (
         confirmation.userId !== userId
     ) {
+        return null;
+    }
+
+    if (
+        isConfirmationExpired(
+            confirmation
+        )
+    ) {
+        pendingConfirmations.delete(
+            confirmationId
+        );
+
         return null;
     }
 

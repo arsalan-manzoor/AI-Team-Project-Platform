@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 
 import { logout } from "../services/authService";
 import { getUnreadNotifications } from "../services/notificationService";
+import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -57,6 +58,7 @@ function Navbar() {
   }
 
   function handleNotificationClick() {
+    setUnreadCount(0);
     navigate("/notifications");
   }
 
@@ -78,6 +80,9 @@ function Navbar() {
 
         <input type="text" placeholder="Search ZYRA..." />
       </div>
+
+      {/* Workspace Switcher */}
+      <WorkspaceSwitcher />
 
       {/* Notification Bell */}
       <button

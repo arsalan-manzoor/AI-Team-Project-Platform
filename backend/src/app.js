@@ -12,6 +12,10 @@ const milestoneRoutes = require("./routes/milestoneRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const resourceRoutes = require("./routes/resourceRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const workspaceRoutes = require("./routes/workspaceRoutes");
+const departmentRoutes = require("./routes/departmentRoutes");
+const projectActivityRoutes = require("./routes/projectActivityRoutes");
+const organizationAnalyticsRoutes = require("./routes/organizationAnalyticsRoutes");
 
 const app = express();
 
@@ -36,5 +40,9 @@ app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/resources", resourceRoutes);
+app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/departments", departmentRoutes);
+app.use("/api/project-activities", projectActivityRoutes);
+app.use("/api/organization-analytics", organizationAnalyticsRoutes);
 
 module.exports = app;

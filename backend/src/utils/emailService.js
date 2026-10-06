@@ -27,6 +27,44 @@ If you did not create a ZYRA account, you can ignore this email.
   console.log("Verification email sent:", info.messageId);
 }
 
+/*
+|--------------------------------------------------------------------------
+| Employee Invitation Email
+|--------------------------------------------------------------------------
+*/
+
+async function sendEmployeeInvitationEmail(
+  email,
+  name,
+  organizationName,
+  role,
+  invitationUrl,
+) {
+  const info = await transporter.sendMail({
+    from: `"ZYRA" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `You're invited to join ${organizationName} on ZYRA`,
+    text: `Hi ${name},
+
+You have been invited to join ${organizationName} on ZYRA.
+
+Your assigned role will be: ${role}
+
+Accept your invitation using the link below:
+
+${invitationUrl}
+
+This invitation will expire after the configured invitation period.
+
+If you were not expecting this invitation, you can safely ignore this email.
+
+— ZYRA Team`,
+  });
+
+  console.log("Employee invitation email sent:", info.messageId);
+}
+
 module.exports = {
   sendVerificationEmail,
+  sendEmployeeInvitationEmail,
 };

@@ -16,26 +16,67 @@ router.post("/", authMiddleware, async (req, res) => {
 
   try {
     const projectResult = await pool.query(
-      `SELECT projects.id
-             FROM projects
-             JOIN team_members
-                ON projects.team_id = team_members.team_id
-             WHERE projects.id = $1
-               AND team_members.user_id = $2`,
-      [projectId, req.user.id],
+      `SELECT projects.id, teams.workspace_id
+       FROM projects
+       JOIN teams
+          ON projects.team_id = teams.id
+       WHERE projects.id = $1`,
+      [projectId],
     );
 
     if (projectResult.rows.length === 0) {
       return res.status(404).json({
-        error: "Project not found or you are not a team member",
+        error: "Project not found",
       });
+    }
+
+    const project = projectResult.rows[0];
+
+    // Workspace-linked project
+    if (project.workspace_id) {
+      const membershipResult = await pool.query(
+        `SELECT role
+         FROM workspace_members
+         WHERE workspace_id = $1
+           AND user_id = $2`,
+        [project.workspace_id, req.user.id],
+      );
+
+      if (membershipResult.rows.length === 0) {
+        return res.status(403).json({
+          error: "You are not a member of this workspace",
+        });
+      }
+
+      if (membershipResult.rows[0].role !== "TEAM_LEADER") {
+        return res.status(403).json({
+          error: "Only the Project Team Leader can create milestones",
+        });
+      }
+    } else {
+      // Legacy project behavior
+      const teamMemberResult = await pool.query(
+        `SELECT projects.id
+         FROM projects
+         JOIN team_members
+            ON projects.team_id = team_members.team_id
+         WHERE projects.id = $1
+           AND team_members.user_id = $2`,
+        [projectId, req.user.id],
+      );
+
+      if (teamMemberResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Project not found or you are not a team member",
+        });
+      }
     }
 
     const result = await pool.query(
       `INSERT INTO milestones
-             (name, description, project_id, deadline, status)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING *`,
+       (name, description, project_id, deadline, status)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
       [
         name,
         description || null,
@@ -59,27 +100,61 @@ router.post("/", authMiddleware, async (req, res) => {
 router.get("/project/:projectId", authMiddleware, async (req, res) => {
   try {
     const projectResult = await pool.query(
-      `SELECT projects.id
-             FROM projects
-             JOIN team_members
-                ON projects.team_id = team_members.team_id
-             WHERE projects.id = $1
-               AND team_members.user_id = $2`,
-      [req.params.projectId, req.user.id],
+      `SELECT projects.id, projects.team_id, teams.workspace_id
+       FROM projects
+       JOIN teams
+          ON projects.team_id = teams.id
+       WHERE projects.id = $1`,
+      [req.params.projectId],
     );
 
     if (projectResult.rows.length === 0) {
       return res.status(404).json({
-        error: "Project not found or you are not a team member",
+        error: "Project not found",
       });
+    }
+
+    const project = projectResult.rows[0];
+
+    if (project.workspace_id) {
+      const membershipResult = await pool.query(
+        `SELECT id
+         FROM workspace_members
+         WHERE workspace_id = $1
+           AND user_id = $2`,
+        [project.workspace_id, req.user.id],
+      );
+
+      if (membershipResult.rows.length === 0) {
+        return res.status(403).json({
+          error: "You are not a member of this workspace",
+        });
+      }
+    } else {
+      // Legacy project behavior
+      const teamMemberResult = await pool.query(
+        `SELECT projects.id
+         FROM projects
+         JOIN team_members
+            ON projects.team_id = team_members.team_id
+         WHERE projects.id = $1
+           AND team_members.user_id = $2`,
+        [req.params.projectId, req.user.id],
+      );
+
+      if (teamMemberResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Project not found or you are not a team member",
+        });
+      }
     }
 
     const result = await pool.query(
       `SELECT id, name, description, project_id,
-                    deadline, status, created_at
-             FROM milestones
-             WHERE project_id = $1
-             ORDER BY id`,
+              deadline, status, created_at
+       FROM milestones
+       WHERE project_id = $1
+       ORDER BY id`,
       [req.params.projectId],
     );
 
@@ -104,36 +179,83 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 
   try {
+    const milestoneResult = await pool.query(
+      `SELECT milestones.id,
+              projects.id AS project_id,
+              projects.team_id,
+              teams.workspace_id
+       FROM milestones
+       JOIN projects
+          ON milestones.project_id = projects.id
+       JOIN teams
+          ON projects.team_id = teams.id
+       WHERE milestones.id = $1`,
+      [req.params.id],
+    );
+
+    if (milestoneResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Milestone not found",
+      });
+    }
+
+    const milestone = milestoneResult.rows[0];
+
+    if (milestone.workspace_id) {
+      const membershipResult = await pool.query(
+        `SELECT role
+         FROM workspace_members
+         WHERE workspace_id = $1
+           AND user_id = $2`,
+        [milestone.workspace_id, req.user.id],
+      );
+
+      if (membershipResult.rows.length === 0) {
+        return res.status(403).json({
+          error: "You are not a member of this workspace",
+        });
+      }
+
+      if (membershipResult.rows[0].role !== "TEAM_LEADER") {
+        return res.status(403).json({
+          error: "Only the Project Team Leader can update milestones",
+        });
+      }
+    } else {
+      // Legacy project behavior
+      const teamMemberResult = await pool.query(
+        `SELECT projects.id
+         FROM projects
+         JOIN team_members
+            ON projects.team_id = team_members.team_id
+         WHERE projects.id = $1
+           AND team_members.user_id = $2`,
+        [milestone.project_id, req.user.id],
+      );
+
+      if (teamMemberResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Milestone not found",
+        });
+      }
+    }
+
     const result = await pool.query(
       `UPDATE milestones
-             SET name = $1,
-                 description = $2,
-                 deadline = $3,
-                 status = $4
-             WHERE id = $5
-               AND project_id IN (
-                   SELECT projects.id
-                   FROM projects
-                   JOIN team_members
-                      ON projects.team_id = team_members.team_id
-                   WHERE team_members.user_id = $6
-               )
-             RETURNING *`,
+       SET name = $1,
+           description = $2,
+           deadline = $3,
+           status = $4
+       WHERE id = $5
+       RETURNING *`,
       [
         name,
         description || null,
         deadline || null,
         status || "pending",
         req.params.id,
-        req.user.id,
       ],
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: "Milestone not found",
-      });
-    }
 
     res.json(result.rows[0]);
   } catch (error) {
@@ -148,25 +270,73 @@ router.put("/:id", authMiddleware, async (req, res) => {
 // Delete a milestone
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query(
-      `DELETE FROM milestones
-             WHERE id = $1
-               AND project_id IN (
-                   SELECT projects.id
-                   FROM projects
-                   JOIN team_members
-                      ON projects.team_id = team_members.team_id
-                   WHERE team_members.user_id = $2
-               )
-             RETURNING *`,
-      [req.params.id, req.user.id],
+    const milestoneResult = await pool.query(
+      `SELECT milestones.id,
+              projects.id AS project_id,
+              projects.team_id,
+              teams.workspace_id
+       FROM milestones
+       JOIN projects
+          ON milestones.project_id = projects.id
+       JOIN teams
+          ON projects.team_id = teams.id
+       WHERE milestones.id = $1`,
+      [req.params.id],
     );
 
-    if (result.rows.length === 0) {
+    if (milestoneResult.rows.length === 0) {
       return res.status(404).json({
         error: "Milestone not found",
       });
     }
+
+    const milestone = milestoneResult.rows[0];
+
+    if (milestone.workspace_id) {
+      const membershipResult = await pool.query(
+        `SELECT role
+         FROM workspace_members
+         WHERE workspace_id = $1
+           AND user_id = $2`,
+        [milestone.workspace_id, req.user.id],
+      );
+
+      if (membershipResult.rows.length === 0) {
+        return res.status(403).json({
+          error: "You are not a member of this workspace",
+        });
+      }
+
+      if (membershipResult.rows[0].role !== "TEAM_LEADER") {
+        return res.status(403).json({
+          error: "Only the Project Team Leader can delete milestones",
+        });
+      }
+    } else {
+      // Legacy project behavior
+      const teamMemberResult = await pool.query(
+        `SELECT projects.id
+         FROM projects
+         JOIN team_members
+            ON projects.team_id = team_members.team_id
+         WHERE projects.id = $1
+           AND team_members.user_id = $2`,
+        [milestone.project_id, req.user.id],
+      );
+
+      if (teamMemberResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Milestone not found",
+        });
+      }
+    }
+
+    const result = await pool.query(
+      `DELETE FROM milestones
+       WHERE id = $1
+       RETURNING *`,
+      [req.params.id],
+    );
 
     res.json({
       message: "Milestone deleted successfully",

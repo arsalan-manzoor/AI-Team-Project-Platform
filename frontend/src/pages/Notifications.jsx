@@ -12,7 +12,10 @@ import {
   FileText,
   Activity,
   Trash2,
+  Eye,
 } from "lucide-react";
+
+import { useNavigate } from "react-router-dom";
 
 import {
   getNotifications,
@@ -25,6 +28,8 @@ import {
 import "../styles/notifications.css";
 
 function Notifications() {
+  const navigate = useNavigate();
+
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,7 +44,33 @@ function Notifications() {
 
       const data = await getNotifications();
 
-      setNotifications(Array.isArray(data) ? data : []);
+      const loadedNotifications = Array.isArray(data) ? data : [];
+
+      /*
+       * When the Notifications page is opened, automatically mark
+       * all currently unread notifications as read.
+       *
+       * This keeps the notification bell badge synchronized with
+       * the actual notification state in the backend.
+       */
+      const unreadNotifications = loadedNotifications.filter(
+        (notification) => !notification.is_read,
+      );
+
+      if (unreadNotifications.length > 0) {
+        await Promise.all(
+          unreadNotifications.map((notification) =>
+            markNotificationAsRead(notification.id),
+          ),
+        );
+      }
+
+      setNotifications(
+        loadedNotifications.map((notification) => ({
+          ...notification,
+          is_read: true,
+        })),
+      );
     } catch (err) {
       setError(err.message || "Failed to load notifications");
     } finally {
@@ -122,6 +153,55 @@ function Notifications() {
     } finally {
       setDeletingAll(false);
     }
+  }
+
+  function getInvitationId(notification) {
+    if (!notification) {
+      return null;
+    }
+
+    if (notification.invitation_id) {
+      return Number(notification.invitation_id);
+    }
+
+    const message = notification.message || "";
+
+    const match = message.match(/Invitation ID:\s*(\d+)/i);
+
+    return match ? Number(match[1]) : null;
+  }
+
+  function isCompanyInvitation(notification) {
+    return (
+      notification?.title?.toLowerCase() === "company invitation" ||
+      notification?.title?.toLowerCase().includes("company invitation")
+    );
+  }
+
+  function handleReviewInvitation(notification) {
+    const invitationId = getInvitationId(notification);
+
+    if (!invitationId) {
+      setError(
+        "This invitation notification does not contain a valid invitation ID.",
+      );
+      return;
+    }
+
+    /*
+     * The invitation page now supports ID-based invitations.
+     *
+     * Notification
+     *      ↓
+     * /employee-invitation/id/:invitationId
+     *      ↓
+     * EmployeeInvitation.jsx
+     */
+    navigateToInvitation(invitationId);
+  }
+
+  function navigateToInvitation(invitationId) {
+    navigate(`/employee-invitation/id/${invitationId}`);
   }
 
   const totalNotifications = notifications.length;
@@ -626,6 +706,12 @@ function Notifications() {
 
                 const isDeleting = deletingNotificationId === notification.id;
 
+                const companyInvitation = isCompanyInvitation(notification);
+
+                const invitationId = companyInvitation
+                  ? getInvitationId(notification)
+                  : null;
+
                 return (
                   <article
                     className={
@@ -676,6 +762,23 @@ function Notifications() {
 
                         <p>{notification.message}</p>
                       </div>
+
+                      {/* =================================================
+                          COMPANY INVITATION
+                          ================================================= */}
+
+                      {companyInvitation && invitationId && (
+                        <div className="company-invitation-actions">
+                          <button
+                            type="button"
+                            className="company-invitation-review"
+                            onClick={() => handleReviewInvitation(notification)}
+                          >
+                            <Eye size={14} />
+                            Review Invitation
+                          </button>
+                        </div>
+                      )}
 
                       {!notification.is_read && (
                         <button

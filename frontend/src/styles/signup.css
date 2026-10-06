@@ -1653,3 +1653,80 @@
   width: 100% !important;
   height: 100% !important;
 }
+/* =========================================================
+   ACCOUNT ROLE SELECT
+   ========================================================= */
+
+.signup-role-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.signup-role-wrapper select {
+  width: 100%;
+  min-height: 45px;
+  box-sizing: border-box;
+  padding: 0 42px 0 42px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 10px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, #64748b 50%) calc(100% - 18px)
+      20px / 6px 6px no-repeat,
+    linear-gradient(135deg, #64748b 50%, transparent 50%) calc(100% - 14px)
+      20px / 6px 6px no-repeat,
+    rgba(2, 6, 23, 0.53);
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.signup-role-wrapper select:hover:not(:disabled) {
+  border-color: rgba(148, 163, 184, 0.24);
+  background:
+    linear-gradient(45deg, transparent 50%, #67e8f9 50%) calc(100% - 18px)
+      20px / 6px 6px no-repeat,
+    linear-gradient(135deg, #67e8f9 50%, transparent 50%) calc(100% - 14px)
+      20px / 6px 6px no-repeat,
+    rgba(2, 6, 23, 0.74);
+}
+
+.signup-role-wrapper select:focus {
+  border-color: rgba(99, 102, 241, 0.68);
+  background:
+    linear-gradient(45deg, transparent 50%, #67e8f9 50%) calc(100% - 18px)
+      20px / 6px 6px no-repeat,
+    linear-gradient(135deg, #67e8f9 50%, transparent 50%) calc(100% - 14px)
+      20px / 6px 6px no-repeat,
+    rgba(2, 6, 23, 0.74);
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.08),
+    0 0 24px rgba(79, 70, 229, 0.06);
+}
+
+.signup-role-wrapper select:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.signup-role-wrapper select option {
+  background: #080f1e;
+  color: #e2e8f0;
+}
+
+.signup-role-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  color: #67e8f9;
+  pointer-events: none;
+}

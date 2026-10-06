@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import FileViewer from "./pages/FileViewer";
+import EmployeeInvitation from "./pages/EmployeeInvitation";
 
 function App() {
   return (
@@ -29,6 +30,17 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+
+        {/* Employee Invitation */}
+        <Route
+          path="/employee-invitation/id/:invitationId"
+          element={<EmployeeInvitation />}
+        />
+
+        <Route
+          path="/employee-invitation/:token"
+          element={<EmployeeInvitation />}
+        />
 
         {/* Protected Main Workspace */}
         <Route element={<ProtectedRoute />}>
@@ -50,6 +62,7 @@ function App() {
               path="/projects/:projectId/tasks"
               element={<ProjectTasks />}
             />
+
             {/* File Viewer */}
             <Route path="/projects/:projectId/file" element={<FileViewer />} />
 

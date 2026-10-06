@@ -22,11 +22,20 @@ import { getProjects } from "../services/ProjectService";
 import { getCurrentUser } from "../services/authService";
 import { getTeams, getTeamMembers } from "../services/teamService";
 import { getTasks } from "../services/taskService";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import "../styles/dashboard.css";
 
 function Dashboard() {
   const navigate = useNavigate();
+
+  const {
+    activeWorkspace,
+    workspaceId,
+    workspaceName,
+    workspaceRole,
+    loading: workspaceLoading,
+  } = useWorkspace();
 
   const [projects, setProjects] = useState([]);
   const [user, setUser] = useState(null);
@@ -42,6 +51,20 @@ function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (workspaceLoading) {
+      return;
+    }
+
+    if (!workspaceId) {
+      setProjects([]);
+      setTasks([]);
+      setMyTasks([]);
+      setTeamMembers([]);
+      setTeamMemberCount(0);
+      setLoading(false);
+      return;
+    }
+
     async function loadDashboard() {
       try {
         setLoading(true);
@@ -61,11 +84,53 @@ function Dashboard() {
 
         const loadedTasks = Array.isArray(tasksData) ? tasksData : [];
 
-        setProjects(loadedProjects);
-        setUser(userData);
-        setTasks(loadedTasks);
+        /*
+         * ============================================================
+         * WORKSPACE FILTERING
+         * ============================================================
+         *
+         * Projects do not currently return workspace_id directly.
+         * However, every workspace project belongs to a workspace-linked
+         * team, and teams already return workspace_id.
+         *
+         * Therefore we first identify the user's teams belonging to the
+         * active workspace and then use those team IDs to scope projects.
+         */
 
-        const assignedTasks = loadedTasks.filter(
+        const workspaceTeams = loadedTeams.filter(
+          (team) =>
+            team.workspace_id !== null &&
+            team.workspace_id !== undefined &&
+            Number(team.workspace_id) === Number(workspaceId),
+        );
+
+        const workspaceTeamIds = new Set(
+          workspaceTeams.map((team) => Number(team.id)),
+        );
+
+        const workspaceProjects = loadedProjects.filter((project) =>
+          workspaceTeamIds.has(Number(project.team_id)),
+        );
+
+        const workspaceProjectIds = new Set(
+          workspaceProjects.map((project) => Number(project.id)),
+        );
+
+        /*
+         * Tasks are scoped through their project.
+         *
+         * Task -> Project -> Team -> Workspace
+         */
+
+        const workspaceTasks = loadedTasks.filter((task) =>
+          workspaceProjectIds.has(Number(task.project_id)),
+        );
+
+        setProjects(workspaceProjects);
+        setUser(userData);
+        setTasks(workspaceTasks);
+
+        const assignedTasks = workspaceTasks.filter(
           (task) =>
             task.assigned_to !== null &&
             task.assigned_to !== undefined &&
@@ -78,7 +143,7 @@ function Dashboard() {
         let allMembers = [];
 
         await Promise.all(
-          loadedTeams.map(async (team) => {
+          workspaceTeams.map(async (team) => {
             try {
               const members = await getTeamMembers(team.id);
 
@@ -121,7 +186,7 @@ function Dashboard() {
     }
 
     loadDashboard();
-  }, []);
+  }, [workspaceId, workspaceLoading]);
 
   const recentProjects = projects.slice(0, 5);
 
@@ -174,7 +239,7 @@ function Dashboard() {
       id: 4,
       type: "workspace",
       title: "Workspace status",
-      description: "ZYRA is monitoring your workspace information.",
+      description: `${workspaceName || "ZYRA Workspace"} is active for your current session.`,
       time: "Today",
       icon: Activity,
     },
@@ -235,6 +300,46 @@ function Dashboard() {
     setShowMessagePanel(true);
   }
 
+  if (workspaceLoading) {
+    return (
+      <div className="zyra-dashboard">
+        <section className="dashboard-overview">
+          <div className="dashboard-header">
+            <div>
+              <p className="dashboard-eyebrow">WORKSPACE OVERVIEW</p>
+
+              <h2>Loading workspace...</h2>
+
+              <p className="dashboard-subtitle">
+                Preparing your ZYRA workspace.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (!activeWorkspace) {
+    return (
+      <div className="zyra-dashboard">
+        <section className="dashboard-overview">
+          <div className="dashboard-header">
+            <div>
+              <p className="dashboard-eyebrow">WORKSPACE OVERVIEW</p>
+
+              <h2>No workspace selected</h2>
+
+              <p className="dashboard-subtitle">
+                Select a workspace from the ZYRA navigation to continue.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="zyra-dashboard">
       {/* =====================================================
@@ -244,7 +349,9 @@ function Dashboard() {
       <section className="dashboard-overview">
         <div className="dashboard-header">
           <div>
-            <p className="dashboard-eyebrow">WORKSPACE OVERVIEW</p>
+            <p className="dashboard-eyebrow">
+              {workspaceName || "WORKSPACE OVERVIEW"}
+            </p>
 
             <h2>Welcome back, {user?.name || "User"}</h2>
 
@@ -260,6 +367,26 @@ function Dashboard() {
             <Plus size={17} />
             Create Project
           </button>
+        </div>
+
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            marginTop: "12px",
+            padding: "6px 10px",
+            borderRadius: "999px",
+            background: "rgba(99, 102, 241, 0.10)",
+            border: "1px solid rgba(99, 102, 241, 0.22)",
+            color: "#a5b4fc",
+            fontSize: "12px",
+            fontWeight: "600",
+          }}
+        >
+          <span>{workspaceName}</span>
+          <span>•</span>
+          <span>{workspaceRole}</span>
         </div>
 
         {error && <div className="dashboard-error">{error}</div>}
@@ -413,6 +540,7 @@ function Dashboard() {
 
           <div className="network-context">
             <span>WORKSPACE CONTEXT</span>
+
             <strong>
               {projects.length} projects · {tasks.length} tasks
             </strong>

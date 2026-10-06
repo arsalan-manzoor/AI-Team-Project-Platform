@@ -12,6 +12,7 @@ import {
   Sparkles,
   ListChecks,
   ShieldCheck,
+  UserCog,
 } from "lucide-react";
 import { apiRequest, setAuthToken } from "../services/api";
 import zyraLogo from "../assets/zyra-logo.jpg";
@@ -24,6 +25,7 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("USER");
 
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationStep, setVerificationStep] = useState(false);
@@ -42,8 +44,15 @@ function Signup() {
 
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
+    const cleanRole = role.trim().toUpperCase();
 
-    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
+    if (
+      !cleanName ||
+      !cleanEmail ||
+      !password ||
+      !confirmPassword ||
+      !cleanRole
+    ) {
       setError("Please fill in all fields.");
       return;
     }
@@ -63,6 +72,13 @@ function Signup() {
       return;
     }
 
+    const allowedRoles = ["ADMIN", "HR", "TEAM_LEADER", "USER"];
+
+    if (!allowedRoles.includes(cleanRole)) {
+      setError("Please select a valid account role.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -72,6 +88,7 @@ function Signup() {
           name: cleanName,
           email: cleanEmail,
           password,
+          role: cleanRole,
         }),
       });
 
@@ -418,6 +435,26 @@ function Signup() {
                       autoComplete="email"
                       disabled={loading || googleLoading}
                     />
+                  </div>
+
+                  <div className="signup-field">
+                    <label htmlFor="signup-role">Account Role</label>
+
+                    <div className="signup-role-wrapper">
+                      <UserCog size={18} className="signup-role-icon" />
+
+                      <select
+                        id="signup-role"
+                        value={role}
+                        onChange={(event) => setRole(event.target.value)}
+                        disabled={loading || googleLoading}
+                      >
+                        <option value="USER">User</option>
+                        <option value="TEAM_LEADER">Team Leader</option>
+                        <option value="HR">HR</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="signup-field">

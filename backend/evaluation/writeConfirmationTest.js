@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const modelAdapter = require("../src/ai/modelAdapter");
 
 const {

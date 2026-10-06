@@ -18,9 +18,17 @@ async function createComment({
         );
     }
 
+    const hasTaskId =
+        taskId !== undefined &&
+        taskId !== null;
+
+    const hasProjectId =
+        projectId !== undefined &&
+        projectId !== null;
+
     if (
-        taskId === undefined &&
-        projectId === undefined
+        !hasTaskId &&
+        !hasProjectId
     ) {
         throw new Error(
             "Task ID or project ID is required"
@@ -28,8 +36,8 @@ async function createComment({
     }
 
     if (
-        taskId !== undefined &&
-        projectId !== undefined
+        hasTaskId &&
+        hasProjectId
     ) {
         throw new Error(
             "Provide either a task ID or project ID, not both"
@@ -37,7 +45,7 @@ async function createComment({
     }
 
     // Check task access
-    if (taskId !== undefined) {
+    if (hasTaskId) {
         const taskResult = await pool.query(
             `SELECT tasks.id
              FROM tasks
@@ -61,7 +69,7 @@ async function createComment({
     }
 
     // Check project access
-    if (projectId !== undefined) {
+    if (hasProjectId) {
         const projectResult = await pool.query(
             `SELECT projects.id
              FROM projects
@@ -91,8 +99,8 @@ async function createComment({
         [
             content,
             userId,
-            taskId ?? null,
-            projectId ?? null
+            hasTaskId ? taskId : null,
+            hasProjectId ? projectId : null
         ]
     );
 

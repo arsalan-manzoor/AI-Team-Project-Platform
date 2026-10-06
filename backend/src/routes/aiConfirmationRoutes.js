@@ -4,6 +4,8 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const {
     getConfirmation,
+    claimConfirmation,
+    releaseConfirmation,
     deleteConfirmation
 } = require("../services/aiConfirmation.service");
 
@@ -31,6 +33,8 @@ const {
 const router = express.Router();
 
 router.post("/", authMiddleware, async (req, res) => {
+    let claimedConfirmation = null;
+
     try {
         const body = req.body || {};
 
@@ -61,12 +65,25 @@ router.post("/", authMiddleware, async (req, res) => {
             });
         }
 
+        claimedConfirmation =
+            claimConfirmation(
+                confirmationId,
+                req.user.id
+            );
+
+        if (!claimedConfirmation) {
+            return res.status(404).json({
+                error:
+                    "Confirmation was not found, has expired, or is already being executed"
+            });
+        }
+
         const args =
-            confirmation.toolArguments || {};
+            claimedConfirmation.toolArguments || {};
 
         // CREATE TASK
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "create_task"
         ) {
             const task =
@@ -93,6 +110,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(201).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -102,25 +121,61 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // UPDATE TASK
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "update_task"
         ) {
             const task =
                 await updateTask({
                     taskId:
                         args.task_id,
-                    title:
-                        args.title,
-                    description:
-                        args.description || null,
-                    assignedTo:
-                        args.assigned_to || null,
-                    status:
-                        args.status || "pending",
-                    priority:
-                        args.priority || "medium",
-                    deadline:
-                        args.deadline || null,
+
+                    ...(args.title !== undefined
+                        ? {
+                              title:
+                                  args.title
+                          }
+                        : {}),
+
+                    ...(args.description !==
+                    undefined
+                        ? {
+                              description:
+                                  args.description
+                          }
+                        : {}),
+
+                    ...(args.assigned_to !==
+                    undefined
+                        ? {
+                              assignedTo:
+                                  args.assigned_to
+                          }
+                        : {}),
+
+                    ...(args.status !==
+                    undefined
+                        ? {
+                              status:
+                                  args.status
+                          }
+                        : {}),
+
+                    ...(args.priority !==
+                    undefined
+                        ? {
+                              priority:
+                                  args.priority
+                          }
+                        : {}),
+
+                    ...(args.deadline !==
+                    undefined
+                        ? {
+                              deadline:
+                                  args.deadline
+                          }
+                        : {}),
+
                     userId:
                         req.user.id
                 });
@@ -129,6 +184,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 confirmationId,
                 req.user.id
             );
+
+            claimedConfirmation = null;
 
             return res.status(200).json({
                 message:
@@ -139,7 +196,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // CREATE PROJECT
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "create_project"
         ) {
             const project =
@@ -159,6 +216,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(201).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -168,7 +227,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // UPDATE PROJECT
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "update_project"
         ) {
             const project =
@@ -188,6 +247,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(200).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -197,7 +258,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // CREATE MILESTONE
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "create_milestone"
         ) {
             const milestone =
@@ -221,6 +282,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(201).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -230,7 +293,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // CREATE COMMENT
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "create_comment"
         ) {
             const comment =
@@ -250,6 +313,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(201).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -259,7 +324,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // DELETE TASK
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "delete_task"
         ) {
             const task =
@@ -275,6 +340,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(200).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -284,7 +351,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // DELETE PROJECT
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "delete_project"
         ) {
             const project =
@@ -300,6 +367,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(200).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -309,7 +378,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
         // BULK UPDATE TASKS
         if (
-            confirmation.toolName ===
+            claimedConfirmation.toolName ===
             "bulk_update_tasks"
         ) {
             const tasks =
@@ -333,6 +402,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 req.user.id
             );
 
+            claimedConfirmation = null;
+
             return res.status(200).json({
                 message:
                     "AI action confirmed and executed successfully",
@@ -340,11 +411,25 @@ router.post("/", authMiddleware, async (req, res) => {
             });
         }
 
+        releaseConfirmation(
+            confirmationId,
+            req.user.id
+        );
+
+        claimedConfirmation = null;
+
         return res.status(400).json({
             error:
                 "Unsupported AI write action"
         });
     } catch (error) {
+        if (claimedConfirmation) {
+            releaseConfirmation(
+                claimedConfirmation.confirmationId,
+                req.user.id
+            );
+        }
+
         if (
             error.message ===
                 "Authenticated user ID must be a valid integer" ||
@@ -442,6 +527,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 "Project name is required" ||
             error.message ===
                 "Invalid project ID" ||
+            error.message ===
+                "Invalid task ID" ||
             error.message ===
                 "Milestone name and project ID are required" ||
             error.message ===

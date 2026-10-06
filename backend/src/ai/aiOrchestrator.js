@@ -20,6 +20,10 @@ const {
     getTaskListContext
 } = require("../services/taskListContext.service");
 
+const {
+    getTeamListContext
+} = require("../services/teamListContext.service");
+
 const MAX_TOOL_ROUNDS = 5;
 
 const ALLOWED_MESSAGE_ROLES = new Set([
@@ -108,19 +112,10 @@ function normalizeToolCalls(modelResponse) {
 function buildConversationMessages(
     storedMessages
 ) {
-    return storedMessages.map((message) => {
-        if (message.role === "tool") {
-            return {
-                role: "tool",
-                content: message.content
-            };
-        }
-
-        return {
-            role: message.role,
-            content: message.content
-        };
-    });
+    return storedMessages.map((message) => ({
+        role: message.role,
+        content: message.content
+    }));
 }
 
 async function loadConversationHistory(
@@ -192,13 +187,7 @@ async function resolveProjectIdFromUserMessage({
     userId
 }) {
     const userMessage =
-        normalizeText(
-            getUserMessageText(messages)
-        );
-
-    if (!userMessage) {
-        return null;
-    }
+        getUserMessageText(messages);
 
     const projectContext =
         await getProjectListContext(userId);
@@ -208,29 +197,128 @@ async function resolveProjectIdFromUserMessage({
             ? projectContext.projects
             : [];
 
-    if (projects.length === 0) {
+    if (!userMessage || projects.length === 0) {
         return null;
     }
+
+    /*
+     * First support the explicit form:
+     *
+     * project "AI Test Project"
+     */
+    const explicitProjectMatch =
+        userMessage.match(
+            /\bproject\s+"([^"]+)"/i
+        );
+
+    if (explicitProjectMatch) {
+        const requestedName =
+            normalizeText(
+                explicitProjectMatch[1]
+            );
+
+        const matchingProjects =
+            projects.filter((project) => {
+                return (
+                    normalizeText(project.name) ===
+                    requestedName
+                );
+            });
+
+        if (matchingProjects.length === 1) {
+            return matchingProjects[0].id;
+        }
+    }
+
+    /*
+     * Also support natural-language references such as:
+     *
+     * in my AI Test Project
+     * in the AI Test Project
+     * for my AI Test Project
+     *
+     * We do not extract an arbitrary project ID from the
+     * model response. Instead, we compare authorized
+     * project names against the user's message.
+     */
+    const normalizedMessage =
+        normalizeText(userMessage);
 
     const matchingProjects =
         projects.filter((project) => {
-            const projectName =
+            const normalizedProjectName =
                 normalizeText(project.name);
 
-            if (!projectName) {
+            if (!normalizedProjectName) {
                 return false;
             }
 
-            return userMessage.includes(
-                projectName
+            const projectReferencePatterns = [
+                `in my ${normalizedProjectName}`,
+                `in the ${normalizedProjectName}`,
+                `in ${normalizedProjectName}`,
+                `for my ${normalizedProjectName}`,
+                `for the ${normalizedProjectName}`,
+                `for ${normalizedProjectName}`,
+                `of my ${normalizedProjectName}`,
+                `of the ${normalizedProjectName}`,
+                `of ${normalizedProjectName}`,
+                `on my ${normalizedProjectName}`,
+                `on the ${normalizedProjectName}`,
+                `on ${normalizedProjectName}`
+            ];
+
+            return projectReferencePatterns.some(
+                (pattern) =>
+                    normalizedMessage.includes(
+                        pattern
+                    )
             );
         });
 
-    if (matchingProjects.length !== 1) {
+    if (matchingProjects.length === 1) {
+        return matchingProjects[0].id;
+    }
+
+    /*
+     * Finally, if the user's message contains the exact
+     * authorized project name as a standalone phrase,
+     * allow that name to resolve as well.
+     *
+     * Word-boundary matching prevents a shorter project
+     * name from accidentally matching part of another word.
+     */
+    const exactNameMatches =
+        projects.filter((project) => {
+            const normalizedProjectName =
+                normalizeText(project.name);
+
+            if (!normalizedProjectName) {
+                return false;
+            }
+
+            const escapedName =
+                normalizedProjectName.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    "\\$&"
+                );
+
+            const exactNamePattern =
+                new RegExp(
+                    `(^|\\s)${escapedName}(?=\\s|$|[.,!?])`,
+                    "i"
+                );
+
+            return exactNamePattern.test(
+                normalizedMessage
+            );
+        });
+
+    if (exactNameMatches.length !== 1) {
         return null;
     }
 
-    return matchingProjects[0].id;
+    return exactNameMatches[0].id;
 }
 
 async function resolveTaskIdFromUserMessage({
@@ -238,11 +326,7 @@ async function resolveTaskIdFromUserMessage({
     userId
 }) {
     const userMessage =
-        getUserMessageText(messages).trim();
-
-    if (!userMessage) {
-        return null;
-    }
+        getUserMessageText(messages);
 
     const taskContext =
         await getTaskListContext(userId);
@@ -252,85 +336,190 @@ async function resolveTaskIdFromUserMessage({
             ? taskContext.tasks
             : [];
 
-    if (tasks.length === 0) {
+    if (!userMessage || tasks.length === 0) {
         return null;
     }
 
-    /*
-     * For requests such as:
-     *
-     * Change the title of my task
-     * "OLD TITLE" to "NEW TITLE".
-     *
-     * The first quoted value is the task title.
-     */
+    const taskMatch =
+        userMessage.match(
+            /task\s+"([^"]+)"/i
+        );
+
+    if (!taskMatch) {
+        return null;
+    }
+
+    const requestedTitle =
+        normalizeText(taskMatch[1]);
+
+    const matchingTasks =
+        tasks.filter((task) => {
+            return (
+                normalizeText(task.title) ===
+                requestedTitle
+            );
+        });
+
+    if (matchingTasks.length !== 1) {
+        return null;
+    }
+
+    return matchingTasks[0].id;
+}
+
+async function resolveTeamIdFromUserMessage({
+    messages,
+    userId
+}) {
+    const userMessage =
+        getUserMessageText(messages);
+
+    const teamContext =
+        await getTeamListContext(userId);
+
+    const teams =
+        Array.isArray(teamContext?.teams)
+            ? teamContext.teams
+            : [];
+
+    if (!userMessage || teams.length === 0) {
+        return null;
+    }
+
     const quotedValues = [
         ...userMessage.matchAll(/"([^"]+)"/g)
     ].map(
         (match) => match[1].trim()
     );
 
-    let requestedTaskTitle = null;
-
-    if (quotedValues.length >= 1) {
-        requestedTaskTitle =
-            normalizeText(
-                quotedValues[0]
-            );
-    }
-
-    if (requestedTaskTitle) {
-        const matchingQuotedTasks =
-            tasks.filter((task) => {
-                const taskTitle =
-                    normalizeText(task.title);
-
-                return (
-                    taskTitle ===
-                    requestedTaskTitle
-                );
-            });
-
-        if (
-            matchingQuotedTasks.length === 1
-        ) {
-            return matchingQuotedTasks[0].id;
-        }
-
-        /*
-         * Never guess between zero or multiple
-         * authorized task matches.
-         */
+    if (quotedValues.length === 0) {
         return null;
     }
 
-    /*
-     * Fallback for requests without quotation marks.
-     */
-    const normalizedMessage =
-        normalizeText(userMessage);
+    const requestedName =
+        normalizeText(
+            quotedValues[
+                quotedValues.length - 1
+            ]
+        );
 
-    const matchingTasks =
-        tasks.filter((task) => {
-            const taskTitle =
-                normalizeText(task.title);
-
-            if (!taskTitle) {
-                return false;
-            }
-
-            return normalizedMessage.includes(
-                taskTitle
+    const matchingTeams =
+        teams.filter((team) => {
+            return (
+                normalizeText(team.name) ===
+                requestedName
             );
         });
 
-    if (
-        matchingTasks.length !== 1
-    ) {
+    if (matchingTeams.length !== 1) {
         return null;
     }
 
-    return matchingTasks[0].id;
+    return matchingTeams[0].id;
+}
+
+async function resolveCommentTarget({
+    toolArguments,
+    messages,
+    userId
+}) {
+    const resolvedArguments = {
+        ...(toolArguments || {})
+    };
+
+    if (
+        Number.isInteger(
+            resolvedArguments.task_id
+        ) ||
+        Number.isInteger(
+            resolvedArguments.project_id
+        )
+    ) {
+        return resolvedArguments;
+    }
+
+    const rawMessage =
+        getUserMessageText(messages);
+
+    /*
+     * Explicit task target.
+     */
+    const taskMatch =
+        rawMessage.match(
+            /\btask\s+"([^"]+)"/i
+        );
+
+    if (taskMatch) {
+        const requestedTask =
+            normalizeText(taskMatch[1]);
+
+        const taskContext =
+            await getTaskListContext(userId);
+
+        const tasks =
+            Array.isArray(taskContext?.tasks)
+                ? taskContext.tasks
+                : [];
+
+        const matchingTasks =
+            tasks.filter((task) => {
+                return (
+                    normalizeText(task.title) ===
+                    requestedTask
+                );
+            });
+
+        if (matchingTasks.length === 1) {
+            resolvedArguments.task_id =
+                matchingTasks[0].id;
+        }
+
+        return resolvedArguments;
+    }
+
+    /*
+     * Explicit project target.
+     *
+     * Example:
+     * Add a comment "Natural Language Project Comment Test"
+     * to the project "ZYRA Task Testing"
+     */
+    const projectMatch =
+        rawMessage.match(
+            /\bproject\s+"([^"]+)"/i
+        );
+
+    if (projectMatch) {
+        const requestedProject =
+            normalizeText(
+                projectMatch[1]
+            );
+
+        const projectContext =
+            await getProjectListContext(userId);
+
+        const projects =
+            Array.isArray(projectContext?.projects)
+                ? projectContext.projects
+                : [];
+
+        const matchingProjects =
+            projects.filter((project) => {
+                return (
+                    normalizeText(project.name) ===
+                    requestedProject
+                );
+            });
+
+        if (matchingProjects.length === 1) {
+            resolvedArguments.project_id =
+                matchingProjects[0].id;
+        }
+
+        return resolvedArguments;
+    }
+
+    return resolvedArguments;
 }
 
 async function resolveWriteArguments({
@@ -346,58 +535,117 @@ async function resolveWriteArguments({
     if (
         toolName === "create_task"
     ) {
-        const resolvedProjectId =
+        const projectId =
             await resolveProjectIdFromUserMessage({
                 messages,
                 userId
             });
 
-        if (
-            Number.isInteger(
-                resolvedProjectId
-            )
-        ) {
+        if (Number.isInteger(projectId)) {
             resolvedArguments.project_id =
-                resolvedProjectId;
+                projectId;
         }
     }
 
     if (
         toolName === "update_task"
     ) {
-        const resolvedTaskId =
+        const taskId =
             await resolveTaskIdFromUserMessage({
                 messages,
                 userId
             });
 
-        if (
-            Number.isInteger(
-                resolvedTaskId
-            )
-        ) {
+        if (Number.isInteger(taskId)) {
             resolvedArguments.task_id =
-                resolvedTaskId;
+                taskId;
+        }
+    }
+
+    if (
+        toolName === "delete_task"
+    ) {
+        const taskId =
+            await resolveTaskIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (Number.isInteger(taskId)) {
+            resolvedArguments.task_id =
+                taskId;
+        }
+    }
+
+    if (
+        toolName === "create_project"
+    ) {
+        const teamId =
+            await resolveTeamIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (Number.isInteger(teamId)) {
+            resolvedArguments.team_id =
+                teamId;
         }
     }
 
     if (
         toolName === "update_project"
     ) {
-        const resolvedProjectId =
+        const projectId =
             await resolveProjectIdFromUserMessage({
                 messages,
                 userId
             });
 
-        if (
-            Number.isInteger(
-                resolvedProjectId
-            )
-        ) {
+        if (Number.isInteger(projectId)) {
             resolvedArguments.project_id =
-                resolvedProjectId;
+                projectId;
         }
+    }
+
+    if (
+        toolName === "delete_project"
+    ) {
+        const projectId =
+            await resolveProjectIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (Number.isInteger(projectId)) {
+            resolvedArguments.project_id =
+                projectId;
+        }
+    }
+
+    if (
+        toolName === "create_milestone"
+    ) {
+        const projectId =
+            await resolveProjectIdFromUserMessage({
+                messages,
+                userId
+            });
+
+        if (Number.isInteger(projectId)) {
+            resolvedArguments.project_id =
+                projectId;
+        }
+    }
+
+    if (
+        toolName === "create_comment"
+    ) {
+        return resolveCommentTarget({
+            toolArguments:
+                resolvedArguments,
+            messages,
+            userId
+        });
     }
 
     return resolvedArguments;
@@ -433,7 +681,8 @@ async function createWriteConfirmation({
 async function runAIRequest({
     messages,
     userId,
-    conversationId = null
+    conversationId = null,
+    modelResponse = null
 }) {
     validateMessages(messages);
 
@@ -451,6 +700,21 @@ async function runAIRequest({
             "AI conversation ID must be a valid integer"
         );
     }
+
+    console.log(
+        "DEBUG AI RUN REQUEST:",
+        JSON.stringify(
+            {
+                messages,
+                userId,
+                conversationId,
+                injectedModelResponse:
+                    modelResponse !== null
+            },
+            null,
+            2
+        )
+    );
 
     const toolDefinitions =
         buildToolDefinitions();
@@ -484,20 +748,52 @@ async function runAIRequest({
         conversation = [...messages];
     }
 
+    let injectedModelResponse =
+        modelResponse;
+
     for (
         let round = 0;
         round < MAX_TOOL_ROUNDS;
         round++
     ) {
-        const modelResponse =
-            await modelAdapter.generateResponse({
-                messages: conversation,
-                tools: toolDefinitions
-            });
+        let currentModelResponse;
 
         if (
-            !modelResponse ||
-            typeof modelResponse !== "object"
+            injectedModelResponse !== null
+        ) {
+            currentModelResponse =
+                injectedModelResponse;
+
+            injectedModelResponse = null;
+        } else {
+            currentModelResponse =
+                await modelAdapter.generateResponse({
+                    messages: conversation,
+                    tools: toolDefinitions
+                });
+        }
+
+        console.log(
+            "DEBUG AI MODEL RESPONSE:",
+            JSON.stringify(
+                currentModelResponse,
+                null,
+                2
+            )
+        );
+
+        console.log(
+            "DEBUG AI CONVERSATION BEFORE NEXT ROUND:",
+            JSON.stringify(
+                conversation,
+                null,
+                2
+            )
+        );
+
+        if (
+            !currentModelResponse ||
+            typeof currentModelResponse !== "object"
         ) {
             throw new Error(
                 "AI model returned an invalid response"
@@ -505,11 +801,27 @@ async function runAIRequest({
         }
 
         const toolCalls =
-            normalizeToolCalls(modelResponse);
+            normalizeToolCalls(
+                currentModelResponse
+            );
+
+        console.log(
+            "DEBUG AI TOOL CALLS:",
+            JSON.stringify(
+                toolCalls,
+                null,
+                2
+            )
+        );
 
         if (toolCalls.length === 0) {
             const content =
-                modelResponse.content || "";
+                currentModelResponse.content || "";
+
+            console.log(
+                "DEBUG AI FINAL CONTENT:",
+                JSON.stringify(content)
+            );
 
             if (conversationId !== null) {
                 await addMessage({
@@ -525,7 +837,7 @@ async function runAIRequest({
         }
 
         const assistantMessage =
-            modelResponse.assistant_message || {
+            currentModelResponse.assistant_message || {
                 role: "assistant",
                 content: ""
             };
@@ -538,9 +850,180 @@ async function runAIRequest({
                 assistantMessage.tool_calls || []
         });
 
+        console.log(
+            "DEBUG AI CONVERSATION AFTER ASSISTANT MESSAGE:",
+            JSON.stringify(
+                conversation,
+                null,
+                2
+            )
+        );
+
         /*
-         * Write tools are intercepted before execution.
-         * No write action can execute automatically.
+         * Never execute a write tool automatically.
+         */
+        for (const toolCall of toolCalls) {
+            const {
+                name,
+                arguments: toolArguments
+            } = toolCall;
+
+            const tool = tools[name];
+
+            if (!tool) {
+                throw new Error(
+                    "Unknown AI tool"
+                );
+            }
+
+            if (tool.type !== "write") {
+                continue;
+            }
+
+            const resolvedArguments =
+                await resolveWriteArguments({
+                    toolName: name,
+                    toolArguments:
+                        toolArguments || {},
+                    messages,
+                    userId
+                });
+
+            if (
+                name === "update_task" &&
+                !Number.isInteger(
+                    resolvedArguments.task_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested task from authorized task data"
+                );
+            }
+
+            if (
+                name === "delete_task" &&
+                !Number.isInteger(
+                    resolvedArguments.task_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested task from authorized task data"
+                );
+            }
+
+            if (
+                name === "create_task" &&
+                !Number.isInteger(
+                    resolvedArguments.project_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested project from authorized project data"
+                );
+            }
+
+            if (
+                name === "create_project" &&
+                !Number.isInteger(
+                    resolvedArguments.team_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested team from authorized team data"
+                );
+            }
+
+            if (
+                name === "update_project" &&
+                !Number.isInteger(
+                    resolvedArguments.project_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested project from authorized project data"
+                );
+            }
+
+            if (
+                name === "delete_project" &&
+                !Number.isInteger(
+                    resolvedArguments.project_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested project from authorized project data"
+                );
+            }
+
+            if (
+                name === "create_milestone" &&
+                !Number.isInteger(
+                    resolvedArguments.project_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested project from authorized project data"
+                );
+            }
+
+            if (
+                name === "create_comment" &&
+                !Number.isInteger(
+                    resolvedArguments.task_id
+                ) &&
+                !Number.isInteger(
+                    resolvedArguments.project_id
+                )
+            ) {
+                throw new Error(
+                    "Unable to resolve the requested comment target from authorized task or project data"
+                );
+            }
+
+            if (
+                name === "create_comment" &&
+                Number.isInteger(
+                    resolvedArguments.task_id
+                ) &&
+                Number.isInteger(
+                    resolvedArguments.project_id
+                )
+            ) {
+                throw new Error(
+                    "Comment must target either a task or a project, not both"
+                );
+            }
+
+            const confirmation =
+                await createWriteConfirmation({
+                    toolName: name,
+                    toolArguments:
+                        resolvedArguments,
+                    userId,
+                    conversationId
+                });
+
+            if (
+                conversationId !== null
+            ) {
+                await addMessage({
+                    conversationId,
+                    role: "assistant",
+                    content:
+                        confirmation.message,
+                    toolName: name,
+                    toolArguments:
+                        resolvedArguments,
+                    toolResult:
+                        confirmation
+                });
+            }
+
+            return confirmation;
+        }
+
+        /*
+         * Only read tools are executed.
          */
         for (const toolCall of toolCalls) {
             const {
@@ -557,91 +1040,8 @@ async function runAIRequest({
             }
 
             if (tool.type === "write") {
-                const resolvedArguments =
-                    await resolveWriteArguments({
-                        toolName: name,
-                        toolArguments:
-                            toolArguments || {},
-                        messages,
-                        userId
-                    });
-
-                /*
-                 * If the server could not resolve a required
-                 * resource identifier from authorized data,
-                 * do not allow the model's guessed identifier
-                 * to reach confirmation.
-                 */
-                if (
-                    name === "update_task" &&
-                    !Number.isInteger(
-                        resolvedArguments.task_id
-                    )
-                ) {
-                    throw new Error(
-                        "Unable to resolve the requested task from authorized task data"
-                    );
-                }
-
-                if (
-                    name === "create_task" &&
-                    !Number.isInteger(
-                        resolvedArguments.project_id
-                    )
-                ) {
-                    throw new Error(
-                        "Unable to resolve the requested project from authorized project data"
-                    );
-                }
-
-                if (
-                    name === "update_project" &&
-                    !Number.isInteger(
-                        resolvedArguments.project_id
-                    )
-                ) {
-                    throw new Error(
-                        "Unable to resolve the requested project from authorized project data"
-                    );
-                }
-
-                const confirmation =
-                    await createWriteConfirmation({
-                        toolName: name,
-                        toolArguments:
-                            resolvedArguments,
-                        userId,
-                        conversationId
-                    });
-
-                if (
-                    conversationId !== null
-                ) {
-                    await addMessage({
-                        conversationId,
-                        role: "assistant",
-                        content:
-                            confirmation.message,
-                        toolName: name,
-                        toolArguments:
-                            resolvedArguments,
-                        toolResult:
-                            confirmation
-                    });
-                }
-
-                return confirmation;
+                continue;
             }
-        }
-
-        /*
-         * Only read tools reach executeTool().
-         */
-        for (const toolCall of toolCalls) {
-            const {
-                name,
-                arguments: toolArguments
-            } = toolCall;
 
             const toolResult =
                 await executeTool(
@@ -649,6 +1049,19 @@ async function runAIRequest({
                     toolArguments,
                     userId
                 );
+
+            console.log(
+                "DEBUG AI TOOL RESULT:",
+                JSON.stringify(
+                    {
+                        name,
+                        toolArguments,
+                        toolResult
+                    },
+                    null,
+                    2
+                )
+            );
 
             if (
                 conversationId !== null
@@ -699,6 +1112,15 @@ async function runAIRequest({
                         toolResult
                     )
             });
+
+            console.log(
+                "DEBUG AI CONVERSATION AFTER TOOL RESULT:",
+                JSON.stringify(
+                    conversation,
+                    null,
+                    2
+                )
+            );
         }
     }
 

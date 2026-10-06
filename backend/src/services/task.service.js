@@ -106,16 +106,36 @@ async function createTask({
 async function updateTask({
     taskId,
     title,
-    description = null,
-    assignedTo = null,
-    status = "pending",
-    priority = "medium",
-    deadline = null,
+    description,
+    assignedTo,
+    status,
+    priority,
+    deadline,
     userId
 }) {
     if (!Number.isInteger(userId)) {
         throw new Error(
             "Authenticated user ID must be a valid integer"
+        );
+    }
+
+    if (!Number.isInteger(taskId)) {
+        throw new Error(
+            "Invalid task ID"
+        );
+    }
+
+    const hasUpdate =
+        title !== undefined ||
+        description !== undefined ||
+        assignedTo !== undefined ||
+        status !== undefined ||
+        priority !== undefined ||
+        deadline !== undefined;
+
+    if (!hasUpdate) {
+        throw new Error(
+            "At least one task field must be provided for update"
         );
     }
 
@@ -150,42 +170,106 @@ async function updateTask({
         const oldAssignedTo =
             taskResult.rows[0].assigned_to;
 
-        if (assignedTo) {
-            const memberResult = await client.query(
-                `SELECT team_members.user_id
-                 FROM team_members
-                 JOIN projects
-                    ON team_members.team_id = projects.team_id
-                 WHERE projects.id = $1
-                   AND team_members.user_id = $2`,
-                [projectId, assignedTo]
-            );
-
-            if (memberResult.rows.length === 0) {
+        if (assignedTo !== undefined) {
+            if (
+                assignedTo !== null &&
+                !Number.isInteger(
+                    Number(assignedTo)
+                )
+            ) {
                 throw new Error(
-                    "Assigned user is not a member of the project team"
+                    "Assigned user must be a valid integer or null"
                 );
+            }
+
+            if (assignedTo !== null) {
+                const memberResult =
+                    await client.query(
+                        `SELECT team_members.user_id
+                         FROM team_members
+                         JOIN projects
+                            ON team_members.team_id =
+                               projects.team_id
+                         WHERE projects.id = $1
+                           AND team_members.user_id = $2`,
+                        [
+                            projectId,
+                            Number(assignedTo)
+                        ]
+                    );
+
+                if (
+                    memberResult.rows.length === 0
+                ) {
+                    throw new Error(
+                        "Assigned user is not a member of the project team"
+                    );
+                }
             }
         }
 
         const result = await client.query(
             `UPDATE tasks
-             SET title = $1,
-                 description = $2,
-                 assigned_to = $3,
-                 status = $4,
-                 priority = $5,
-                 deadline = $6
-             WHERE id = $7
-               AND created_by = $8
+             SET title =
+                    CASE
+                        WHEN $1::text IS NULL
+                            THEN title
+                        ELSE $1::text
+                    END,
+                 description =
+                    CASE
+                        WHEN $2::text IS NULL
+                            THEN description
+                        ELSE $2::text
+                    END,
+                 assigned_to =
+                    CASE
+                        WHEN $3::boolean = false
+                            THEN assigned_to
+                        ELSE $4::int
+                    END,
+                 status =
+                    CASE
+                        WHEN $5::text IS NULL
+                            THEN status
+                        ELSE $5::text
+                    END,
+                 priority =
+                    CASE
+                        WHEN $6::text IS NULL
+                            THEN priority
+                        ELSE $6::text
+                    END,
+                 deadline =
+                    CASE
+                        WHEN $7::boolean = false
+                            THEN deadline
+                        ELSE $8::timestamp
+                    END
+             WHERE id = $9
+               AND created_by = $10
              RETURNING *`,
             [
-                title,
-                description,
-                assignedTo,
-                status,
-                priority,
-                deadline,
+                title === undefined
+                    ? null
+                    : title,
+                description === undefined
+                    ? null
+                    : description,
+                assignedTo !== undefined,
+                assignedTo === undefined
+                    ? null
+                    : assignedTo,
+                status === undefined
+                    ? null
+                    : status,
+                priority === undefined
+                    ? null
+                    : priority,
+                deadline !== undefined,
+                deadline === undefined
+                    ? null
+                    : deadline,
                 taskId,
                 userId
             ]
@@ -197,22 +281,25 @@ async function updateTask({
             );
         }
 
-        const newAssignedTo = assignedTo
-            ? Number(assignedTo)
-            : null;
+        const newAssignedTo =
+            assignedTo === undefined
+                ? oldAssignedTo
+                : assignedTo;
 
         if (
-            newAssignedTo &&
-            newAssignedTo !== Number(oldAssignedTo)
+            assignedTo !== undefined &&
+            newAssignedTo !== null &&
+            Number(newAssignedTo) !==
+                Number(oldAssignedTo)
         ) {
             await client.query(
                 `INSERT INTO notifications
                  (user_id, title, message)
                  VALUES ($1, $2, $3)`,
                 [
-                    newAssignedTo,
+                    Number(newAssignedTo),
                     "New Task Assigned",
-                    `You have been assigned a new task: ${title}`
+                    `You have been assigned a new task: ${result.rows[0].title}`
                 ]
             );
         }
@@ -475,7 +562,10 @@ async function bulkUpdateTasks({
             );
         }
 
-        if (assignedTo !== undefined && assignedTo !== null) {
+        if (
+            assignedTo !== undefined &&
+            assignedTo !== null
+        ) {
             for (const task of result.rows) {
                 if (
                     Number(task.assigned_to) !==

@@ -4,6 +4,19 @@ const REQUEST_TIMEOUT_MS = 120000;
 
 const AI_SYSTEM_INSTRUCTION =
     "You are the ZYRA AI assistant. " +
+    "Use the available tools whenever the user's question requires information from the ZYRA database. " +
+    "IMPORTANT TOOL ROUTING RULES: " +
+    "If the user asks about notifications, alerts, or whether they have notifications, call get_notifications. " +
+    "If the user asks about their projects, call get_projects. " +
+    "If the user asks about a specific project, use get_project when its project ID is known or can be resolved from authorized project data. " +
+    "If the user asks about tasks, call get_tasks or get_task as appropriate. " +
+    "If the user asks about team members, call get_team_members. " +
+    "If the user asks about milestones, call get_milestones. " +
+    "If the user asks about recent activity, call get_recent_activity. " +
+    "If the user asks for project summary information, call get_project_summary_data. " +
+    "If the user asks about a resource, call get_resource. " +
+    "Do not answer database questions from assumptions or general knowledge when an appropriate read tool exists. " +
+    "For a simple database question, call the appropriate read tool first, then answer using its result. " +
     "Use only information returned by authorized tools. " +
     "Never guess, speculate, invent, fabricate, or assume IDs, names, dates, or other database values. " +
     "When a tool requires an ID and the user has not explicitly provided that ID, you MUST use an appropriate authorized read tool to resolve the ID before attempting the write. " +
@@ -11,7 +24,6 @@ const AI_SYSTEM_INSTRUCTION =
     "Never invent a project_id, task_id, team_id, milestone_id, resource_id, or user ID. " +
     "If an appropriate read tool cannot resolve the required identifier, do not attempt the write. " +
     "When a write action depends on information returned by a previous tool call, use the exact identifier and values returned by that tool. " +
-    "Use only information returned by authorized tools when answering questions or preparing write actions. " +
     "When a tool returns available=true, treat the returned data as authoritative and use the exact values from that data in your answer or subsequent tool call. " +
     "For example, if a team tool returns team.name, use that exact team name; never replace it with a generic name such as 'default', 'not provided', or 'unknown'. " +
     "If a tool returns information about multiple entities, keep each entity's ID, name, and other fields associated with the correct entity. " +
@@ -126,32 +138,83 @@ async function generateResponse({
             ...messages
         ];
 
+        const ollamaRequestBody = {
+            model: MODEL_NAME,
+            messages: modelMessages,
+            tools: tools.map(
+                convertToolDefinition
+            ),
+            stream: false
+        };
+
+        console.log(
+            "DEBUG OLLAMA REQUEST:",
+            JSON.stringify(
+                {
+                    model:
+                        ollamaRequestBody.model,
+                    messages:
+                        ollamaRequestBody.messages,
+                    toolCount:
+                        ollamaRequestBody.tools.length,
+                    toolNames:
+                        ollamaRequestBody.tools.map(
+                            (tool) =>
+                                tool.function.name
+                        ),
+                    stream:
+                        ollamaRequestBody.stream
+                },
+                null,
+                2
+            )
+        );
+
         const response = await fetch(
             OLLAMA_URL,
             {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type":
+                        "application/json"
                 },
-                body: JSON.stringify({
-                    model: MODEL_NAME,
-                    messages: modelMessages,
-                    tools: tools.map(
-                        convertToolDefinition
-                    ),
-                    stream: false
-                }),
+                body: JSON.stringify(
+                    ollamaRequestBody
+                ),
                 signal: controller.signal
             }
         );
 
+        console.log(
+            "DEBUG OLLAMA HTTP STATUS:",
+            response.status
+        );
+
         if (!response.ok) {
+            const errorBody =
+                await response.text();
+
+            console.log(
+                "DEBUG OLLAMA ERROR BODY:",
+                errorBody
+            );
+
             throw new Error(
                 `Ollama request failed with status ${response.status}`
             );
         }
 
-        const data = await response.json();
+        const data =
+            await response.json();
+
+        console.log(
+            "DEBUG OLLAMA RAW RESPONSE:",
+            JSON.stringify(
+                data,
+                null,
+                2
+            )
+        );
 
         if (
             !data ||
@@ -202,6 +265,15 @@ async function generateResponse({
                     }
                 );
 
+            console.log(
+                "DEBUG OLLAMA NORMALIZED TOOL CALLS:",
+                JSON.stringify(
+                    normalizedToolCalls,
+                    null,
+                    2
+                )
+            );
+
             return {
                 tool_calls:
                     normalizedToolCalls,
@@ -209,6 +281,17 @@ async function generateResponse({
                     data.message
             };
         }
+
+        console.log(
+            "DEBUG OLLAMA RETURNED NO TOOL CALLS."
+        );
+
+        console.log(
+            "DEBUG OLLAMA MESSAGE CONTENT:",
+            JSON.stringify(
+                data.message.content
+            )
+        );
 
         return {
             content:

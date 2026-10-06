@@ -92,7 +92,7 @@ async function main() {
                     {
                         role: "user",
                         content:
-                            "Give me a summary of project 2."
+                            "Give me a summary of project 6."
                     }
                 ]
             }

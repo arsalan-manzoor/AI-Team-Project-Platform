@@ -182,7 +182,7 @@ const toolRegistry = {
         name: "update_task",
         type: "write",
         description:
-            "Update ONE existing task when the user explicitly asks to change a task. The task must be identified by task ID. Updating a task requires explicit confirmation before execution.",
+            "Update ONE existing task when the user explicitly asks to change a task. The task must be identified by task ID. At least one task field must be provided for the update. Any omitted task fields must remain unchanged. Updating a task requires explicit confirmation before execution.",
         parameters: {
             task_id: {
                 type: "integer",
@@ -190,7 +190,7 @@ const toolRegistry = {
             },
             title: {
                 type: "string",
-                required: true
+                required: false
             },
             description: {
                 type: "string",
@@ -214,7 +214,7 @@ const toolRegistry = {
             }
         },
         returns:
-            "The updated task after authorization and database validation."
+            "The updated task after authorization and database validation. Only explicitly provided fields are changed."
     },
 
     create_project: {

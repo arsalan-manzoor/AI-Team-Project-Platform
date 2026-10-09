@@ -542,6 +542,45 @@ The context builder should select the minimum context type and fields needed to 
 
 Status: NEXT — design a context builder/service before implementing RAG or vector search.
 
+
+
+### AI Context Contract
+
+The backend uses a structured contract between the application context layer and future AI orchestration.
+
+The current contract is:
+
+```js
+{
+    context_type: "team",
+    data: {}
+}
+```
+
+Supported context types:
+
+- `user_tasks`
+- `team`
+- `project`
+- `task`
+- `milestone`
+- `recent_activity`
+
+The `data` field contains only context retrieved by the authorized backend service.
+
+The AI layer must not receive unrestricted database access. Authentication and authorization remain the responsibility of the backend before context is constructed.
+
+The context layer also applies a maximum item limit to collection fields to prevent unnecessarily large context payloads.
+
+Future versions may extend this contract with fields such as:
+
+- `scope`
+- `user`
+- `metadata`
+- `context_version`
+- `token_budget`
+
+These should be added only when required by the AI orchestration layer.
 6. AI Security & Authorization
 
 Security is the highest-priority architectural constraint.
@@ -1766,40 +1805,37 @@ Explainability	Show supporting project/task data and identify predictions as pre
 Agent runaway behavior	Max steps, tool allowlists, timeouts, approval gates
 Integration failures	OAuth scopes, retries, idempotency, webhook verification
 22. NOW / NEXT / FUTURE
-NOW
-Keep the current backend stable.
-Preserve JWT and authorization.
-Preserve current API contracts.
-Keep PostgreSQL as the source of truth.
-Document the current architecture.
-Finish current frontend/backend integration.
-Do not add an LLM merely for demonstration.
-Do not change the schema without a concrete requirement.
-NEXT
-Design the AI context layer.
-Define permission-aware context retrieval.
-Define initial read-only AI tools.
-Define tool schemas and security rules.
-Build an AI model adapter boundary.
-Define an AI evaluation dataset.
-Determine what activity history is actually required.
-Prototype a read-only assistant.
-Consider RAG only for substantial unstructured content.
-Consider pgvector only when semantic retrieval becomes necessary.
-Begin collecting the historical data needed for meaningful intelligence.
-FUTURE
-AI write tools.
-Controlled AI project actions.
-Project risk prediction.
-Task delay prediction.
-Workload intelligence.
-Persistent AI memory.
-RAG/vector search at scale.
-AI agents.
-Human-approved multi-step workflows.
-GitHub/Slack/Drive/Calendar integrations.
-MCP interoperability.
-Automated project operations.
+
+NOW — Implemented foundation
+
+Keep the current backend stable. Preserve JWT, authorization, existing API contracts, and PostgreSQL as the source of truth.
+
+Completed foundations:
+- Central AI context routing for supported workspace contexts.
+- Read-only AI tool registry and permission-aware data retrieval.
+- Model adapter and orchestration boundary.
+- Tool argument validation and rejection of unknown or malformed tool calls.
+- Confirmation flow for supported AI write actions.
+- Deterministic project-intelligence calculations and evaluation coverage.
+- Automated evaluations for read-only tools, orchestration, and project intelligence.
+
+NEXT — Safe incremental expansion
+
+- Continue testing AI backend behavior and authorization boundaries.
+- Implement the next approved write action, starting with `update_task`, through existing permission-aware business logic and confirmation.
+- Add evaluation cases for unauthorized requests, invalid arguments, declined confirmations, and failures.
+- Review frontend integration for the assistant and confirmation workflow.
+- Collect activity history only when needed.
+
+FUTURE — Only when justified
+
+- Additional controlled AI write actions and multi-step workflows.
+- Predictive task-delay, project-risk, and workload models after sufficient historical data becomes available.
+- Persistent AI memory, RAG, and vector search when justified by real requirements.
+- More autonomous agents under explicit guardrails.
+- GitHub, Slack, Drive, Calendar, and MCP integrations for specific workflows.
+- Dedicated vector infrastructure and complex orchestration only when necessary.
+
 23. Implementation Roadmap
 Phase 1 — Stable Project Workspace
 

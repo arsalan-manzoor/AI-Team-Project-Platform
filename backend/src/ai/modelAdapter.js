@@ -1,3 +1,4 @@
+
 const OLLAMA_URL = "http://localhost:11434/api/chat";
 const MODEL_NAME = "qwen2.5:3b";
 const REQUEST_TIMEOUT_MS = 120000;
@@ -13,6 +14,7 @@ const AI_SYSTEM_INSTRUCTION =
     "If the user asks about team members, call get_team_members. " +
     "If the user asks about milestones, call get_milestones. " +
     "If the user asks about recent activity, call get_recent_activity. " +
+    "If the user asks about calculated project intelligence such as deadline coverage, overdue tasks, tasks due soon, or deadline pressure, call get_project_intelligence. " +
     "If the user asks for project summary information, call get_project_summary_data. " +
     "If the user asks about a resource, call get_resource. " +
     "Do not answer database questions from assumptions or general knowledge when an appropriate read tool exists. " +
@@ -141,80 +143,29 @@ async function generateResponse({
         const ollamaRequestBody = {
             model: MODEL_NAME,
             messages: modelMessages,
-            tools: tools.map(
-                convertToolDefinition
-            ),
+            tools: tools.map(convertToolDefinition),
             stream: false
         };
-
-        console.log(
-            "DEBUG OLLAMA REQUEST:",
-            JSON.stringify(
-                {
-                    model:
-                        ollamaRequestBody.model,
-                    messages:
-                        ollamaRequestBody.messages,
-                    toolCount:
-                        ollamaRequestBody.tools.length,
-                    toolNames:
-                        ollamaRequestBody.tools.map(
-                            (tool) =>
-                                tool.function.name
-                        ),
-                    stream:
-                        ollamaRequestBody.stream
-                },
-                null,
-                2
-            )
-        );
 
         const response = await fetch(
             OLLAMA_URL,
             {
                 method: "POST",
                 headers: {
-                    "Content-Type":
-                        "application/json"
+                    "Content-Type": "application/json"
                 },
-                body: JSON.stringify(
-                    ollamaRequestBody
-                ),
+                body: JSON.stringify(ollamaRequestBody),
                 signal: controller.signal
             }
         );
 
-        console.log(
-            "DEBUG OLLAMA HTTP STATUS:",
-            response.status
-        );
-
         if (!response.ok) {
-            const errorBody =
-                await response.text();
-
-            console.log(
-                "DEBUG OLLAMA ERROR BODY:",
-                errorBody
-            );
-
             throw new Error(
                 `Ollama request failed with status ${response.status}`
             );
         }
 
-        const data =
-            await response.json();
-
-        console.log(
-            "DEBUG OLLAMA RAW RESPONSE:",
-            JSON.stringify(
-                data,
-                null,
-                2
-            )
-        );
+        const data = await response.json();
 
         if (
             !data ||
@@ -227,80 +178,45 @@ async function generateResponse({
         }
 
         if (
-            Array.isArray(
-                data.message.tool_calls
-            ) &&
+            Array.isArray(data.message.tool_calls) &&
             data.message.tool_calls.length > 0
         ) {
             const normalizedToolCalls =
-                data.message.tool_calls.map(
-                    (toolCall) => {
-                        if (
-                            !toolCall ||
-                            typeof toolCall !==
-                                "object" ||
-                            !toolCall.function ||
-                            typeof toolCall.function !==
-                                "object"
-                        ) {
-                            throw new Error(
-                                "Ollama returned an invalid tool call"
-                            );
-                        }
-
-                        const normalizedToolCall = {
-                            name:
-                                toolCall.function
-                                    .name,
-                            arguments:
-                                toolCall.function
-                                    .arguments
-                        };
-
-                        validateToolCall(
-                            normalizedToolCall
+                data.message.tool_calls.map((toolCall) => {
+                    if (
+                        !toolCall ||
+                        typeof toolCall !== "object" ||
+                        !toolCall.function ||
+                        typeof toolCall.function !== "object"
+                    ) {
+                        throw new Error(
+                            "Ollama returned an invalid tool call"
                         );
-
-                        return normalizedToolCall;
                     }
-                );
 
-            console.log(
-                "DEBUG OLLAMA NORMALIZED TOOL CALLS:",
-                JSON.stringify(
-                    normalizedToolCalls,
-                    null,
-                    2
-                )
-            );
+                    const normalizedToolCall = {
+                        name: toolCall.function.name,
+                        arguments: toolCall.function.arguments
+                    };
+
+                    validateToolCall(normalizedToolCall);
+
+                    return normalizedToolCall;
+                });
 
             return {
-                tool_calls:
-                    normalizedToolCalls,
-                assistant_message:
-                    data.message
+                tool_calls: normalizedToolCalls,
+                assistant_message: data.message
             };
         }
 
-        console.log(
-            "DEBUG OLLAMA RETURNED NO TOOL CALLS."
-        );
-
-        console.log(
-            "DEBUG OLLAMA MESSAGE CONTENT:",
-            JSON.stringify(
-                data.message.content
-            )
-        );
-
         return {
             content:
-                typeof data.message.content ===
-                "string"
+                typeof data.message.content === "string"
                     ? data.message.content
                     : "",
-            assistant_message:
-                data.message
+            assistant_message: data.message,
+            tool_calls: []
         };
     } catch (error) {
         if (error.name === "AbortError") {

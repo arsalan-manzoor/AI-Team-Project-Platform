@@ -124,6 +124,21 @@ const toolRegistry = {
             "Structured summary data for the requested authorized project."
     },
 
+    get_project_intelligence: {
+        name: "get_project_intelligence",
+        type: "read",
+        description:
+            "Get deterministic project intelligence for ONE SPECIFIC authorized project when the user asks about deadline coverage, overdue tasks, tasks due soon, or project deadline pressure. Use this tool when calculated project metrics are requested. Do not use it to list projects.",
+        parameters: {
+            project_id: {
+                type: "integer",
+                required: true
+            }
+        },
+        returns:
+            "Deterministic deadline-based intelligence for the requested authorized project."
+    },
+
     get_resource: {
         name: "get_resource",
         type: "read",

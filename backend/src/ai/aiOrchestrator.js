@@ -601,8 +601,7 @@ async function resolveWriteArguments({
             });
 
         if (Number.isInteger(projectId)) {
-            resolvedArguments.project_id =
-                projectId;
+            resolvedArguments.project_id = projectId;
         }
     }
 
@@ -918,7 +917,6 @@ async function runAIRequest({
             } = toolCall;
 
             const tool = tools[name];
-
             const toolResult = await executeTool(
                 name,
                 toolArguments,

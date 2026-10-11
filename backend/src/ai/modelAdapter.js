@@ -1,4 +1,3 @@
-
 const OLLAMA_URL = "http://localhost:11434/api/chat";
 const MODEL_NAME = "qwen2.5:3b";
 const REQUEST_TIMEOUT_MS = 120000;
@@ -79,7 +78,52 @@ function convertToolDefinition(tool) {
     };
 }
 
-function validateToolCall(toolCall) {
+function normalizeToolArguments(argumentsObject, toolDefinition) {
+    if (
+        !argumentsObject ||
+        typeof argumentsObject !== "object" ||
+        Array.isArray(argumentsObject)
+    ) {
+        throw new Error(
+            "Ollama returned invalid tool arguments"
+        );
+    }
+
+    const normalizedArguments = {
+        ...argumentsObject
+    };
+
+    const parameters = toolDefinition?.parameters || {};
+
+    for (const [name, definition] of Object.entries(parameters)) {
+        if (
+            !Object.prototype.hasOwnProperty.call(
+                normalizedArguments,
+                name
+            )
+        ) {
+            continue;
+        }
+
+        const value = normalizedArguments[name];
+
+        if (
+            definition.type === "integer" &&
+            typeof value === "string" &&
+            /^\d+$/.test(value.trim())
+        ) {
+            const parsedValue = Number(value.trim());
+
+            if (Number.isSafeInteger(parsedValue)) {
+                normalizedArguments[name] = parsedValue;
+            }
+        }
+    }
+
+    return normalizedArguments;
+}
+
+function validateToolCall(toolCall, toolDefinitions = []) {
     if (
         !toolCall ||
         typeof toolCall !== "object"
@@ -107,12 +151,40 @@ function validateToolCall(toolCall) {
             "Ollama returned invalid tool arguments"
         );
     }
+
+    const toolDefinition = toolDefinitions.find(
+        (tool) => tool.name === toolCall.name
+    );
+
+    if (toolDefinition) {
+        const parameters = toolDefinition.parameters || {};
+
+        for (const [name, definition] of Object.entries(parameters)) {
+            if (
+                !Object.prototype.hasOwnProperty.call(
+                    toolCall.arguments,
+                    name
+                )
+            ) {
+                continue;
+            }
+
+            const value = toolCall.arguments[name];
+
+            if (
+                definition.type === "integer" &&
+                !Number.isInteger(value)
+            ) {
+                throw new Error(
+                    "Ollama returned an invalid integer argument: " +
+                    name
+                );
+            }
+        }
+    }
 }
 
-async function generateResponse({
-    messages,
-    tools
-}) {
+async function generateResponse({ messages, tools }) {
     if (!Array.isArray(messages)) {
         throw new Error(
             "Model adapter messages must be an array"
@@ -147,21 +219,19 @@ async function generateResponse({
             stream: false
         };
 
-        const response = await fetch(
-            OLLAMA_URL,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(ollamaRequestBody),
-                signal: controller.signal
-            }
-        );
+        const response = await fetch(OLLAMA_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(ollamaRequestBody),
+            signal: controller.signal
+        });
 
         if (!response.ok) {
             throw new Error(
-                `Ollama request failed with status ${response.status}`
+                "Ollama request failed with status " +
+                response.status
             );
         }
 
@@ -194,12 +264,45 @@ async function generateResponse({
                         );
                     }
 
+                    const toolName = toolCall.function.name;
+
+                    if (typeof toolName !== "string") {
+                        throw new Error(
+                            "Ollama returned an invalid tool name"
+                        );
+                    }
+
+                    const toolDefinition = tools.find(
+                        (tool) => tool.name === toolName
+                    );
+
+                    let toolArguments =
+                        toolCall.function.arguments ?? {};
+
+                    if (typeof toolArguments === "string") {
+                        try {
+                            toolArguments = JSON.parse(toolArguments);
+                        } catch {
+                            throw new Error(
+                                "Ollama returned malformed tool arguments"
+                            );
+                        }
+                    }
+
+                    toolArguments = normalizeToolArguments(
+                        toolArguments,
+                        toolDefinition
+                    );
+
                     const normalizedToolCall = {
-                        name: toolCall.function.name,
-                        arguments: toolCall.function.arguments
+                        name: toolName,
+                        arguments: toolArguments
                     };
 
-                    validateToolCall(normalizedToolCall);
+                    validateToolCall(
+                        normalizedToolCall,
+                        tools
+                    );
 
                     return normalizedToolCall;
                 });
@@ -234,5 +337,6 @@ async function generateResponse({
 module.exports = {
     generateResponse,
     convertToolDefinition,
-    validateToolCall
+    validateToolCall,
+    normalizeToolArguments
 };

@@ -5,6 +5,7 @@ const http = require("http");
 const BASE_URL = "http://localhost:5000";
 const EMAIL = "zyraaitest2026@gmail.com";
 const PASSWORD = process.env.ZYRA_TEST_PASSWORD;
+const TASK_ID = 180;
 
 function request(path, options = {}) {
     return new Promise((resolve, reject) => {
@@ -72,11 +73,10 @@ async function main() {
         }
     );
 
-    if (
-        login.status !== 200 ||
-        !login.body.token
-    ) {
-        throw new Error("Login failed");
+    if (login.status !== 200 || !login.body.token) {
+        throw new Error(
+            `Login failed with status ${login.status}`
+        );
     }
 
     const response = await request(
@@ -91,14 +91,14 @@ async function main() {
                 messages: [
                     {
                         role: "user",
-                        content:
-                            "Tell me the details of task 1."
+                        content: `Tell me the details of task ${TASK_ID}.`
                     }
                 ]
             }
         }
     );
 
+    console.log("Task ID:", TASK_ID);
     console.log("Status:", response.status);
     console.log(
         "Response:",

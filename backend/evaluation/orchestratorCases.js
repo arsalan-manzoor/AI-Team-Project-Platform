@@ -47,10 +47,47 @@ const cases = [
                     role: "assistant",
                     content: ""
                 }
+            },
+            {
+                content:
+                    "No authorized information is available for the requested item."
             }
         ],
         expected_content:
             "No authorized information is available for the requested item."
+    },
+
+    {
+        name: "multi_tool_mixed_authorization",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_calls: [
+                    {
+                        name: "get_project",
+                        arguments: {
+                            project_id: 1
+                        }
+                    },
+                    {
+                        name: "get_project",
+                        arguments: {
+                            project_id: 2
+                        }
+                    }
+                ],
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                content: "Authorized project data retrieved"
+            }
+        ],
+        expected_content:
+            "Authorized project data retrieved",
+        expected_mixed_authorization: true
     },
 
     {
@@ -250,8 +287,7 @@ const cases = [
                     arguments: {
                         task_id: 2,
                         title: "Updated task title",
-                        description:
-                            "Updated task description",
+                        description: "Updated task description",
                         assigned_to: 6,
                         status: "in_progress",
                         priority: "high",
@@ -269,8 +305,7 @@ const cases = [
             arguments: {
                 task_id: 2,
                 title: "Updated task title",
-                description:
-                    "Updated task description",
+                description: "Updated task description",
                 assigned_to: 6,
                 status: "in_progress",
                 priority: "high",
@@ -287,8 +322,7 @@ const cases = [
                 tool_call: {
                     name: "create_comment",
                     arguments: {
-                        content:
-                            "Test comment from AI orchestrator",
+                        content: "Test comment from AI orchestrator",
                         project_id: 6
                     }
                 },
@@ -301,8 +335,7 @@ const cases = [
         expected_confirmation: {
             tool_name: "create_comment",
             arguments: {
-                content:
-                    "Test comment from AI orchestrator",
+                content: "Test comment from AI orchestrator",
                 project_id: 6
             }
         }
@@ -503,6 +536,7 @@ function normalizeContent(value) {
 
 async function runCase(testCase) {
     let responseIndex = 0;
+    let mixedAuthorizationVerified = false;
 
     modelAdapter.generateResponse = async function ({
         messages
@@ -526,9 +560,8 @@ async function runCase(testCase) {
             let toolResult;
 
             try {
-                toolResult =
-                    JSON.parse(toolMessage.content);
-            } catch (error) {
+                toolResult = JSON.parse(toolMessage.content);
+            } catch {
                 throw new Error(
                     "Tool result message contains invalid JSON"
                 );
@@ -543,14 +576,76 @@ async function runCase(testCase) {
                     ? toolResult.data !== null
                     : toolResult !== null;
 
-            if (
-                hasToolData !==
-                testCase.expected_tool_data
-            ) {
+            if (hasToolData !== testCase.expected_tool_data) {
                 throw new Error(
                     "Unexpected tool result authorization state"
                 );
             }
+        }
+
+        if (
+            testCase.expected_mixed_authorization &&
+            responseIndex === 1
+        ) {
+            const toolMessages = messages.filter(
+                (message) => message.role === "tool"
+            );
+
+            if (toolMessages.length !== 2) {
+                throw new Error(
+                    "Expected both read-tool results to reach the model"
+                );
+            }
+
+            const results = toolMessages.map((message) => {
+                try {
+                    return JSON.parse(message.content);
+                } catch {
+                    throw new Error(
+                        "Tool result message contains invalid JSON"
+                    );
+                }
+            });
+
+            const unauthorizedResult = results.find(
+                (result) =>
+                    result &&
+                    typeof result === "object" &&
+                    result.available === false
+            );
+
+            if (!unauthorizedResult) {
+                throw new Error(
+                    "Expected one sanitized unauthorized result"
+                );
+            }
+
+            const authorizedResult = results.find(
+                (result) =>
+                    result &&
+                    typeof result === "object" &&
+                    result.available !== false
+            );
+
+            if (!authorizedResult) {
+                throw new Error(
+                    "Authorized result was not preserved"
+                );
+            }
+
+            const unauthorizedText =
+                JSON.stringify(unauthorizedResult);
+
+            if (
+                unauthorizedText.includes("project_id") ||
+                unauthorizedText.includes("project_name")
+            ) {
+                throw new Error(
+                    "Unauthorized result exposed restricted details"
+                );
+            }
+
+            mixedAuthorizationVerified = true;
         }
 
         const response =
@@ -573,22 +668,15 @@ async function runCase(testCase) {
         });
 
         if (testCase.expected_confirmation) {
-            const expected =
-                testCase.expected_confirmation;
+            const expected = testCase.expected_confirmation;
 
             const passed =
                 result &&
                 result.requires_confirmation === true &&
-                result.tool_name ===
-                    expected.tool_name &&
-                JSON.stringify(
-                    result.tool_arguments
-                ) ===
-                    JSON.stringify(
-                        expected.arguments
-                    ) &&
-                typeof result.confirmation_id ===
-                    "string" &&
+                result.tool_name === expected.tool_name &&
+                JSON.stringify(result.tool_arguments) ===
+                    JSON.stringify(expected.arguments) &&
+                typeof result.confirmation_id === "string" &&
                 result.confirmation_id.length > 0;
 
             console.log(
@@ -600,11 +688,7 @@ async function runCase(testCase) {
             if (!passed) {
                 console.log(
                     "  Received:",
-                    JSON.stringify(
-                        result,
-                        null,
-                        2
-                    )
+                    JSON.stringify(result, null, 2)
                 );
             }
 
@@ -616,12 +700,16 @@ async function runCase(testCase) {
                 normalizeContent(result.content);
 
             const expectedContent =
-                normalizeContent(
-                    testCase.expected_content
-                );
+                normalizeContent(testCase.expected_content);
 
-            const passed =
-                actualContent === expectedContent;
+            let passed = actualContent === expectedContent;
+
+            if (
+                testCase.expected_mixed_authorization &&
+                !mixedAuthorizationVerified
+            ) {
+                passed = false;
+            }
 
             console.log(
                 (passed ? "PASS" : "FAIL") +
@@ -630,15 +718,8 @@ async function runCase(testCase) {
             );
 
             if (!passed) {
-                console.log(
-                    "  Expected: " +
-                    expectedContent
-                );
-
-                console.log(
-                    "  Received: " +
-                    actualContent
-                );
+                console.log("  Expected: " + expectedContent);
+                console.log("  Received: " + actualContent);
             }
 
             return passed;
@@ -646,9 +727,8 @@ async function runCase(testCase) {
 
         if (testCase.expected_error) {
             console.log("FAIL: " + testCase.name);
-            console.log(
-                "  Reason: expected validation error"
-            );
+            console.log("  Reason: expected validation error");
+
             return false;
         }
 
@@ -656,8 +736,7 @@ async function runCase(testCase) {
     } catch (error) {
         if (testCase.expected_error) {
             const passed =
-                error.message ===
-                testCase.expected_error;
+                error.message === testCase.expected_error;
 
             console.log(
                 (passed ? "PASS" : "FAIL") +
@@ -666,19 +745,14 @@ async function runCase(testCase) {
             );
 
             if (!passed) {
-                console.log(
-                    "  Reason: " +
-                    error.message
-                );
+                console.log("  Reason: " + error.message);
             }
 
             return passed;
         }
 
         console.log("FAIL: " + testCase.name);
-        console.log(
-            "  Reason: " + error.message
-        );
+        console.log("  Reason: " + error.message);
 
         return false;
     }
@@ -687,7 +761,26 @@ async function runCase(testCase) {
 async function runEvaluation() {
     let passed = 0;
 
-    for (const testCase of cases) {
+    const requestedCase =
+        process.env.ORCHESTRATOR_CASE;
+
+    const selectedCases = requestedCase
+        ? cases.filter(
+            (testCase) => testCase.name === requestedCase
+        )
+        : cases;
+
+    if (selectedCases.length === 0) {
+        console.error(
+            "No orchestrator test case found with name: " +
+            requestedCase
+        );
+
+        process.exitCode = 1;
+        return;
+    }
+
+    for (const testCase of selectedCases) {
         if (await runCase(testCase)) {
             passed++;
         }
@@ -699,11 +792,11 @@ async function runEvaluation() {
         "Orchestrator evaluation: " +
         passed +
         "/" +
-        cases.length +
+        selectedCases.length +
         " cases passed"
     );
 
-    if (passed !== cases.length) {
+    if (passed !== selectedCases.length) {
         process.exitCode = 1;
     }
 }

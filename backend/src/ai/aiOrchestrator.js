@@ -1,5 +1,7 @@
 const modelAdapter = require("./modelAdapter");
+
 const tools = require("./toolRegistry");
+
 const { executeTool } = require("./toolExecutor");
 
 const {
@@ -705,7 +707,6 @@ async function runAIRequest({
         if (injectedModelResponse !== null) {
             currentModelResponse =
                 injectedModelResponse;
-
             injectedModelResponse = null;
         } else {
             currentModelResponse =
@@ -908,7 +909,9 @@ async function runAIRequest({
         }
 
         /*
-         * Only read tools are executed below.
+         * Execute all read tools in this batch.
+         * Sanitize unavailable results before storing
+         * or exposing them to the model.
          */
         for (const toolCall of toolCalls) {
             const {
@@ -916,47 +919,40 @@ async function runAIRequest({
                 arguments: toolArguments
             } = toolCall;
 
-            const tool = tools[name];
             const toolResult = await executeTool(
                 name,
                 toolArguments,
                 userId
             );
 
+            const isUnavailableResult =
+                toolResult &&
+                typeof toolResult === "object" &&
+                toolResult.available === false;
+
+            const modelSafeToolResult = isUnavailableResult
+                ? {
+                    available: false,
+                    message:
+                        "No authorized information is available for the requested item."
+                }
+                : toolResult;
+
             if (conversationId !== null) {
                 await addMessage({
                     conversationId,
                     role: "tool",
-                    content: JSON.stringify(toolResult),
+                    content: JSON.stringify(modelSafeToolResult),
                     toolName: name,
                     toolArguments,
-                    toolResult
+                    toolResult: modelSafeToolResult
                 });
-            }
-
-            if (
-                toolResult &&
-                typeof toolResult === "object" &&
-                toolResult.available === false
-            ) {
-                const content =
-                    "No authorized information is available for the requested item.";
-
-                if (conversationId !== null) {
-                    await addMessage({
-                        conversationId,
-                        role: "assistant",
-                        content
-                    });
-                }
-
-                return { content };
             }
 
             conversation.push({
                 role: "tool",
                 tool_name: name,
-                content: JSON.stringify(toolResult)
+                content: JSON.stringify(modelSafeToolResult)
             });
         }
     }

@@ -7,28 +7,47 @@ Scope: Backend, AI, ML, agents, security, data, and integrations
 Current rule: Research/design first. Do not change working backend functionality or database structure without an explicit implementation decision.
 
 1. Current Backend
+
 Current stack
+
 Node.js
+
 Express.js
+
 PostgreSQL
+
 JWT authentication
+
 bcrypt password hashing
+
 REST APIs
+
 React + Vite frontend (maintained separately)
+
 Current backend capabilities
 
 The current backend provides:
 
 Authentication and JWT-based session authorization
+
 Users
+
 Teams
+
 Team membership
+
 Projects
+
 Tasks
+
 Subtasks
+
 Milestones
+
 Comments
+
 Resources
+
 Notifications
 
 The current API is organized into route groups under /api, with authorization enforced by the existing authentication middleware and entity-specific membership/creator checks.
@@ -37,25 +56,27 @@ Current data flow
 
 User
 
-  ↓
+  ↓
 
 Team
 
-  ↓
+  ↓
 
 Project
 
-  ├── Tasks
+  ├── Tasks
 
-  │    ├── Subtasks
+  │    ├── Subtasks
 
-  │    └── Comments
+  │    └── Comments
 
-  ├── Milestones
+  ├── Milestones
 
-  ├── Resources
+  ├── Resources
 
-  └── Notifications / activity signals
+  └── Notifications / activity signals
+
+
 
 
 
@@ -66,23 +87,26 @@ Current security model
 The current design uses:
 
 
+
 JWT
 
- ↓
+ ↓
 
 Authenticated user
 
- ↓
+ ↓
 
 Existing authorization checks
 
- ↓
+ ↓
 
 Permitted teams/projects/tasks
 
- ↓
+ ↓
 
 Backend response
+
+
 
 
 
@@ -95,56 +119,67 @@ Status: NOW — keep the current backend stable.
 Current PostgreSQL tables:
 
 users
+
 teams
+
 team_members
+
 projects
+
 tasks
+
 subtasks
+
 milestones
+
 comments
+
 resources
+
 notifications
 
 Important relationships include:
 
 
+
 users
 
- ├── teams.created_by
+ ├── teams.created_by
 
- ├── team_members
+ ├── team_members
 
- ├── projects.created_by
+ ├── projects.created_by
 
- ├── tasks.created_by
+ ├── tasks.created_by
 
- ├── tasks.assigned_to
+ ├── tasks.assigned_to
 
- ├── comments.user_id
+ ├── comments.user_id
 
- └── notifications.user_id
+ └── notifications.user_id
 
 teams
 
- ├── team_members
+ ├── team_members
 
- └── projects
+ └── projects
 
 projects
 
- ├── tasks
+ ├── tasks
 
- ├── milestones
+ ├── milestones
 
- └── resources
+ └── resources
 
 tasks
 
- └── subtasks / comments
+ └── subtasks / comments
 
 projects/tasks
 
- └── current operational activity is partly represented by timestamps and notifications
+ └── current operational activity is partly represented by timestamps and notifications
+
 
 
 What ZYRA already knows
@@ -152,17 +187,29 @@ What ZYRA already knows
 The existing model can answer many questions from structured data:
 
 Who belongs to a team?
+
 Which projects belong to a team?
+
 Which tasks belong to a project?
+
 Who created a task?
+
 Who is assigned to a task?
+
 Task status and priority
+
 Task deadline
+
 Milestone status and deadline
+
 Project/team membership
+
 Comments attached to tasks/projects
+
 Resources attached to projects
+
 User notifications
+
 What is missing for richer intelligence
 
 The current model does not provide a complete event history for every state transition.
@@ -170,15 +217,25 @@ The current model does not provide a complete event history for every state tran
 Examples of potentially useful future events:
 
 Task created
+
 Task assigned
+
 Task reassigned
+
 Task started
+
 Task status changed
+
 Task completed
+
 Task deadline changed
+
 Milestone completed
+
 Project progress changed
+
 Comment/activity event
+
 Resource added/removed
 
 This does not justify a schema change now.
@@ -190,14 +247,23 @@ Status: NOW — use current data. NEXT — define an event/activity model if int
 The current backend exposes API groups for:
 
 /api/auth
+
 /api/users
+
 /api/teams
+
 /api/projects
+
 /api/tasks
+
 /api/notifications
+
 /api/subtasks
+
 /api/milestones
+
 /api/comments
+
 /api/resources
 
 The APIs already provide the basic CRUD/read operations needed for a future AI context layer.
@@ -209,23 +275,26 @@ The future AI layer should not directly query arbitrary PostgreSQL tables from a
 Preferred flow:
 
 
+
 AI request
 
-   ↓
+   ↓
 
 AI orchestration
 
-   ↓
+   ↓
 
 Permission-aware context/tool layer
 
-   ↓
+   ↓
 
 Existing backend/data-access logic
 
-   ↓
+   ↓
 
 PostgreSQL
+
+
 
 
 
@@ -240,12 +309,19 @@ The first AI layer should be a read-focused project assistant.
 Example questions:
 
 What tasks are pending?
+
 What tasks are overdue?
+
 What are my tasks this week?
+
 Which project is behind schedule?
+
 What milestones are coming up?
+
 Who is working on the authentication module?
+
 Summarize this project's progress.
+
 Summarize recent project activity.
 
 The assistant should answer from authorized workspace data rather than relying on model memory.
@@ -254,43 +330,45 @@ Recommended first architecture
 
 ZYRA Frontend
 
-      ↓
+      ↓
 
 AI Assistant UI
 
-      ↓
+      ↓
 
 AI Orchestration Layer
 
-      ↓
+      ↓
 
 Permission-aware Context / Tool Layer
 
-      ↓
+      ↓
 
 ZYRA Backend
 
-      ↓
+      ↓
 
 PostgreSQL
 
-      ↓
+      ↓
 
 Structured results
 
-      ↓
+      ↓
 
 AI model
 
-      ↓
+      ↓
 
 User-friendly response
 
 
 
+
+
 The AI model should interpret language and synthesize results. The backend should remain responsible for truth, authorization, and mutations.
 
-Status: NEXT — design and prototype after current frontend/integration work.
+Status: NOW — the AI assistant foundation is implemented; continue verification and frontend integration.
 
 5. AI Context Architecture
 
@@ -302,37 +380,38 @@ Context pipeline
 
 User question
 
-   ↓
+   ↓
 
 Intent detection
 
-   ↓
+   ↓
 
 Identify workspace scope
 
-   ↓
+   ↓
 
 Authenticate user
 
-   ↓
+   ↓
 
 Check team/project membership
 
-   ↓
+   ↓
 
 Select relevant entities
 
-   ↓
+   ↓
 
 Fetch only required fields
 
-   ↓
+   ↓
 
 Build structured context
 
-   ↓
+   ↓
 
 Send context to model
+
 
 
 Example
@@ -344,86 +423,101 @@ Question:
 Potential context:
 
 
+
 {
 
-  "project": {
+  "project": {
 
-    "id": 12,
+    "id": 12,
 
-    "name": "Project A",
+    "name": "Project A",
 
-    "description": "...",
+    "description": "...",
 
-    "deadline": "..."
+    "deadline": "..."
 
-  },
+  },
 
-  "milestones": [
+  "milestones": [
 
-    {
+    {
 
-      "name": "...",
+      "name": "...",
 
-      "status": "...",
+      "status": "...",
 
-      "deadline": "..."
+      "deadline": "..."
 
-    }
+    }
 
-  ],
+  ],
 
-  "tasks": [
+  "tasks": [
 
-    {
+    {
 
-      "title": "...",
+      "title": "...",
 
-      "status": "...",
+      "status": "...",
 
-      "priority": "...",
+      "priority": "...",
 
-      "deadline": "...",
+      "deadline": "...",
 
-      "assignee": "..."
+      "assignee": "..."
 
-    }
+    }
 
-  ],
+  ],
 
-  "recent_comments": [
+  "recent_comments": [
 
-    {
+    {
 
-      "content": "...",
+      "content": "...",
 
-      "created_at": "..."
+      "created_at": "..."
 
-    }
+    }
 
-  ]
+  ]
 
 }
+
+
 
 
 
 The context builder should avoid unnecessary fields such as:
 
 Password hashes
+
 JWTs
+
 Unrelated users
+
 Unrelated projects
+
 Unrelated teams
+
 Internal secrets
+
 Large unrelated resource content
+
 Context filtering
 
 The context layer should apply:
 
 Identity filtering
+
 Membership filtering
+
 Entity scope filtering
+
 Field filtering
+
 Time-window filtering
+
 Result-size limits
 
 For example, "recent activity" may initially use a bounded time window rather than the complete historical database.
@@ -436,31 +530,40 @@ Initial context types
 
 The first context layer should use a small set of explicit context types instead of sending arbitrary workspace data to the model.
 
-Context type	Typical purpose	Minimum relevant data
-Project Context	Project status, progress, delays	Project, milestones, tasks, recent comments
-Task Context	Task details, status, delays, issues	Task, project, subtasks, related comments
-User Task Context	Workload, assigned work, deadlines	Assigned tasks and related project information
+Context type   Typical purpose   Minimum relevant data
+
+Project Context   Project status, progress, delays Project, milestones, tasks, recent comments
+
+Task Context   Task details, status, delays, issues   Task, project, subtasks, related comments
+
+User Task Context Workload, assigned work, deadlines  Assigned tasks and related project information
+
 Examples:
+
 “Why is Project A behind schedule?” → Project Context
+
 “What is wrong with Task X?” → Task Context
+
 “What do I need to finish this week?” → User Task Context
 
 The context builder should select the minimum context type and fields needed to answer the question. It should not expand an ambiguous request into the entire database. If the requested scope cannot be determined safely, the system should ask for clarification or use an explicitly authorized workspace scope.
 
-Status: NEXT — design a context builder/service before implementing RAG or vector search.
+Status: NOW - permission-aware context services are implemented. NEXT - refine context selection and coverage. FUTURE - add RAG/vector search only if justified.
+
+
 
 
 
 ### AI Context Contract
 
-The backend uses a structured contract between the application context layer and future AI orchestration.
+The backend uses a structured contract between the application context layer and AI orchestration. This example documents the contract shape; verify the exact field names and supported values against the current implementation before treating it as an API specification.
 
-The current contract is:
+Example contract:
 
 ```js
 {
-    context_type: "team",
-    data: {}
+  context_type: "team",
+  data: {}
 }
 ```
 
@@ -472,7 +575,6 @@ Supported context types:
 - `task`
 - `milestone`
 - `recent_activity`
-
 The `data` field contains only context retrieved by the authorized backend service.
 
 The AI layer must not receive unrestricted database access. Authentication and authorization remain the responsibility of the backend before context is constructed.
@@ -488,6 +590,7 @@ Future versions may extend this contract with fields such as:
 - `token_budget`
 
 These should be added only when required by the AI orchestration layer.
+
 6. AI Security & Authorization
 
 Security is the highest-priority architectural constraint.
@@ -496,21 +599,23 @@ Required rule
 
 User
 
- ↓
+ ↓
 
 JWT
 
- ↓
+ ↓
 
 Existing ZYRA authorization
 
- ↓
+ ↓
 
 Authorized data/tools
 
- ↓
+ ↓
 
 AI
+
+
 
 
 
@@ -521,29 +626,33 @@ Example
 If User A cannot access Project B:
 
 
+
 User A
 
- ↓
+ ↓
 
 AI asks for Project B
 
- ↓
+ ↓
 
 Backend authorization check
 
- ↓
+ ↓
 
 Access denied
 
- ↓
+ ↓
 
 AI receives no Project B data
+
+
 
 
 
 The model should never be trusted to enforce this boundary.
 
 Future security controls
+
 Authentication
 
 The AI request should be associated with the authenticated ZYRA user.
@@ -571,12 +680,19 @@ Tool permissions
 Each tool should have:
 
 Explicit name
+
 Explicit description
+
 Strict input schema
+
 Authorization check
+
 Validation
+
 Audit logging
+
 Rate limiting where appropriate
+
 Destructive actions
 
 Delete operations and other high-impact actions should require explicit user confirmation.
@@ -585,21 +701,22 @@ Proposed permission levels
 
 READ
 
- ↓
+ ↓
 
 Low risk
 
 WRITE
 
- ↓
+ ↓
 
 Requires authorization + validation
 
 SENSITIVE / DESTRUCTIVE
 
- ↓
+ ↓
 
 Authorization + validation + explicit confirmation
+
 
 
 AI output safety
@@ -607,122 +724,104 @@ AI output safety
 The assistant should distinguish:
 
 Database facts
+
 Calculations
+
 Model-generated summaries
+
 Predictions
+
 Recommendations
 
 Predictions must not be presented as database facts.
 
-Status: NOW — preserve existing authorization. NEXT — formalize AI-specific permission/tool policies. FUTURE — advanced agent governance.
+Status: NOW - preserve existing authorization and enforce permission checks through the AI tool registry and execution flow. NEXT - expand policy coverage and regression tests. FUTURE - advanced agent governance.
 
-7. AI Tool / Function Architecture
+## 7. AI Tool / Function Architecture
 
-Function calling is a suitable mechanism for connecting an LLM to controlled application functions. OpenAI, Google Gemini, and other providers support structured tool/function calling. The important architectural principle is that the application executes the function; the model only proposes the tool call and arguments.
+Function calling connects the language model to controlled application functions. The model proposes a tool call and its arguments; the backend validates the request and executes the operation. The model must never execute database operations directly.
 
-READ-ONLY tools
+### READ-ONLY TOOLS
 
-Potential future tools:
+The current AI implementation includes registered tools for retrieving project information and other authorized application context.
 
+Supported capabilities include:
 
-get_projects()
+* Retrieving projects.
+* Retrieving individual project details.
+* Retrieving tasks and task details.
+* Retrieving team-member information.
+* Retrieving milestones.
+* Retrieving project summary and related context where supported.
 
-get_project()
+The exact available tools and parameter schemas are defined in the current AI tool registry.
 
-get_tasks()
+**Security requirements:**
 
-get_task()
+* Return only information the authenticated user is authorized to access.
+* Validate tool arguments before execution.
+* Do not expose restricted information through tool results or model responses.
+* Preserve authorized results when a request contains multiple tool calls with different authorization outcomes.
 
-get_team_members()
+### WRITE TOOLS
 
-get_milestones()
+The current AI implementation includes registered write operations for supported application features.
 
-get_notifications()
+Implemented capabilities include supported task, project, milestone, and comment operations. Actual availability depends on the registered tools and their implemented backend services.
 
-get_recent_activity()
+**Execution requirements:**
 
-get_project_summary_data()
+* Reuse existing backend services and business rules.
+* Validate input arguments before execution.
+* Enforce authentication and authorization.
+* Require explicit confirmation for operations that use the confirmation workflow.
+* Prevent duplicate execution of expired, invalid, or already-used confirmations.
+* Return clear success or error results.
 
+The language model must not bypass the backend's validation, permission checks, or confirmation requirements.
 
+### SENSITIVE AND DESTRUCTIVE OPERATIONS
 
-These should return only authorized data.
+Examples include:
 
-WRITE tools
+* Deleting tasks.
+* Deleting projects.
+* Removing team members.
+* Deleting resources.
+* Performing bulk updates.
 
-Potential future tools:
+The availability of each operation depends on its implementation and registration in the tool registry.
 
+**Safety requirements:**
 
-create_task()
+* Verify that the authenticated user has the required permissions.
+* Validate the target resource and requested operation.
+* Require confirmation wherever the implemented workflow specifies it.
+* Never execute a destructive operation solely because the language model proposed it.
+* Do not claim that an operation is implemented unless its backend functionality and execution path have been verified.
 
-update_task()
+### TOOL EXECUTION FLOW
 
-create_project()
+1. The user submits a request.
+2. The language model proposes a tool call.
+3. The application validates the tool name and arguments.
+4. The backend checks authorization.
+5. The application requests confirmation when required.
+6. The backend executes the authorized operation.
+7. The application processes and records the result.
+8. The language model explains the result to the user.
 
-create_comment()
+### IMPORTANT SECURITY RULE
 
-create_milestone()
+The language model must never receive database credentials or direct, unrestricted database access. All application operations must pass through controlled backend services, validation, authorization, and applicable confirmation checks.
 
+### STATUS
 
+**NOW:** The tool registry, controlled tool execution, permission-aware access, and write-confirmation flows are implemented.
 
-These should reuse existing business rules instead of creating separate AI-only mutation logic.
+**NEXT:** Verify and expand tool coverage, argument validation, authorization cases, and regression tests against actual application requirements.
 
-SENSITIVE / DESTRUCTIVE tools
-
-Examples:
-
-
-delete_task()
-
-delete_project()
-
-remove_team_member()
-
-delete_resource()
-
-bulk_update_tasks()
-
-
-
-These should not execute automatically in the initial agent architecture.
-
-Tool execution pattern
-
-User request
-
-   ↓
-
-LLM proposes tool
-
-   ↓
-
-Application validates tool + arguments
-
-   ↓
-
-Authorization check
-
-   ↓
-
-Optional confirmation
-
-   ↓
-
-Backend operation
-
-   ↓
-
-Result
-
-   ↓
-
-LLM explains result
-
-
-Important rule
-
-The model should never receive database credentials or direct unrestricted database access.
-
-Status: NEXT — define tool contracts. FUTURE — enable controlled write/agent tools.
+**FUTURE:** Introduce advanced agent capabilities only when justified by concrete requirements and supported by appropriate security controls.
 
 8. Future ML / Intelligence Layer
 
@@ -733,14 +832,21 @@ Candidate: Project risk prediction
 Potential inputs:
 
 Completion rate
+
 Overdue task count
+
 Remaining task count
+
 Milestone progress
+
 Deadline pressure
+
 Scope changes
+
 Historical completion behavior
 
 Potential output:
+
 
 
 Low risk
@@ -750,22 +856,31 @@ Medium risk
 High risk
 
 
+
 Candidate: Task delay prediction
 
 Inputs may include:
 
 Task priority
+
 Task age
+
 Historical completion duration
+
 Current status
+
 Deadline distance
+
 Reassignment history
+
 Project workload
 
 Output:
 
 
+
 Estimated probability of delay
+
 
 
 Candidate: Workload insights
@@ -773,24 +888,32 @@ Candidate: Workload insights
 Could initially be rule-based:
 
 Tasks per member
+
 Overdue tasks per member
+
 Upcoming deadlines
+
 Unassigned tasks
+
 Distribution of priority
+
 Candidate: Project health
 
 A first version may use transparent rules rather than ML:
 
 
+
 Health signals
 
- ↓
+ ↓
 
 Weighted rule calculation
 
- ↓
+ ↓
 
 Project health indicator
+
+
 
 
 
@@ -799,42 +922,69 @@ This is preferable to training a model before enough historical data exists.
 Status: NEXT — define measurable signals and collect historical data. FUTURE — trained predictive models when justified.
 
 9. Data Requirements for ML
+
 CURRENT DATA
 
 Already available:
 
 Users
+
 Teams
+
 Team membership
+
 Projects
+
 Tasks
+
 Task status
+
 Priority
+
 Deadlines
+
 Assignees
+
 Subtasks
+
 Milestones
+
 Comments
+
 Resources
+
 Notifications
+
 Creation timestamps
+
 MISSING / LIMITED DATA
 
 Potential gaps:
 
 Complete task state history
+
 Assignment history
+
 Deadline-change history
+
 Status-transition timestamps
+
 Actual start/completion time
+
 Project progress history
+
 Structured blockers
+
 Task dependencies
+
 Historical workload snapshots
+
 Agent/tool activity history
+
 FUTURE DATA REQUIREMENTS
 
 A future activity/event model could record:
+
 
 
 event_id
@@ -861,6 +1011,8 @@ metadata
 
 
 
+
+
 This is only a conceptual design.
 
 Do not add this table yet.
@@ -868,9 +1020,13 @@ Do not add this table yet.
 Before adding it, determine:
 
 Which ML feature requires it?
+
 Which events are necessary?
+
 How much storage will it require?
+
 What privacy implications exist?
+
 What retention policy is needed?
 
 Status: NOW — document gaps. NEXT — design event history. FUTURE — use historical data for ML.
@@ -883,63 +1039,66 @@ Stage 1: Assistant
 
 Question
 
- ↓
+ ↓
 
 Retrieve authorized context
 
- ↓
+ ↓
 
 Answer
+
 
 
 Stage 2: Tool-enabled assistant
 
 Question
 
- ↓
+ ↓
 
 Choose read tool
 
- ↓
+ ↓
 
 Retrieve data
 
- ↓
+ ↓
 
 Answer
+
 
 
 Stage 3: Controlled agent
 
 Goal
 
- ↓
+ ↓
 
 Plan
 
- ↓
+ ↓
 
 Select tools
 
- ↓
+ ↓
 
 Check permissions
 
- ↓
+ ↓
 
 Request approval where needed
 
- ↓
+ ↓
 
 Execute
 
- ↓
+ ↓
 
 Verify
 
- ↓
+ ↓
 
 Report
+
 
 
 Example
@@ -951,47 +1110,49 @@ User:
 Possible future workflow:
 
 
+
 Understand project
 
- ↓
+ ↓
 
 Read milestones
 
- ↓
+ ↓
 
 Read incomplete tasks
 
- ↓
+ ↓
 
 Identify overdue work
 
- ↓
+ ↓
 
 Analyze workload
 
- ↓
+ ↓
 
 Prepare recommendations
 
- ↓
+ ↓
 
 Ask user for approval
 
- ↓
+ ↓
 
 Create/update approved tasks
 
- ↓
+ ↓
 
 Notify relevant members
 
- ↓
+ ↓
 
 Verify results
 
- ↓
+ ↓
 
 Report completion
+
 
 
 Agent guardrails
@@ -999,14 +1160,23 @@ Agent guardrails
 Agents should have:
 
 Defined goals
+
 Explicit tool allowlists
+
 Maximum action limits
+
 Authorization checks
+
 Confirmation gates
+
 Timeouts
+
 Audit logs
+
 Error handling
+
 Rollback/compensation strategy where possible
+
 Human override
 
 Agent behavior should remain bounded rather than unrestricted.
@@ -1022,12 +1192,17 @@ GitHub
 Useful data:
 
 Pull requests
+
 Commits
+
 Issues
+
 Reviews
+
 CI status
 
 Possible future use:
+
 
 
 Task ↔ GitHub issue/PR
@@ -1035,44 +1210,63 @@ Task ↔ GitHub issue/PR
 Project progress ↔ repository activity
 
 
+
 Google Drive
 
 Useful for:
 
 Project documents
+
 Specifications
+
 Reports
+
 Reference material
+
 Slack / Discord
 
 Useful for:
 
 Turning conversations into tasks
+
 Activity summaries
+
 Notifications
+
 Project discussions
+
 Calendar
 
 Useful for:
 
 Deadlines
+
 Meetings
+
 Scheduling
+
 Presentation preparation
+
 Email
 
 Useful for:
 
 Notifications
+
 Task intake
+
 Project updates
+
 CI/CD
 
 Useful for:
 
 Deployment status
+
 Build failures
+
 Release readiness
+
 Issue trackers
 
 Potential future synchronization with Jira, Linear, etc.
@@ -1084,11 +1278,17 @@ Do not add integrations simply because they are available.
 Evaluate each integration by:
 
 User value
+
 Authentication complexity
+
 Data sensitivity
+
 API limits
+
 Reliability
+
 Maintenance cost
+
 Whether it creates duplicate sources of truth
 
 Status: FUTURE — prioritize only after core AI workflows are stable.
@@ -1098,89 +1298,91 @@ Status: FUTURE — prioritize only after core AI workflows are stable.
 A practical evolution is:
 
 
-                    ZYRA FRONTEND
 
-                          │
+                    ZYRA FRONTEND
 
-                          ▼
+                          │
 
-                 ZYRA APPLICATION API
+                          ▼
 
-                          │
+                 ZYRA APPLICATION API
 
-        ┌─────────────────┴─────────────────┐
+                          │
 
-        │                                   │
+        ┌─────────────────┴─────────────────┐
 
-        ▼                                   ▼
+        │                                   │
 
-  Core Backend                        AI Orchestration
+        ▼                                   ▼
 
-  ├── Auth                            ├── Request handling
+  Core Backend                        AI Orchestration
 
-  ├── Users                           ├── Context builder
+  ├── Auth                            ├── Request handling
 
-  ├── Teams                           ├── Permission checks
+  ├── Users                           ├── Context builder
 
-  ├── Projects                        ├── Tool registry
+  ├── Teams                           ├── Permission checks
 
-  ├── Tasks                           ├── Model adapter
+  ├── Projects                        ├── Tool registry
 
-  ├── Milestones                      ├── Conversation state
+  ├── Tasks                           ├── Model adapter
 
-  ├── Comments                        └── Safety/confirmation
+  ├── Milestones                      ├── Conversation state
 
-  ├── Resources
+  ├── Comments                        └── Safety/confirmation
 
-  └── Notifications
+  ├── Resources
 
-        │                                   │
+  └── Notifications
 
-        └──────────────┬────────────────────┘
+        │                                   │
 
-                       ▼
+        └──────────────┬────────────────────┘
 
-                  PostgreSQL
+                       ▼
 
-                       │
+                  PostgreSQL
 
-                       ▼
+                       │
 
-              Future event/activity data
+                       ▼
 
-                       │
+              Future event/activity data
 
-             ┌─────────┴─────────┐
+                       │
 
-             ▼                   ▼
+             ┌─────────┴─────────┐
 
-        AI Context            ML Layer
+             ▼                   ▼
 
-        / Retrieval       ├── Risk models
+        AI Context            ML Layer
 
-        ├── Structured    ├── Delay prediction
+        / Retrieval       ├── Risk models
 
-        │   context       ├── Workload insights
+        ├── Structured    ├── Delay prediction
 
-        └── RAG if needed └── Project health
+        │   context       ├── Workload insights
 
-             │
+        └── RAG if needed └── Project health
 
-             ▼
+             │
 
-             AI Model
+             ▼
 
-             │
+             AI Model
 
-             ▼
+             │
 
-       Future Agent Layer
+             ▼
 
-             │
+       Future Agent Layer
 
-             ▼
+             │
 
-       Tools / Integrations
+             ▼
+
+       Tools / Integrations
+
 
 
 Important architectural decision
@@ -1193,18 +1395,24 @@ Add embeddings/vector search only when semantic retrieval is actually required.
 
 PostgreSQL's pgvector extension can later provide vector similarity search while keeping vectors alongside relational data. It supports exact and approximate nearest-neighbor search and can be combined with PostgreSQL filtering. This makes it a reasonable future option, but it is not required for the first AI assistant.
 
-Status: NOW — keep the relational backend. NEXT — add a context layer. FUTURE — add vector/RAG capability if needed.
+Status: NOW - retain PostgreSQL and the existing permission-aware context layer. NEXT - refine context retrieval as needed. FUTURE - add vector/RAG capability only if a concrete need emerges.
 
 13. RAG and Memory
+
 RAG
 
 RAG becomes useful when ZYRA contains substantial unstructured content such as:
 
 Project documents
+
 Long comments
+
 Specifications
+
 Meeting notes
+
 Imported documents
+
 External knowledge
 
 For simple questions about structured tasks and deadlines, direct SQL/API retrieval is preferable.
@@ -1213,17 +1421,19 @@ Proposed retrieval hierarchy
 
 1. Structured API/database query
 
-        ↓
+        ↓
 
 2. Full-text search if appropriate
 
-        ↓
+        ↓
 
 3. Vector retrieval for semantic content
 
-        ↓
+        ↓
 
 4. Combined/hybrid retrieval
+
+
 
 
 
@@ -1234,9 +1444,13 @@ AI memory
 Separate:
 
 Conversation history
+
 Workspace facts
+
 User preferences
+
 Long-term memory
+
 Tool execution history
 
 Memory must have explicit scope and retention rules.
@@ -1246,17 +1460,25 @@ A user's private memory must never become visible to another workspace member.
 Status: NEXT — define memory boundaries. FUTURE — implement persistent memory/RAG only when justified.
 
 14. Technology Options
+
 LLM/API providers
+
 OpenAI
 
 Strengths:
 
 Strong current model ecosystem
+
 Official JavaScript/TypeScript SDK
+
 Responses API
+
 Function/tool calling
+
 Agent tooling
+
 Structured outputs
+
 Broad multimodal capabilities
 
 The official API documentation describes tools including function calling and remote MCP, and an Agents SDK for backend orchestration.
@@ -1264,15 +1486,21 @@ The official API documentation describes tools including function calling and re
 Considerations:
 
 Paid API usage
+
 Vendor dependency
+
 Need for usage limits and monitoring
+
 Google Gemini
 
 Strengths:
 
 Function calling
+
 Structured tool declarations
+
 Multi-tool workflows
+
 Strong Google ecosystem
 
 Google's documentation describes function calling as a bridge between natural-language requests and external functions/APIs, with the application responsible for executing the requested function.
@@ -1280,22 +1508,31 @@ Google's documentation describes function calling as a bridge between natural-la
 Considerations:
 
 Provider-specific API design
+
 Pricing and limits change over time
+
 Vendor dependency
+
 Anthropic Claude
 
 Strengths:
 
 Strong long-context and agent-oriented workflows
+
 Tool use
+
 Multiple model tiers
+
 Clear prompting/tool-use documentation
 
 Considerations:
 
 API cost
+
 Vendor dependency
+
 Model availability changes over time
+
 Recommendation
 
 Do not hard-code ZYRA's architecture around one model provider.
@@ -1303,25 +1540,29 @@ Do not hard-code ZYRA's architecture around one model provider.
 Create a future model adapter interface:
 
 
+
 AI Orchestration
 
-      ↓
+      ↓
 
 Model Adapter
 
- ┌────┼────┐
+ ┌────┼────┐
 
- ▼    ▼    ▼
+ ▼    ▼    ▼
 
 OpenAI Gemini Claude
 
 
 
+
+
 The initial implementation can use one provider, but the application should keep provider-specific code isolated.
 
-Status: NEXT — define an adapter boundary. FUTURE — multi-provider fallback if justified.
+Status: NOW - the Ollama-specific model adapter is implemented. NEXT - formalize a provider-neutral adapter only if needed. FUTURE - multi-provider fallback if justified.
 
 15. AI Orchestration Options
+
 Direct provider SDK
 
 Best for the first AI assistant.
@@ -1329,8 +1570,11 @@ Best for the first AI assistant.
 Advantages:
 
 Low complexity
+
 Easy to understand
+
 Fewer dependencies
+
 Easier debugging
 
 Recommendation: NEXT
@@ -1357,18 +1601,20 @@ Technology Comparison
 
 The following comparison is intended for architecture planning, not as a permanent technology commitment. Costs, free tiers, limits, model availability, and product capabilities can change over time.
 
-Option	Cost / student suitability	Ease of use	Scalability	Security	Complexity	Performance	Long-term suitability
-OpenAI API	Paid API; suitable for controlled student experiments with strict usage limits	High	High	Strong application-level controls; ZYRA must enforce authorization	Low–medium	High, model-dependent	High if isolated behind an adapter
-Google Gemini API	Paid usage with provider-specific pricing/limits; suitable for experiments within budget	High	High	Strong provider controls; ZYRA authorization remains required	Low–medium	High, model-dependent	High if isolated behind an adapter
-Anthropic Claude API	Paid API; suitable for controlled experiments	High	High	Strong provider controls; ZYRA authorization remains required	Low–medium	High, model-dependent	High if isolated behind an adapter
-Direct provider SDK	Low application complexity; API usage is the main cost	High	High enough for the first assistant	Depends on provider plus ZYRA controls	Low	Good for straightforward workflows	High as the first implementation approach
-LangGraph / similar	Framework cost is mainly engineering time and dependencies	Medium	High for complex workflows	Requires careful state, tool, and permission design	Medium–high	Good, but orchestration adds overhead	High when workflows become genuinely stateful
-MCP	Protocol itself is not the main cost; integration effort is the main cost	Medium	High for interoperability	Explicit capability/tool boundaries, but ZYRA authorization must remain authoritative	Medium	Depends on connected tools/providers	High for future interoperability
-PostgreSQL + pgvector	Uses existing PostgreSQL infrastructure; low additional architecture cost	Medium	High for many application-scale retrieval workloads	Existing PostgreSQL access controls plus application authorization	Medium	Good for combined relational + vector retrieval	High if semantic retrieval is required
-Dedicated vector database	Additional service/infrastructure cost; less attractive before retrieval scale justifies it	Medium	High	Adds another security boundary and service to manage	Medium–high	Potentially strong at large retrieval workloads	Useful only when scale/operational needs justify it
-scikit-learn	Free/open source; very suitable for student ML experiments	High	Good for classical ML workloads	Model/data security remains application responsibility	Low–medium	Strong for tabular classical ML	High for early predictive features
-PyTorch	Free/open source; compute can become expensive	Medium	High	Requires normal model/data security controls	Medium–high	Strong for deep learning workloads	High when deep learning is actually justified
-MLflow	Open source; operational cost depends on deployment	Medium	High for experiment/model management	Requires secure tracking, artifacts, and access controls	Medium	Evaluation/tracking rather than primary inference performance	High when ML/GenAI experimentation becomes substantial
+| Option | Cost / student suitability | Ease of use | Scalability | Security | Complexity | Performance | Long-term suitability |
+|---|---|---|---|---|---|---|---|
+| OpenAI API | Paid API; suitable for controlled student experiments with strict usage limits | High | High | Strong application-level controls; ZYRA must enforce authorization | Low–medium | High, model-dependent | High if isolated behind an adapter |
+| Google Gemini API | Paid usage with provider-specific pricing and limits; suitable for experiments within budget | High | High | Strong provider controls; ZYRA authorization remains required | Low–medium | High, model-dependent | High if isolated behind an adapter |
+| Anthropic Claude API | Paid API; suitable for controlled experiments | High | High | Strong provider controls; ZYRA authorization remains required | Low–medium | High, model-dependent | High if isolated behind an adapter |
+| Direct provider SDK | Low application complexity; API usage is the main cost | High | High enough for the first assistant | Depends on provider plus ZYRA controls | Low | Good for straightforward workflows | High as the first implementation approach |
+| LangGraph / similar workflow frameworks | Framework cost is mainly engineering time and dependencies | Medium | High for complex workflows | Requires careful state, tool, and permission design | Medium–high | Good, but orchestration adds overhead | High when workflows become genuinely stateful |
+| MCP | Protocol itself is not the main cost; integration effort is the main cost | Medium | High for interoperability | Explicit capability/tool boundaries; ZYRA authorization must remain authoritative | Medium | Depends on connected tools and providers | High for future interoperability |
+| PostgreSQL + pgvector | Uses existing PostgreSQL infrastructure; low additional architecture cost | Medium | High for many application-scale retrieval workloads | Existing PostgreSQL access controls plus application authorization | Medium | Good for combined relational and vector retrieval | High if semantic retrieval is required |
+| Dedicated vector database | Additional service/infrastructure cost; less attractive before retrieval scale justifies it | Medium | High | Adds another security boundary and service to manage | Medium–high | Potentially strong at large retrieval workloads | Useful only when scale and operational needs justify it |
+| scikit-learn | Free/open source; very suitable for student ML experiments | High | Good for classical ML workloads | Model/data security remains application responsibility | Low–medium | Strong for tabular classical ML | High for early predictive features |
+| PyTorch | Free/open source; compute can become expensive | Medium | High | Requires normal model/data security controls | Medium–high | Strong for deep learning workloads | High when deep learning is actually justified |
+| MLflow | Open source; operational cost depends on deployment | Medium | High for experiment/model management | Requires secure tracking, artifacts, and access controls | Medium | Evaluation/tracking rather than primary inference performance | High when ML/GenAI experimentation becomes substantial |
+
 Comparison principles
 
 The comparison should be evaluated against the actual ZYRA requirement at the time of implementation. Avoid selecting technology only because it is popular or AI-related.
@@ -1376,15 +1622,25 @@ The comparison should be evaluated against the actual ZYRA requirement at the ti
 Important criteria are:
 
 Cost and API usage
+
 Free/student suitability
+
 Ease of implementation and debugging
+
 Scalability
+
 Security and authorization compatibility
+
 Engineering complexity
+
 Runtime performance and latency
+
 Long-term maintenance
+
 Vendor lock-in
+
 Fit with the existing Node.js + Express + PostgreSQL architecture
+
 Student/project suitability
 
 For a student project, low initial complexity is important. The first AI assistant should therefore prefer a direct provider SDK and the existing PostgreSQL backend. More complex orchestration, vector infrastructure, and ML operations should be introduced only when a measurable requirement justifies them.
@@ -1394,16 +1650,23 @@ Cost-control requirements
 Before using paid AI APIs, ZYRA should have:
 
 Request and token limits
+
 Context-size limits
+
 Rate limiting
+
 Usage logging
+
 Error handling
+
 Budget monitoring
+
 Safe development/test accounts or keys
 
-Status: NOW — document comparison criteria. NEXT — select a provider when the AI assistant is implemented. FUTURE — add multi-provider support only if a concrete requirement exists.
+Status: NOW - the current implementation uses local Ollama with qwen2.5:3b. NEXT - compare alternative providers and models against measured requirements. FUTURE - multi-provider support only for a concrete need.
 
 16. Embeddings and Vector Storage
+
 Option A: No vector database
 
 Use PostgreSQL and normal queries.
@@ -1411,10 +1674,15 @@ Use PostgreSQL and normal queries.
 Best for:
 
 Tasks
+
 Projects
+
 Milestones
+
 Users
+
 Notifications
+
 Structured filters
 
 Recommendation: NOW
@@ -1426,9 +1694,13 @@ Use PostgreSQL + pgvector.
 Advantages:
 
 Keeps vectors near existing relational data
+
 Exact and approximate search
+
 HNSW and IVFFlat indexes
+
 PostgreSQL filtering and joins
+
 Lower architectural complexity than introducing another database
 
 Recommendation: NEXT/FUTURE, only when semantic retrieval is required
@@ -1440,6 +1712,7 @@ Consider only if retrieval scale or operational requirements justify it.
 Recommendation: FUTURE
 
 17. ML Framework Options
+
 scikit-learn
 
 Good candidate for early tabular ML experiments.
@@ -1447,8 +1720,11 @@ Good candidate for early tabular ML experiments.
 Useful for:
 
 Classification
+
 Regression
+
 Baseline models
+
 Feature experiments
 
 Low complexity and appropriate for a student project.
@@ -1468,9 +1744,13 @@ MLflow
 Potentially useful later for:
 
 Experiment tracking
+
 Evaluation
+
 Model/version management
+
 GenAI evaluation
+
 Agent evaluation
 
 MLflow currently provides evaluation capabilities for agent quality, safety, hallucination, retrieval quality, and regression testing.
@@ -1484,18 +1764,29 @@ AI systems require more than ordinary API testing.
 Future evaluation should measure:
 
 Answer correctness
+
 Authorization correctness
+
 Tool-call correctness
+
 Hallucination rate
+
 Retrieval relevance
+
 Latency
+
 Token/API cost
+
 Failure rate
+
 User feedback
+
 Action success rate
+
 Evaluation dataset
 
 Create a small test set containing questions such as:
+
 
 
 What tasks are pending?
@@ -1512,7 +1803,10 @@ Why is project X behind schedule?
 
 
 
+
+
 Also include security tests:
+
 
 
 Can user A retrieve project B?
@@ -1523,11 +1817,14 @@ Can the AI execute a tool outside its allowed scope?
 
 
 
+
+
 These should become regression tests before agentic features are introduced.
 
-Status: NEXT — define evaluation cases. FUTURE — automated continuous AI evaluation.
+Status: NOW - evaluation cases exist for tools, orchestration, context, and project intelligence. NEXT - continue running and expanding evaluations. FUTURE - automated continuous AI evaluation.
 
 19. Research Findings from AI-Native Products
+
 Linear
 
 Linear currently positions its AI around project context, project updates, status checking, triage, coding sessions, and agent actions. It also exposes an MCP server for compatible AI clients.
@@ -1535,8 +1832,11 @@ Linear currently positions its AI around project context, project updates, statu
 Useful lesson for ZYRA:
 
 Keep AI grounded in structured project context.
+
 Record agent actions.
+
 Make agent work visible and reviewable.
+
 Separate context retrieval from model reasoning.
 
 Classification: NEXT/FUTURE
@@ -1548,6 +1848,7 @@ Notion AI currently combines workspace context, databases, docs, connected appli
 Useful lesson:
 
 AI becomes more useful when structured work and unstructured knowledge are connected.
+
 Search/retrieval and action should be separate capabilities.
 
 Classification: NEXT/FUTURE
@@ -1559,6 +1860,7 @@ ClickUp Brain uses tasks, Docs, conversations, and workspace information as cont
 Useful lesson:
 
 Context should be scoped to the relevant workspace/location.
+
 AI features can begin as narrow task/project operations rather than a general autonomous agent.
 
 Classification: NEXT
@@ -1570,7 +1872,9 @@ Atlassian's current Rovo approach combines workspace context, AI search, agents,
 Useful lesson:
 
 Agent permissions should be explicit.
+
 Tool access must be governed.
+
 Human review/approval is important for higher-impact actions.
 
 Classification: FUTURE
@@ -1582,40 +1886,74 @@ Plane positions itself as an AI-native project management workspace with project
 Useful lesson:
 
 AI should understand project context directly.
+
 Agents need a structured work system and explicit rules.
+
 APIs/webhooks are important foundations for integrations.
 
 Classification: NEXT/FUTURE
+
+Asana
+
+Asana AI combines project and task context with summaries, status insights, task creation, workflow automation, AI teammates, and connectors for external AI tools. Its current product direction emphasizes humans and AI agents working from shared work context with permission controls and review points.
+
+Useful lesson:
+
+- Ground AI in the same structured project, task, goal, and dependency data used by the rest of the workspace.
+- Start with narrow workflows such as summaries, status reporting, risk identification, and request routing.
+- Keep permissions, auditability, and human review as part of the workflow rather than relying on model instructions alone.
+- Connect AI to existing work systems instead of creating a disconnected source of project truth.
+
+Classification: NEXT/FUTURE
+
+Height (Historical Case Study)
+
+Height was a project-management and issue-tracking platform that later focused on autonomous AI workflows. Its historical AI direction included automating routine work such as bug triage, backlog maintenance, task organization, and status updates. Height discontinued its service on September 24, 2025, so it is a historical case study, not a currently available product or integration target.
+
+Useful lesson:
+
+- AI can reduce administrative overhead when it works on structured tasks and relevant workspace activity.
+- Automations should have bounded responsibilities, clear validation, and reviewable outcomes.
+- A product should retain value if a particular AI provider or external platform becomes unavailable.
+- Do not build a new Height integration; use the product only to study its historical design approach.
+
+Classification: HISTORICAL REFERENCE
 
 Overall product research conclusion
 
 The common architectural pattern is not:
 
 
+
 UI → LLM → database
+
+
 
 
 
 It is closer to:
 
 
+
 Workspace
 
- ↓
+ ↓
 
 Structured + unstructured context
 
- ↓
+ ↓
 
 Permission-aware AI layer
 
- ↓
+ ↓
 
 Tools/actions
 
- ↓
+ ↓
 
 Human oversight
+
+
 
 
 
@@ -1624,6 +1962,7 @@ ZYRA should follow this principle without copying any specific product.
 20. AI Tool Security Model
 
 Every future tool should have a definition similar to:
+
 
 
 Tool name
@@ -1648,7 +1987,10 @@ Failure behavior
 
 
 
+
+
 Example:
+
 
 
 create_task
@@ -1689,28 +2031,50 @@ Record user, tool, arguments summary, result, timestamp.
 
 
 
+
+
 This provides a predictable path from assistant to agent.
 
 21. Risks & Mitigations
-Risk	Mitigation
-Hallucination	Ground answers in backend data; distinguish facts from generated analysis
-Prompt injection	Treat workspace content as untrusted data; separate instructions from retrieved content
-Unauthorized data access	Enforce existing authorization before context reaches the model
-Data leakage	Minimize context and exclude secrets/private fields
-Incorrect AI actions	Validate tool arguments and require confirmation for risky actions
-Destructive actions	Explicit confirmation and restricted tool allowlists
-Poor data quality	Validate backend data and expose uncertainty
-Insufficient historical data	Start with rules; collect events before training ML
-AI API cost	Token limits, context filtering, caching, monitoring, rate limits
-Latency	Bounded context, streaming where useful, efficient queries
-Rate limits	Queue/retry policies and provider monitoring
-Vendor lock-in	Model adapter boundary and provider-neutral tool contracts
-Over-engineering	Build only after measurable requirements appear
-Privacy	Explicit data scope, retention rules, access controls
-Model unreliability	Evaluation datasets, regression tests, human review
-Explainability	Show supporting project/task data and identify predictions as predictions
-Agent runaway behavior	Max steps, tool allowlists, timeouts, approval gates
-Integration failures	OAuth scopes, retries, idempotency, webhook verification
+
+Risk |Mitigation
+
+Hallucination |Ground answers in backend data; distinguish facts from generated analysis
+
+Prompt injection |Treat workspace content as untrusted data; separate instructions from retrieved content
+
+Unauthorized data access | Enforce existing authorization before context reaches the model
+
+Data leakage | Minimize context and exclude secrets/private fields
+
+Incorrect AI actions Validate tool arguments and require confirmation for risky actions
+
+Destructive actions  Explicit confirmation and restricted tool allowlists
+
+Poor data quality Validate backend data and expose uncertainty
+
+Insufficient historical data  Start with rules; collect events before training ML
+
+AI API cost Token limits, context filtering, caching, monitoring, rate limits
+
+Latency  Bounded context, streaming where useful, efficient queries
+
+Rate limits Queue/retry policies and provider monitoring
+
+Vendor lock-in Model adapter boundary and provider-neutral tool contracts
+
+Over-engineering  Build only after measurable requirements appear
+
+Privacy  Explicit data scope, retention rules, access controls
+
+Model unreliability  Evaluation datasets, regression tests, human review
+
+Explainability Show supporting project/task data and identify predictions as predictions
+
+Agent runaway behavior  Max steps, tool allowlists, timeouts, approval gates
+
+Integration failures OAuth scopes, retries, idempotency, webhook verification
+
 22. NOW / NEXT / FUTURE
 
 NOW — Implemented foundation
@@ -1718,32 +2082,49 @@ NOW — Implemented foundation
 Keep the current backend stable. Preserve JWT, authorization, existing API contracts, and PostgreSQL as the source of truth.
 
 Completed foundations:
+
 - Central AI context routing for supported workspace contexts.
+
 - Read-only AI tool registry and permission-aware data retrieval.
+
 - Model adapter and orchestration boundary.
+
 - Tool argument validation and rejection of unknown or malformed tool calls.
+
 - Confirmation flow for supported AI write actions.
+
 - Deterministic project-intelligence calculations and evaluation coverage.
+
 - Automated evaluations for read-only tools, orchestration, and project intelligence.
 
 NEXT — Safe incremental expansion
 
 - Continue testing AI backend behavior and authorization boundaries.
+
 - Extend the existing confirmation-based write-action workflow with additional approved actions only after testing authorization, validation, failure handling, and confirmation behavior.
+
 - Add evaluation cases for unauthorized requests, invalid arguments, declined confirmations, and failures.
+
 - Review frontend integration for the assistant and confirmation workflow.
+
 - Collect activity history only when needed.
 
 FUTURE — Only when justified
 
 - Additional controlled AI write actions and multi-step workflows.
+
 - Predictive task-delay, project-risk, and workload models after sufficient historical data becomes available.
+
 - Persistent AI memory, RAG, and vector search when justified by real requirements.
+
 - More autonomous agents under explicit guardrails.
+
 - GitHub, Slack, Drive, Calendar, and MCP integrations for specific workflows.
+
 - Dedicated vector infrastructure and complex orchestration only when necessary.
 
 23. Implementation Roadmap
+
 Phase 1 — Stable Project Workspace
 
 Goal: Maintain the current project-management foundation.
@@ -1751,8 +2132,11 @@ Goal: Maintain the current project-management foundation.
 Backend work:
 
 Stabilize APIs
+
 Maintain authorization
+
 Complete frontend integration
+
 Maintain PostgreSQL relationships
 
 Data: Current relational data.
@@ -1768,7 +2152,9 @@ Complexity: Low to medium.
 Do not build yet:
 
 Autonomous agents
+
 Predictive ML
+
 Vector database
 
 Status: NOW
@@ -1780,17 +2166,25 @@ Goal: Answer questions about authorized project data.
 Backend work:
 
 AI orchestration boundary
+
 Context builder
+
 Read-only tool layer
 
 Data:
 
 Projects
+
 Tasks
+
 Milestones
+
 Teams
+
 Members
+
 Comments
+
 Notifications
 
 AI requirement: LLM with structured tool/function calling.
@@ -1798,7 +2192,9 @@ AI requirement: LLM with structured tool/function calling.
 Security:
 
 JWT-associated user identity
+
 Existing authorization
+
 Context minimization
 
 Dependencies: Stable backend and frontend assistant UI.
@@ -1808,9 +2204,10 @@ Complexity: Medium.
 Do not build yet:
 
 Autonomous writes
+
 Predictive ML
 
-Status: NEXT
+Status: NOW — foundation implemented; continue verification and integration.
 
 Phase 3 — AI Context + Tool Calling
 
@@ -1819,10 +2216,15 @@ Goal: Give AI reliable workspace context and controlled actions.
 Backend work:
 
 Tool registry
+
 Context service
+
 Validation layer
+
 Tool authorization
+
 Confirmation flow
+
 Audit events
 
 Data: Current data plus carefully selected activity information.
@@ -1838,9 +2240,10 @@ Complexity: Medium to high.
 Do not build yet:
 
 Unrestricted agent loops
+
 Autonomous destructive actions
 
-Status: NEXT
+Status: NOW — foundation implemented; continue verification and safe incremental expansion.
 
 Phase 4 — Project Intelligence
 
@@ -1849,15 +2252,21 @@ Goal: Generate useful project insights.
 Examples:
 
 Project health
+
 Overdue-work analysis
+
 Workload summaries
+
 Risk explanations
+
 Progress summaries
 
 Backend work:
 
 Aggregation/query layer
+
 Context features
+
 Insight calculation
 
 Data: Current data plus activity history where necessary.
@@ -1874,7 +2283,7 @@ Do not build yet:
 
 Complex ML models without evidence.
 
-Status: NEXT
+Status: NOW — deterministic project-intelligence foundation implemented; continue testing and refinement.
 
 Phase 5 — Predictive ML
 
@@ -1883,14 +2292,19 @@ Goal: Predict measurable outcomes.
 Examples:
 
 Task delay
+
 Project risk
+
 Workload pressure
 
 Backend work:
 
 Feature extraction
+
 ML service boundary
+
 Model inference API
+
 Monitoring
 
 Data: Historical events and outcomes.
@@ -1916,11 +2330,17 @@ Goal: Allow AI to plan and execute approved multi-step work.
 Backend work:
 
 Tool registry
+
 Agent state
+
 Planning/execution loop
+
 Approval gates
+
 Audit trail
+
 Verification
+
 Failure handling
 
 Data: Current workspace + activity history + relevant external context.
@@ -1946,21 +2366,33 @@ Goal: Connect ZYRA to external work systems.
 Potential integrations:
 
 GitHub
+
 Google Drive
+
 Slack
+
 Discord
+
 Calendar
+
 Email
+
 CI/CD
+
 Issue trackers
 
 Backend work:
 
 OAuth
+
 Webhooks
+
 Sync services
+
 Idempotency
+
 Retry handling
+
 Integration permissions
 
 AI/ML: Agent/tool orchestration.
@@ -1978,33 +2410,57 @@ Integrations without a specific workflow/value.
 Status: FUTURE
 
 24. Recommended Architecture Decisions
+
 Keep PostgreSQL as the system of record.
+
 Do not allow the LLM direct database access.
+
 Keep authorization outside the model.
+
 Build an explicit context layer.
+
 Start with read-only tools.
+
 Reuse existing backend business rules for future writes.
+
 Require confirmation for high-impact actions.
+
 Start ML with transparent rules and classical models.
+
 Collect historical events before training predictive models.
+
 Use RAG only when unstructured data makes it necessary.
+
 Prefer pgvector before introducing a separate vector database if PostgreSQL remains suitable.
+
 Keep model-provider code behind an adapter boundary.
+
 Introduce orchestration frameworks only when workflow complexity justifies them.
+
 Treat MCP as an interoperability option, not a replacement for authorization.
+
 Make AI actions observable and auditable.
+
 Build evaluation and security tests before expanding agent autonomy.
+
 25. What Should Not Change Yet
 
 The following should remain unchanged unless a concrete requirement is approved:
 
 Existing JWT authentication
+
 Existing authorization rules
+
 Current API contracts
+
 Current PostgreSQL schema
+
 Existing route structure
+
 Existing frontend/backend integration contracts
+
 Existing task notification behavior
+
 Current project/team/task permission model
 
 Future architecture should wrap around the working system rather than destabilize it.
@@ -2014,27 +2470,28 @@ Future architecture should wrap around the working system rather than destabiliz
 ZYRA should evolve incrementally:
 
 
-Stable Project Workspace
+
+ Stable Project Workspace
 
         ↓
 
-Read-only AI Assistant
+Permission-aware AI Context Layer
 
         ↓
 
-Permission-aware Context Layer
+AI Assistant with Read-only and Controlled Write Tools
 
         ↓
 
-Controlled Tool Calling
+Validated Tool Execution and Human Confirmation
 
         ↓
 
-Project Intelligence
+Deterministic Project Intelligence
 
         ↓
 
-Predictive ML
+Predictive ML (when sufficient historical data exists)
 
         ↓
 
@@ -2046,7 +2503,10 @@ Automation + Integrations
 
 
 
+
+
 The most important architectural principle is:
+
 
 
 ZYRA owns the data and permissions.
@@ -2059,24 +2519,107 @@ Humans retain control over consequential actions.
 
 
 
+
+
 This keeps the existing backend useful today while leaving a clear path toward AI, ML, agents, and automation without prematurely redesigning the system.
 
 27. Research References
 
-Official/current sources consulted during preparation:
+Official/current sources consulted during preparation. Product capabilities and availability are time-sensitive; Height is listed only as a historical case study because its service ended in September 2025:
 
 OpenAI API developer documentation: https://platform.openai.com/docs/quickstart/make-your-first-api-request
+
 OpenAI model/API comparison: https://developers.openai.com/api/docs/models/compare
+
 Google Gemini function calling: https://ai.google.dev/gemini-api/docs/function-calling
+
 Anthropic Claude documentation: https://docs.anthropic.com/
+
 Model Context Protocol architecture: https://modelcontextprotocol.io/specification/2025-03-26/architecture
+
 pgvector: https://github.com/pgvector/pgvector
+
 MLflow GenAI evaluation: https://mlflow.org/genai/evaluations
+
 Linear AI: https://linear.app/ai
+
 Linear MCP: https://linear.app/docs/mcp
+
 Notion AI: https://www.notion.com/product/ai
+
 ClickUp Brain: https://help.clickup.com/hc/en-us/articles/12578085238039-What-is-ClickUp-Brain-AI
+
 Atlassian Rovo/Jira AI: https://www.atlassian.com/software/jira/ai
+
 Plane AI: https://plane.so/ai
 
+Asana AI: https://asana.com/product/ai
+
+Asana AI Teammates: https://asana.com/product/ai/ai-teammates
+
+Height historical overview and discontinuation status: https://www.therundown.ai/tools/height
+
 Product capabilities change over time; these references are used to identify architectural patterns, not to prescribe copying any product.
+
+## Verified Backend API Route Inventory
+
+**Audit date:** 2026-10-21
+**Source:** Express application mounts and route declarations in `backend/src`.
+
+| Method | Endpoint | Source file | Line |
+|---|---|---|---:|
+| POST | `/api/ai/chat/` | `aiChatRoutes.js` | 12 |
+| POST | `/api/ai/confirm/` | `aiConfirmationRoutes.js` | 35 |
+| GET | `/api/ai/context/:type` | `aiContextRoutes.js` | 7 |
+| GET | `/api/ai/conversations/` | `aiConversationRoutes.js` | 65 |
+| POST | `/api/ai/conversations/` | `aiConversationRoutes.js` | 15 |
+| DELETE | `/api/ai/conversations/:id` | `aiConversationRoutes.js` | 142 |
+| GET | `/api/ai/conversations/:id` | `aiConversationRoutes.js` | 86 |
+| POST | `/api/auth/login` | `authRoutes.js` | 9 |
+| GET | `/api/auth/me` | `authRoutes.js` | 69 |
+| POST | `/api/comments/` | `commentRoutes.js` | 8 |
+| DELETE | `/api/comments/:id` | `commentRoutes.js` | 179 |
+| PUT | `/api/comments/:id` | `commentRoutes.js` | 143 |
+| GET | `/api/comments/project/:projectId` | `commentRoutes.js` | 113 |
+| GET | `/api/comments/task/:taskId` | `commentRoutes.js` | 81 |
+| POST | `/api/milestones/` | `milestoneRoutes.js` | 12 |
+| DELETE | `/api/milestones/:id` | `milestoneRoutes.js` | 193 |
+| PUT | `/api/milestones/:id` | `milestoneRoutes.js` | 124 |
+| GET | `/api/milestones/project/:projectId` | `milestoneRoutes.js` | 71 |
+| GET | `/api/notifications/` | `notificationRoutes.js` | 8 |
+| PUT | `/api/notifications/:id/read` | `notificationRoutes.js` | 75 |
+| PUT | `/api/notifications/read-all` | `notificationRoutes.js` | 51 |
+| GET | `/api/notifications/unread` | `notificationRoutes.js` | 29 |
+| GET | `/api/projects/` | `projectRoutes.js` | 47 |
+| POST | `/api/projects/` | `projectRoutes.js` | 8 |
+| DELETE | `/api/projects/:id` | `projectRoutes.js` | 133 |
+| GET | `/api/projects/:id` | `projectRoutes.js` | 69 |
+| PUT | `/api/projects/:id` | `projectRoutes.js` | 98 |
+| POST | `/api/resources/` | `resourceRoutes.js` | 8 |
+| DELETE | `/api/resources/:id` | `resourceRoutes.js` | 138 |
+| PUT | `/api/resources/:id` | `resourceRoutes.js` | 94 |
+| GET | `/api/resources/project/:projectId` | `resourceRoutes.js` | 59 |
+| POST | `/api/subtasks/` | `subtaskRoutes.js` | 8 |
+| DELETE | `/api/subtasks/:id` | `subtaskRoutes.js` | 137 |
+| PUT | `/api/subtasks/:id` | `subtaskRoutes.js` | 93 |
+| GET | `/api/subtasks/task/:taskId` | `subtaskRoutes.js` | 54 |
+| GET | `/api/tasks/` | `taskRoutes.js` | 76 |
+| POST | `/api/tasks/` | `taskRoutes.js` | 17 |
+| DELETE | `/api/tasks/:id` | `taskRoutes.js` | 198 |
+| GET | `/api/tasks/:id` | `taskRoutes.js` | 102 |
+| PUT | `/api/tasks/:id` | `taskRoutes.js` | 134 |
+| GET | `/api/teams/` | `teamRoutes.js` | 41 |
+| POST | `/api/teams/` | `teamRoutes.js` | 8 |
+| DELETE | `/api/teams/:teamId` | `teamRoutes.js` | 168 |
+| GET | `/api/teams/:teamId` | `teamRoutes.js` | 63 |
+| PUT | `/api/teams/:teamId` | `teamRoutes.js` | 127 |
+| GET | `/api/teams/:teamId/members` | `teamRoutes.js` | 92 |
+| POST | `/api/teams/:teamId/members` | `teamRoutes.js` | 199 |
+| DELETE | `/api/teams/:teamId/members/:userId` | `teamRoutes.js` | 249 |
+| GET | `/api/users/` | `userRoutes.js` | 11 |
+| POST | `/api/users/` | `userRoutes.js` | 28 |
+| PUT | `/api/users/:id` | `userRoutes.js` | 64 |
+
+### Verification limits
+
+This inventory records statically detected routes; it does not alone prove runtime behavior, authentication, or entity-level authorization. Review middleware and service checks before making security claims. No application code or database schema was changed by this inventory operation.

@@ -1,98 +1,485 @@
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Lenis from "lenis";
+
 import "../styles/landing.css";
 
 import {
-  ArrowDown,
+  Activity,
   ArrowRight,
+  BarChart3,
   Brain,
+  Building2,
   CheckCircle2,
-  ChevronRight,
   CircleCheck,
   Clock3,
   FolderKanban,
   Layers3,
+  ShieldCheck,
   Sparkles,
+  User,
   Users,
   Zap,
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
+gsap.registerPlugin(ScrollTrigger);
+
+const SECTIONS = [
+  { id: "product", num: "01", label: "Workspace" },
+  { id: "features", num: "02", label: "Architecture" },
+  { id: "intelligence", num: "03", label: "Intelligence" },
+  { id: "vision", num: "04", label: "Launch" },
+];
+
+const EVOLUTION_STEPS = [
+  { step: "01", title: "WORK", icon: FolderKanban },
+  { step: "02", title: "DATA", icon: Activity },
+  { step: "03", title: "CONTEXT", icon: Layers3 },
+  { step: "04", title: "RELATIONSHIPS", icon: Users },
+  { step: "05", title: "INTELLIGENCE", icon: Brain, active: true },
+  { step: "06", title: "ACTION", icon: Zap, future: true },
+];
 
 function Landing() {
   const navigate = useNavigate();
+  const containerRef = useRef(null);
+  const stageRef = useRef(null);
+  const dashboardRef = useRef(null);
+  const lenisRef = useRef(null);
 
-  const handleEnterZYRA = () => {
-    navigate("/login");
-  };
+  const [activeSection, setActiveSection] = useState(0);
+  const [previewMode, setPreviewMode] = useState("company");
 
-  const handleGetStarted = () => {
-    navigate("/signup");
-  };
+  const handleStartIndividual = () => navigate("/individual");
+  const handleStartCompany = () => navigate("/company");
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.35,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+    lenisRef.current = lenis;
+
+    lenis.on("scroll", ScrollTrigger.update);
+
+    const updateTicker = (time) => {
+      lenis.raf(time * 1000);
+    };
+    gsap.ticker.add(updateTicker);
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      gsap.ticker.remove(updateTicker);
+      lenis.destroy();
+    };
+  }, []);
 
   const scrollToSection = (id) => {
-    document.getElementById(id)?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+    const target = document.getElementById(id);
+    if (!target) return;
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(target, { offset: 0, duration: 1.5 });
+    } else {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleStageMouseMove = (e) => {
+    if (window.innerWidth <= 800 || !stageRef.current || !dashboardRef.current)
+      return;
+    const rect = stageRef.current.getBoundingClientRect();
+    const xRatio = (e.clientX - rect.left) / rect.width - 0.5;
+    const yRatio = (e.clientY - rect.top) / rect.height - 0.5;
+
+    gsap.to(dashboardRef.current, {
+      rotateY: xRatio * 10,
+      rotateX: -yRatio * 10,
+      duration: 0.5,
+      ease: "power2.out",
+      overwrite: "auto",
+    });
+    gsap.to(".landing-floating-card", {
+      x: xRatio * -30,
+      y: yRatio * -24,
+      duration: 0.6,
+      stagger: 0.03,
+      ease: "power2.out",
+      overwrite: "auto",
     });
   };
 
+  const handleStageMouseLeave = () => {
+    if (window.innerWidth <= 800 || !dashboardRef.current) return;
+    gsap.to(dashboardRef.current, {
+      rotateY: 0,
+      rotateX: 0,
+      duration: 0.8,
+      ease: "power3.out",
+      overwrite: "auto",
+    });
+    gsap.to(".landing-floating-card", {
+      x: 0,
+      y: 0,
+      duration: 0.8,
+      ease: "power3.out",
+      overwrite: "auto",
+    });
+  };
+
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.to(".zyra-scroll-progress-bar", {
+        scaleX: 1,
+        ease: "none",
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 0.2,
+        },
+      });
+
+      const mm = gsap.matchMedia();
+
+      mm.add("(min-width: 801px)", () => {
+        // =====================================================
+        // STAGE 01
+        // =====================================================
+        const heroTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: "#product",
+            start: "top top",
+            end: "+=175%",
+            pin: true,
+            scrub: 1,
+            onToggle: (self) => self.isActive && setActiveSection(0),
+          },
+        });
+        heroTl
+          .to(
+            ".theater-hero-header",
+            {
+              y: -140,
+              scale: 0.88,
+              opacity: 0,
+              filter: "blur(8px)",
+              duration: 0.7,
+              ease: "power2.inOut",
+            },
+            0,
+          )
+          .fromTo(
+            ".landing-dashboard-window",
+            { rotateX: 28, scale: 0.78, y: 40 },
+            {
+              rotateX: 0,
+              scale: 1.08,
+              y: -95,
+              boxShadow:
+                "0 45px 130px rgba(0,0,0,0.85), 0 0 80px rgba(34,211,238,0.32)",
+              duration: 1.1,
+              ease: "power2.out",
+            },
+            0,
+          )
+          .fromTo(
+            ".mini-progress-fill",
+            { scaleX: 0.2, transformOrigin: "left center" },
+            { scaleX: 1, duration: 0.8, stagger: 0.12 },
+            0.35,
+          )
+          .fromTo(
+            ".mini-task",
+            { x: -20, opacity: 0.3 },
+            { x: 0, opacity: 1, stagger: 0.12, duration: 0.6 },
+            0.4,
+          )
+          .fromTo(
+            ".landing-ai-floating",
+            { x: 80, y: 40, opacity: 0, scale: 0.6 },
+            { x: -45, y: -90, opacity: 1, scale: 1.05, duration: 0.7 },
+            0.45,
+          )
+          .fromTo(
+            ".landing-collaboration-floating",
+            { x: -80, y: 40, opacity: 0, scale: 0.6 },
+            { x: 45, y: -85, opacity: 1, scale: 1.05, duration: 0.7 },
+            0.55,
+          )
+          .fromTo(
+            ".landing-insight-floating",
+            { y: 60, opacity: 0, scale: 0.6 },
+            { y: -55, opacity: 1, scale: 1.05, duration: 0.7 },
+            0.65,
+          );
+
+        // =====================================================
+        // STAGE 02: 3D ISOMETRIC LAYER STACK
+        // =====================================================
+        const archTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: "#features",
+            start: "top top",
+            end: "+=200%",
+            pin: true,
+            scrub: 1.2,
+            onToggle: (self) => self.isActive && setActiveSection(1),
+          },
+        });
+        archTl
+          .fromTo(
+            "#features .compact-stage-header",
+            { y: 45, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4 },
+            0,
+          )
+          .fromTo(
+            ".iso-3d-stage",
+            {
+              autoAlpha: 0,
+              scale: 0.8,
+              rotateX: 30,
+              rotateZ: -10,
+              transformPerspective: 2500,
+            },
+            {
+              autoAlpha: 1,
+              scale: 1,
+              rotateX: 48,
+              rotateZ: -20,
+              duration: 0.6,
+              ease: "power3.out",
+            },
+            0.1,
+          )
+          .fromTo(
+            ".iso-layer-1",
+            { z: 0, opacity: 0 },
+            { z: 60, opacity: 1, duration: 0.5 },
+            0.3,
+          )
+          .fromTo(
+            ".iso-layer-2",
+            { z: 0, opacity: 0 },
+            { z: 120, opacity: 1, duration: 0.5 },
+            0.4,
+          )
+          .fromTo(
+            ".iso-layer-3",
+            { z: 0, opacity: 0 },
+            { z: 180, opacity: 1, duration: 0.5 },
+            0.5,
+          )
+          .fromTo(
+            ".iso-layer-4",
+            { z: 0, opacity: 0 },
+            { z: 240, opacity: 1, duration: 0.5 },
+            0.6,
+          )
+          .fromTo(
+            ".iso-layer-5",
+            { z: 0, opacity: 0 },
+            { z: 300, opacity: 1, duration: 0.5 },
+            0.7,
+          )
+          .fromTo(
+            ".iso-data-stream",
+            { scaleY: 0, opacity: 0 },
+            { scaleY: 1, opacity: 1, duration: 0.6 },
+            0.5,
+          )
+          .fromTo(
+            ".iso-action-btn",
+            { y: 20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4 },
+            0.8,
+          );
+
+        // =====================================================
+        // STAGE 03: THE TELEMETRY RADAR
+        // =====================================================
+        const intelTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: "#intelligence",
+            start: "top top",
+            end: "+=220%",
+            pin: true,
+            scrub: 1.2,
+            onToggle: (self) => self.isActive && setActiveSection(2),
+          },
+        });
+
+        intelTl
+          .fromTo(
+            "#intelligence .compact-stage-header",
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4 },
+            0,
+          )
+          .fromTo(
+            ".radar-grid",
+            { scale: 0.2, opacity: 0, rotateZ: -45 },
+            {
+              scale: 1,
+              opacity: 1,
+              rotateZ: 0,
+              duration: 1,
+              ease: "power3.out",
+            },
+            0.1,
+          )
+          .fromTo(
+            ".term-line",
+            { opacity: 0, x: -20 },
+            { opacity: 1, x: 0, stagger: 0.15, duration: 0.5 },
+            0.3,
+          )
+          .fromTo(
+            ".node-a .node-dot",
+            { scale: 0, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.3 },
+            0.8,
+          )
+          .fromTo(
+            ".node-a .node-tooltip",
+            { y: 15, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4 },
+            0.9,
+          )
+          .fromTo(
+            ".node-b .node-dot",
+            { scale: 0, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.3 },
+            1.3,
+          )
+          .fromTo(
+            ".node-b .node-tooltip",
+            { y: 15, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4 },
+            1.4,
+          )
+          .fromTo(
+            ".node-c .node-dot",
+            { scale: 0, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.3 },
+            1.8,
+          )
+          .fromTo(
+            ".node-c .node-tooltip",
+            { y: 15, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4 },
+            1.9,
+          )
+          .fromTo(
+            ".hud-evo-pill",
+            { y: 20, opacity: 0.15, scale: 0.9 },
+            { y: 0, opacity: 1, scale: 1, stagger: 0.1, duration: 0.6 },
+            2.2,
+          );
+
+        // =====================================================
+        // STAGE 04
+        // =====================================================
+        const visionTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: "#vision",
+            start: "top top",
+            end: "+=150%",
+            pin: true,
+            scrub: 1,
+            onToggle: (self) => self.isActive && setActiveSection(3),
+          },
+        });
+        visionTl
+          .fromTo(
+            ".vision-orbit-one",
+            { rotation: -80, scale: 0.6 },
+            { rotation: 25, scale: 1.05, duration: 1.2 },
+            0,
+          )
+          .fromTo(
+            ".vision-orbit-two",
+            { rotation: 80, scale: 0.6 },
+            { rotation: -25, scale: 1.05, duration: 1.2 },
+            0,
+          )
+          .fromTo(
+            ".vision-kinetic-title",
+            { y: 50, opacity: 0, scale: 0.88 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.7 },
+            0.15,
+          )
+          .fromTo(
+            ".holo-portal-card",
+            { y: 80, opacity: 0, scale: 0.88, rotateX: 15 },
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              rotateX: 0,
+              stagger: 0.15,
+              duration: 0.8,
+              ease: "power3.out",
+            },
+            0.45,
+          );
+      });
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="zyra-landing">
-      {/* =========================================================
-          AMBIENT BACKGROUND
-      ========================================================= */}
+    <div className="zyra-landing" ref={containerRef}>
+      <div className="zyra-scroll-progress-bar" aria-hidden="true" />
+
+      <aside className="zyra-section-hud" aria-label="Section progress">
+        {SECTIONS.map((sec, idx) => (
+          <button
+            key={sec.id}
+            type="button"
+            className={`hud-dot-btn ${activeSection === idx ? "active" : ""}`}
+            onClick={() => scrollToSection(sec.id)}
+          >
+            <span className="hud-num">{sec.num}</span>
+            <span className="hud-label">{sec.label}</span>
+            <span className="hud-pip" />
+          </button>
+        ))}
+      </aside>
 
       <div className="landing-background" aria-hidden="true">
         <div className="landing-noise" />
         <div className="landing-grid" />
-
         <div className="landing-orb landing-orb-cyan" />
         <div className="landing-orb landing-orb-blue" />
         <div className="landing-orb landing-orb-purple" />
-
         <div className="landing-glow landing-glow-one" />
         <div className="landing-glow landing-glow-two" />
         <div className="landing-glow landing-glow-three" />
-
         <div className="landing-stars">
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
+          {Array.from({ length: 12 }).map((_, idx) => (
+            <span key={idx} />
+          ))}
         </div>
-
         <div className="landing-orbit landing-orbit-one" />
         <div className="landing-orbit landing-orbit-two" />
         <div className="landing-orbit landing-orbit-three" />
-
         <div className="landing-light-trail landing-light-trail-one" />
         <div className="landing-light-trail landing-light-trail-two" />
       </div>
-
-      {/* =========================================================
-          NAVIGATION
-      ========================================================= */}
 
       <header className="landing-navbar">
         <button
           type="button"
           className="landing-brand"
-          onClick={() => scrollToSection("hero")}
-          aria-label="Go to ZYRA home"
+          onClick={() => scrollToSection("product")}
         >
           <span className="landing-brand-mark">
-            <svg
-              viewBox="0 0 64 64"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
+            <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient
                   id="landingZyraGradient"
@@ -107,460 +494,389 @@ function Landing() {
                   <stop offset="1" stopColor="#a78bfa" />
                 </linearGradient>
               </defs>
-
               <path
-                d="
-                  M10 8
-                  H54
-                  C57 8 58 11 56 13
-                  L20 51
-                  H54
-                  C57 51 58 54 56 56
-                  H10
-                  C7 56 6 53 8 51
-                  L44 13
-                  H10
-                  C7 13 7 8 10 8
-                  Z
-                "
+                d="M10 8 H54 C57 8 58 11 56 13 L20 51 H54 C57 51 58 54 56 56 H10 C7 56 6 53 8 51 L44 13 H10 C7 13 7 8 10 8 Z"
                 fill="url(#landingZyraGradient)"
               />
             </svg>
           </span>
-
           <span className="landing-brand-copy">
             <strong>ZYRA</strong>
             <span>Intelligent Project Workspace</span>
           </span>
         </button>
 
-        <nav className="landing-nav-links" aria-label="Main navigation">
-          <button type="button" onClick={() => scrollToSection("product")}>
-            Product
-          </button>
-
-          <button type="button" onClick={() => scrollToSection("features")}>
-            Features
-          </button>
-
-          <button type="button" onClick={() => scrollToSection("intelligence")}>
-            Intelligence
-          </button>
-
-          <button type="button" onClick={() => scrollToSection("vision")}>
-            Vision
-          </button>
+        <nav className="landing-nav-links">
+          {SECTIONS.map((sec, idx) => (
+            <button
+              key={sec.id}
+              type="button"
+              className={activeSection === idx ? "active-nav-link" : ""}
+              onClick={() => scrollToSection(sec.id)}
+            >
+              {sec.label}
+            </button>
+          ))}
         </nav>
 
         <div className="landing-nav-actions">
           <button
             type="button"
             className="landing-signin-btn"
-            onClick={handleEnterZYRA}
+            onClick={handleStartIndividual}
           >
-            Sign In
+            Start with Individual
           </button>
-
           <button
             type="button"
-            className="landing-get-started-btn"
-            onClick={handleGetStarted}
+            className="landing-get-started-btn company-header-btn"
+            onClick={handleStartCompany}
           >
-            Get Started
-            <ArrowRight size={15} />
+            Start with Company <ArrowRight size={14} />
           </button>
         </div>
       </header>
 
-      {/* =========================================================
-          MAIN
-      ========================================================= */}
-
       <main>
-        {/* =======================================================
-            HERO
-        ======================================================= */}
-
-        <section className="landing-hero" id="hero">
-          <div className="landing-hero-content">
-            <div className="landing-eyebrow">
-              <span className="landing-eyebrow-dot" />
-              THE INTELLIGENT PROJECT WORKSPACE
+        {/* STAGE 01 */}
+        <section className="cinematic-section" id="product">
+          <div className="theater-stage-container">
+            <div className="theater-hero-header">
+              <div className="landing-eyebrow">
+                <span className="landing-eyebrow-dot" />
+                INTELLIGENT WORKSPACE ECOSYSTEM
+              </div>
+              <h1 className="theater-hero-title">
+                Your work. <span>Connected intelligently.</span>
+              </h1>
+              <div className="theater-dual-gateways">
+                <button
+                  type="button"
+                  className="landing-primary-btn zyra-entry-btn"
+                  onClick={handleStartIndividual}
+                  onMouseEnter={() => setPreviewMode("individual")}
+                >
+                  <User size={16} />
+                  <div className="entry-btn-copy">
+                    <strong>Start with Individual</strong>
+                    <small>Personal Workspace →</small>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="landing-demo-btn zyra-entry-btn company-entry"
+                  onClick={handleStartCompany}
+                  onMouseEnter={() => setPreviewMode("company")}
+                >
+                  <span className="landing-demo-icon">
+                    <Building2 size={15} strokeWidth={2.2} />
+                  </span>
+                  <div className="entry-btn-copy">
+                    <strong>Start with Company</strong>
+                    <small>Organization Workspace →</small>
+                  </div>
+                </button>
+              </div>
             </div>
 
-            <h1 className="landing-hero-title">
-              Everything your team
-              <span>needs to build.</span>
-            </h1>
+            <div
+              className="landing-product-stage theater-product-stage"
+              ref={stageRef}
+              onMouseMove={handleStageMouseMove}
+              onMouseLeave={handleStageMouseLeave}
+            >
+              <div className="landing-stage-aura" />
+              <div className="landing-stage-ring landing-stage-ring-one" />
+              <div className="landing-stage-ring landing-stage-ring-two" />
 
-            <p className="landing-hero-description">
-              Projects, tasks, teams and intelligence in one evolving workspace.
-            </p>
+              <div className="landing-floating-card landing-ai-floating">
+                <div className="floating-card-icon">
+                  <Sparkles size={17} />
+                </div>
+                <div className="floating-card-content">
+                  <strong>ZYRA Context Engine</strong>
+                  <span>
+                    {previewMode === "company"
+                      ? "Connected: 4 Depts • 18 Tasks"
+                      : "Personal Velocity: +24% this week"}
+                  </span>
+                </div>
+                <span className="floating-live-dot" />
+              </div>
 
-            <div className="landing-hero-actions">
-              <button
-                type="button"
-                className="landing-primary-btn"
-                onClick={handleGetStarted}
+              <div className="landing-floating-card landing-collaboration-floating">
+                <div className="collaboration-avatars">
+                  <span>A</span>
+                  <span>M</span>
+                  <span>+</span>
+                </div>
+                <div className="floating-card-content">
+                  <strong>
+                    {previewMode === "company"
+                      ? "Role Permissions Active"
+                      : "Solo Builder Mode"}
+                  </strong>
+                  <span>
+                    {previewMode === "company"
+                      ? "Org Admin • Team Leads synced"
+                      : "Zero org setup required"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="landing-floating-card landing-insight-floating">
+                <div className="floating-insight-icon">
+                  <BarChart3 size={16} />
+                </div>
+                <div className="floating-card-content">
+                  <strong>Live AI Action</strong>
+                  <span>
+                    {previewMode === "company"
+                      ? "Rebalanced Helix UI across Design Team"
+                      : "Auto-scheduled Helix UX review"}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className="landing-dashboard-window theater-dashboard-window"
+                ref={dashboardRef}
               >
-                Get Started
-                <ArrowRight size={18} />
-              </button>
-
-              {/* WATCH DEMO — FIXED ICON */}
-              <button
-                type="button"
-                className="landing-demo-btn"
-                onClick={() => scrollToSection("intelligence")}
-              >
-                <span className="landing-demo-icon">
-                  <ChevronRight size={16} strokeWidth={2.5} />
-                </span>
-                Watch Demo
-              </button>
-            </div>
-
-            <div className="landing-trust-row">
-              <div>
-                <CheckCircle2 size={16} />
-                <span>Project Management</span>
-              </div>
-
-              <div>
-                <CheckCircle2 size={16} />
-                <span>Team Collaboration</span>
-              </div>
-
-              <div>
-                <CheckCircle2 size={16} />
-                <span>AI Ready</span>
-              </div>
-            </div>
-          </div>
-
-          {/* =====================================================
-              VISUAL 1 — ZYRA WORKSPACE
-          ===================================================== */}
-
-          <div className="landing-product-stage">
-            <div className="landing-stage-aura" />
-
-            <div className="landing-stage-ring landing-stage-ring-one" />
-            <div className="landing-stage-ring landing-stage-ring-two" />
-
-            {/* AI FLOATING CARD */}
-
-            <div className="landing-floating-card landing-ai-floating">
-              <div className="floating-card-icon">
-                <Sparkles size={17} />
-              </div>
-
-              <div className="floating-card-content">
-                <strong>ZYRA Intelligence</strong>
-                <span>Analyzing your workspace...</span>
-              </div>
-
-              <span className="floating-live-dot" />
-            </div>
-
-            {/* COLLABORATION CARD */}
-
-            <div className="landing-floating-card landing-collaboration-floating">
-              <div className="collaboration-avatars">
-                <span>A</span>
-                <span>M</span>
-                <span>+</span>
-              </div>
-
-              <div className="floating-card-content">
-                <strong>Team Collaboration</strong>
-                <span>2 members online</span>
-              </div>
-            </div>
-
-            {/* AI INSIGHT CARD */}
-
-            <div className="landing-floating-card landing-insight-floating">
-              <div className="floating-insight-icon">
-                <Brain size={16} />
-              </div>
-
-              <div className="floating-card-content">
-                <strong>AI Insight</strong>
-                <span>3 tasks may need attention.</span>
-              </div>
-            </div>
-
-            {/* MAIN ZYRA WINDOW */}
-
-            <div className="landing-dashboard-window">
-              <div className="dashboard-window-topbar">
-                <div className="dashboard-window-brand">
-                  <div className="dashboard-mini-logo">Z</div>
-                  <strong>ZYRA</strong>
-                </div>
-
-                <div className="dashboard-window-search">
-                  <span>Search projects, tasks, AI insights...</span>
-                </div>
-
-                <div className="dashboard-window-actions">
-                  <span className="window-action-dot" />
-                  <span className="window-action-dot" />
-
-                  <div className="dashboard-user">
-                    <span className="dashboard-user-avatar">A</span>
-                    <span>Arsalan</span>
+                <div className="dashboard-window-topbar">
+                  <div className="dashboard-window-brand">
+                    <div className="dashboard-mini-logo">Z</div>
+                    <strong>ZYRA OS</strong>
                   </div>
-                </div>
-              </div>
-
-              <div className="dashboard-window-body">
-                {/* MINI SIDEBAR */}
-
-                <aside className="dashboard-mini-sidebar">
-                  <div className="mini-sidebar-heading">WORKSPACE</div>
-
-                  <div className="mini-sidebar-link active">
-                    <Layers3 size={14} />
-                    Dashboard
+                  <div className="dashboard-mode-switcher">
+                    <button
+                      type="button"
+                      className={previewMode === "individual" ? "active" : ""}
+                      onClick={() => setPreviewMode("individual")}
+                    >
+                      <User size={10} /> Individual Mode
+                    </button>
+                    <button
+                      type="button"
+                      className={previewMode === "company" ? "active" : ""}
+                      onClick={() => setPreviewMode("company")}
+                    >
+                      <Building2 size={10} /> Company Org Mode
+                    </button>
                   </div>
-
-                  <div className="mini-sidebar-link">
-                    <FolderKanban size={14} />
-                    Projects
-                  </div>
-
-                  <div className="mini-sidebar-link">
-                    <CircleCheck size={14} />
-                    Tasks
-                  </div>
-
-                  <div className="mini-sidebar-link">
-                    <Users size={14} />
-                    Teams
-                  </div>
-
-                  <div className="mini-sidebar-heading mini-activity-heading">
-                    ACTIVITY
-                  </div>
-
-                  <div className="mini-sidebar-link">
-                    <Clock3 size={14} />
-                    Notifications
-                  </div>
-
-                  <div className="mini-ai-link">
-                    <Sparkles size={14} />
-                    <span>AI Assistant</span>
-                  </div>
-                </aside>
-
-                {/* MINI DASHBOARD */}
-
-                <div className="dashboard-mini-main">
-                  <div className="dashboard-mini-header">
-                    <div>
-                      <span>OVERVIEW</span>
-
-                      <h3>
-                        Good morning, Arsalan
-                        <span>👋</span>
-                      </h3>
-                    </div>
-
-                    <div className="dashboard-mini-avatar">A</div>
-                  </div>
-
-                  <div className="dashboard-mini-content">
-                    {/* PROJECTS */}
-
-                    <div className="dashboard-project-area">
-                      <div className="mini-section-header">
-                        <strong>Current Projects</strong>
-                        <span>View all</span>
-                      </div>
-
-                      <div className="mini-project-grid">
-                        <div className="mini-project-card cyan">
-                          <div className="mini-project-top">
-                            <strong>Project Nexus</strong>
-                            <span>•••</span>
-                          </div>
-
-                          <div className="mini-project-meta">
-                            <span>Progress</span>
-                            <strong>85%</strong>
-                          </div>
-
-                          <div className="mini-progress">
-                            <div
-                              className="mini-progress-fill"
-                              style={{ width: "85%" }}
-                            />
-                          </div>
-
-                          <div className="mini-project-bottom">
-                            <div className="mini-avatars">
-                              <span>A</span>
-                              <span>M</span>
-                              <span>+</span>
-                            </div>
-
-                            <span className="mini-status cyan-status">
-                              In Progress
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="mini-project-card blue">
-                          <div className="mini-project-top">
-                            <strong>Horizon Launch</strong>
-                            <span>•••</span>
-                          </div>
-
-                          <div className="mini-project-meta">
-                            <span>Progress</span>
-                            <strong>72%</strong>
-                          </div>
-
-                          <div className="mini-progress">
-                            <div
-                              className="mini-progress-fill"
-                              style={{ width: "72%" }}
-                            />
-                          </div>
-
-                          <div className="mini-project-bottom">
-                            <div className="mini-avatars">
-                              <span>A</span>
-                              <span>M</span>
-                            </div>
-
-                            <span className="mini-status blue-status">
-                              Active
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="mini-project-card purple">
-                          <div className="mini-project-top">
-                            <strong>Helix Redesign</strong>
-                            <span>•••</span>
-                          </div>
-
-                          <div className="mini-project-meta">
-                            <span>Progress</span>
-                            <strong>64%</strong>
-                          </div>
-
-                          <div className="mini-progress">
-                            <div
-                              className="mini-progress-fill"
-                              style={{ width: "64%" }}
-                            />
-                          </div>
-
-                          <div className="mini-project-bottom">
-                            <div className="mini-avatars">
-                              <span>A</span>
-                              <span>+</span>
-                            </div>
-
-                            <span className="mini-status purple-status">
-                              Review
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* INTELLIGENCE PANEL */}
-
-                    <div className="mini-intelligence-panel">
-                      <div className="mini-panel-title">
-                        <strong>ZYRA Intelligence</strong>
-                        <Sparkles size={14} />
-                      </div>
-
-                      <span className="mini-panel-subtitle">
-                        AI Performance Outlook
+                  <div className="dashboard-window-actions">
+                    <span className="window-action-dot" />
+                    <div className="dashboard-user">
+                      <span className="dashboard-user-avatar">A</span>
+                      <span>
+                        {previewMode === "company"
+                          ? "Arsalan • Org Admin"
+                          : "Arsalan • Independent"}
                       </span>
+                    </div>
+                  </div>
+                </div>
 
-                      <div className="mini-chart">
-                        <svg
-                          viewBox="0 0 240 80"
-                          preserveAspectRatio="none"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M0 62 C30 35 48 58 76 43 S120 58 150 29 S190 48 240 12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                          />
-                        </svg>
+                <div className="dashboard-window-body">
+                  <aside className="dashboard-mini-sidebar">
+                    <div className="mini-sidebar-heading">
+                      {previewMode === "company" ? "ORGANIZATION" : "WORKSPACE"}
+                    </div>
+                    <div className="mini-sidebar-link active">
+                      <Layers3 size={14} /> Command
+                    </div>
+                    {previewMode === "company" && (
+                      <div className="mini-sidebar-link">
+                        <Building2 size={14} /> Departments
                       </div>
-
-                      <p>Focus areas: Nexus is on track; Helix needs review.</p>
-
-                      <div className="mini-recommendations">
-                        <strong>Priority Recommendations</strong>
-                        <span>1. Optimize resources for Nexus.</span>
-                        <span>2. Resolve Helix UI bottlenecks.</span>
+                    )}
+                    <div className="mini-sidebar-link">
+                      <FolderKanban size={14} /> Projects
+                    </div>
+                    <div className="mini-sidebar-link">
+                      <CircleCheck size={14} /> Tasks
+                    </div>
+                    {previewMode === "company" && (
+                      <div className="mini-sidebar-link">
+                        <Users size={14} /> Teams
                       </div>
+                    )}
+                    <div className="mini-sidebar-heading mini-activity-heading">
+                      PULSE
+                    </div>
+                    <div className="mini-sidebar-link">
+                      <Clock3 size={14} /> Activity
+                    </div>
+                    <div className="mini-ai-link">
+                      <Sparkles size={14} />
+                      <span>Context AI</span>
+                    </div>
+                  </aside>
+
+                  <div className="dashboard-mini-main">
+                    <div className="dashboard-mini-header">
+                      <div>
+                        <span>
+                          {previewMode === "company"
+                            ? "ORGANIZATION → DEPARTMENTS → TEAMS → PROJECTS"
+                            : "PERSONAL WORKSPACE → PROJECTS → AI CO-PILOT"}
+                        </span>
+                        <h3>
+                          {previewMode === "company"
+                            ? "Nexus Enterprise Ecosystem"
+                            : "Arsalan's Personal Command"}{" "}
+                          <span>⚡</span>
+                        </h3>
+                      </div>
+                      <div className="dashboard-mini-avatar">A</div>
                     </div>
 
-                    {/* BOTTOM PANELS */}
-
-                    <div className="mini-bottom-panels">
-                      <div className="mini-tasks-panel">
+                    <div className="dashboard-mini-content">
+                      <div className="dashboard-project-area">
                         <div className="mini-section-header">
-                          <strong>My Tasks</strong>
-                          <span>•••</span>
+                          <strong>Active Connected Projects</strong>
+                          <span>Live Sync</span>
                         </div>
-
-                        <div className="mini-task">
-                          <CheckCircle2 size={14} />
-                          <span>Finalize Helix UX Review</span>
-                          <small>Today</small>
-                        </div>
-
-                        <div className="mini-task">
-                          <CircleCheck size={14} />
-                          <span>Sync Marketing Plan</span>
-                          <small>Tomorrow</small>
-                        </div>
-
-                        <div className="mini-task">
-                          <Clock3 size={14} />
-                          <span>Project Retrospective</span>
-                          <small>Friday</small>
+                        <div className="mini-project-grid">
+                          <div className="mini-project-card cyan">
+                            <div className="mini-project-top">
+                              <strong>Project Nexus</strong>
+                              <span>•••</span>
+                            </div>
+                            <div className="mini-project-meta">
+                              <span>Velocity</span>
+                              <strong>85%</strong>
+                            </div>
+                            <div className="mini-progress">
+                              <div
+                                className="mini-progress-fill"
+                                style={{ width: "85%" }}
+                              />
+                            </div>
+                            <div className="mini-project-bottom">
+                              <div className="mini-avatars">
+                                <span>A</span>
+                                {previewMode === "company" && <span>M</span>}
+                                {previewMode === "company" && <span>+</span>}
+                              </div>
+                              <span className="mini-status cyan-status">
+                                On Track
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mini-project-card blue">
+                            <div className="mini-project-top">
+                              <strong>Horizon Launch</strong>
+                              <span>•••</span>
+                            </div>
+                            <div className="mini-project-meta">
+                              <span>Velocity</span>
+                              <strong>72%</strong>
+                            </div>
+                            <div className="mini-progress">
+                              <div
+                                className="mini-progress-fill"
+                                style={{ width: "72%" }}
+                              />
+                            </div>
+                            <div className="mini-project-bottom">
+                              <div className="mini-avatars">
+                                <span>A</span>
+                                {previewMode === "company" && <span>M</span>}
+                              </div>
+                              <span className="mini-status blue-status">
+                                Active
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mini-project-card purple">
+                            <div className="mini-project-top">
+                              <strong>Helix Redesign</strong>
+                              <span>•••</span>
+                            </div>
+                            <div className="mini-project-meta">
+                              <span>Velocity</span>
+                              <strong>64%</strong>
+                            </div>
+                            <div className="mini-progress">
+                              <div
+                                className="mini-progress-fill"
+                                style={{ width: "64%" }}
+                              />
+                            </div>
+                            <div className="mini-project-bottom">
+                              <div className="mini-avatars">
+                                <span>A</span>
+                                {previewMode === "company" && <span>+</span>}
+                              </div>
+                              <span className="mini-status purple-status">
+                                Review
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="mini-team-panel">
-                        <div className="mini-section-header">
-                          <strong>Team Activity</strong>
-                          <span>•••</span>
+                      <div className="mini-intelligence-panel">
+                        <div className="mini-panel-title">
+                          <strong>ZYRA AI Context</strong>
+                          <Sparkles size={14} />
                         </div>
-
-                        <div className="mini-feed-item">
-                          <span className="feed-avatar">A</span>
-
-                          <p>
-                            Updated <strong>Project Nexus</strong> and synced
-                            the team.
-                          </p>
+                        <span className="mini-panel-subtitle">
+                          Real-Time Telemetry
+                        </span>
+                        <div className="mini-chart">
+                          <svg viewBox="0 0 240 80" preserveAspectRatio="none">
+                            <path
+                              d="M0 62 C30 35 48 58 76 43 S120 58 150 29 S190 48 240 12"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            />
+                          </svg>
                         </div>
+                        <div className="mini-recommendations">
+                          <strong>AI Auto-Actions</strong>
+                          <span>Nexus milestone verified</span>
+                          <span>Helix bottleneck resolved</span>
+                        </div>
+                      </div>
 
-                        <div className="mini-feed-item">
-                          <span className="feed-avatar purple-feed">M</span>
-
-                          <p>
-                            Updated project tasks and collaborated with the
-                            team.
-                          </p>
+                      <div className="mini-bottom-panels">
+                        <div className="mini-tasks-panel">
+                          <div className="mini-section-header">
+                            <strong>Workflow Stream</strong>
+                            <span>Live</span>
+                          </div>
+                          <div className="mini-task">
+                            <CheckCircle2 size={14} />
+                            <span>Finalize Helix UX Review</span>
+                            <small>Done</small>
+                          </div>
+                          <div className="mini-task">
+                            <CircleCheck size={14} />
+                            <span>Sync Department Roadmap</span>
+                            <small>Active</small>
+                          </div>
+                        </div>
+                        <div className="mini-team-panel">
+                          <div className="mini-section-header">
+                            <strong>Context Activity</strong>
+                            <span>Pulse</span>
+                          </div>
+                          <div className="mini-feed-item">
+                            <span className="feed-avatar">A</span>
+                            <p>
+                              <strong>Project Nexus</strong> synced with AI
+                              analytics.
+                            </p>
+                          </div>
+                          <div className="mini-feed-item">
+                            <span className="feed-avatar purple-feed">AI</span>
+                            <p>
+                              Updated workload across{" "}
+                              <strong>3 active teams</strong>.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -568,637 +884,265 @@ function Landing() {
                 </div>
               </div>
             </div>
-
-            {/* ACTIVE STATUS */}
-
-            <div className="landing-stage-status">
-              <span className="status-pulse" />
-
-              <span>ZYRA workspace is active</span>
-
-              <span className="status-divider" />
-
-              <strong>2 members online</strong>
-            </div>
           </div>
         </section>
 
-        {/* =======================================================
-            CAPABILITIES
-        ======================================================= */}
-
-        <section className="landing-capabilities-section" id="features">
-          <div className="landing-section-heading">
-            <div className="landing-section-label">
-              <Zap size={15} />
-              ONE INTELLIGENT WORKSPACE
-            </div>
-
-            <h2>
-              Everything your project needs.
-              <span>All in one place.</span>
-            </h2>
-
-            <p>
-              ZYRA brings the essential pieces of project execution together
-              before intelligence takes it further.
-            </p>
-          </div>
-
-          <div className="landing-capability-grid">
-            <div className="landing-capability-card">
-              <div className="capability-icon">
-                <FolderKanban size={22} />
-              </div>
-
-              <div className="capability-content">
-                <span className="capability-number">01</span>
-                <h3>Projects</h3>
-
-                <p>
-                  Organize projects, track progress and keep everything
-                  connected.
-                </p>
-              </div>
-
-              <span className="capability-arrow">
-                <ArrowRight size={16} />
-              </span>
-            </div>
-
-            <div className="landing-capability-card">
-              <div className="capability-icon">
-                <CircleCheck size={22} />
-              </div>
-
-              <div className="capability-content">
-                <span className="capability-number">02</span>
-                <h3>Tasks</h3>
-
-                <p>
-                  Turn ideas into actionable work and stay aligned on what comes
-                  next.
-                </p>
-              </div>
-
-              <span className="capability-arrow">
-                <ArrowRight size={16} />
-              </span>
-            </div>
-
-            <div className="landing-capability-card">
-              <div className="capability-icon">
-                <Users size={22} />
-              </div>
-
-              <div className="capability-content">
-                <span className="capability-number">03</span>
-                <h3>Teams</h3>
-
-                <p>
-                  Give teams a shared space for better collaboration and
-                  visibility.
-                </p>
-              </div>
-
-              <span className="capability-arrow">
-                <ArrowRight size={16} />
-              </span>
-            </div>
-
-            <div className="landing-capability-card ai-capability">
-              <div className="capability-icon">
-                <Sparkles size={22} />
-              </div>
-
-              <div className="capability-content">
-                <span className="capability-number">04</span>
-                <h3>AI Assistant</h3>
-
-                <p>
-                  Get intelligent insights, suggestions and support while you
-                  work.
-                </p>
-              </div>
-
-              <span className="capability-arrow">
-                <ArrowRight size={16} />
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* =======================================================
-            VISUAL 2 — ZYRA INTELLIGENCE NETWORK
-        ======================================================= */}
-
-        <section className="landing-intelligence-section" id="intelligence">
-          <div className="landing-section-heading intelligence-heading">
-            <div className="landing-section-label">
-              <Sparkles size={15} />
-              THE INTELLIGENCE LAYER
-            </div>
-
-            <h2>
-              Your workspace
-              <span>gets smarter over time.</span>
-            </h2>
-
-            <p>Your work is connected. Your intelligence should be too.</p>
-          </div>
-
-          {/* =====================================================
-              INTELLIGENCE VISUAL
-          ===================================================== */}
-
-          <div className="zyra-intelligence-visual">
-            <div className="intelligence-visual-title">
-              <span>YOUR WORK IS CONNECTED.</span>
-              <strong>YOUR INTELLIGENCE SHOULD BE TOO.</strong>
-            </div>
-
-            <div className="intelligence-network">
-              {/* ENERGY RINGS */}
-
-              <div className="network-ring network-ring-one" />
-              <div className="network-ring network-ring-two" />
-              <div className="network-ring network-ring-three" />
-
-              {/* SVG CONNECTION SYSTEM */}
-
-              <svg
-                className="network-connections"
-                viewBox="0 0 1100 620"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                {/* PROJECTS */}
-
-                <path
-                  className="network-line"
-                  d="M160 160 C330 160 360 280 500 310"
-                />
-
-                <path
-                  className="network-line-glow"
-                  d="M160 160 C330 160 360 280 500 310"
-                />
-
-                {/* TEAMS */}
-
-                <path
-                  className="network-line"
-                  d="M160 430 C330 430 360 350 500 310"
-                />
-
-                <path
-                  className="network-line-glow"
-                  d="M160 430 C330 430 360 350 500 310"
-                />
-
-                {/* TASKS */}
-
-                <path
-                  className="network-line"
-                  d="M940 160 C770 160 740 280 600 310"
-                />
-
-                <path
-                  className="network-line-glow"
-                  d="M940 160 C770 160 740 280 600 310"
-                />
-
-                {/* PEOPLE */}
-
-                <path
-                  className="network-line"
-                  d="M940 430 C770 430 740 350 600 310"
-                />
-
-                <path
-                  className="network-line-glow"
-                  d="M940 430 C770 430 740 350 600 310"
-                />
-
-                {/* LOWER CONNECTION */}
-
-                <path
-                  className="network-lower-line"
-                  d="M550 370 C550 445 550 475 550 535"
-                />
-              </svg>
-
-              {/* MOVING PARTICLES */}
-
-              <span className="network-particle particle-projects" />
-              <span className="network-particle particle-teams" />
-              <span className="network-particle particle-tasks" />
-              <span className="network-particle particle-people" />
-
-              {/* PROJECT NODE */}
-
-              <div className="network-card network-card-projects">
-                <div className="network-card-heading">
-                  <FolderKanban size={15} />
-                  PROJECTS
-                </div>
-
-                <div className="network-card-lines">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div className="network-mini-chart">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </div>
-
-                <span className="network-node-dot" />
-              </div>
-
-              {/* TASK NODE */}
-
-              <div className="network-card network-card-tasks">
-                <div className="network-card-heading">
-                  <CircleCheck size={15} />
-                  TASKS
-                </div>
-
-                <div className="network-card-lines">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div className="network-task-bars">
-                  <i />
-                  <i />
-                  <i />
-                </div>
-
-                <span className="network-node-dot" />
-              </div>
-
-              {/* TEAMS NODE */}
-
-              <div className="network-card network-card-teams">
-                <div className="network-card-heading">
-                  <Users size={15} />
-                  TEAMS
-                </div>
-
-                <div className="network-card-lines">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div className="network-team-dots">
-                  <i />
-                  <i />
-                  <i />
-                </div>
-
-                <span className="network-node-dot" />
-              </div>
-
-              {/* PEOPLE NODE */}
-
-              <div className="network-card network-card-people">
-                <div className="network-card-heading">
-                  <Users size={15} />
-                  PEOPLE
-                </div>
-
-                <div className="network-card-lines">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
-                <div className="network-people-icons">
-                  <i />
-                  <i />
-                  <i />
-                </div>
-
-                <span className="network-node-dot" />
-              </div>
-
-              {/* CENTRAL ZYRA CORE */}
-
-              <div className="zyra-network-core">
-                <div className="core-energy-ring core-ring-one" />
-                <div className="core-energy-ring core-ring-two" />
-                <div className="core-energy-ring core-ring-three" />
-
-                <div className="core-pulse" />
-
-                <div className="core-logo">
-                  <span>Z</span>
-                </div>
-
-                <strong>ZYRA</strong>
-                <small>AI INTELLIGENCE</small>
-              </div>
-
-              {/* LOWER SYSTEM */}
-
-              <div className="network-lower-system">
-                <div className="lower-system-core">
-                  <div className="lower-core-glow" />
-                  <strong>ZYRA</strong>
-                  <span>INTELLIGENCE</span>
-                </div>
-
-                <div className="lower-system-node lower-projects">PROJECTS</div>
-
-                <div className="lower-system-node lower-tasks">TASKS</div>
-
-                <div className="lower-system-node lower-teams">TEAMS</div>
-
-                <div className="lower-system-node lower-people">PEOPLE</div>
-              </div>
-
-              <div className="network-down-arrow">
-                <ArrowDown size={20} />
-              </div>
-            </div>
-          </div>
-
-          {/* ORIGINAL EVOLUTION FLOW REMAINS */}
-
-          <div className="intelligence-evolution">
-            <div className="intelligence-line" />
-
-            <div className="intelligence-stage">
-              <div className="intelligence-node">
-                <Layers3 size={23} />
-              </div>
-
-              <span className="intelligence-step">FOUNDATION</span>
-
-              <strong>Workspace</strong>
-              <span>Organize & manage</span>
-            </div>
-
-            <div className="intelligence-connector">
-              <ArrowRight size={18} />
-            </div>
-
-            <div className="intelligence-stage active">
-              <div className="intelligence-node">
-                <Sparkles size={23} />
-              </div>
-
-              <span className="intelligence-step">NOW</span>
-
-              <strong>AI Assistant</strong>
-              <span>Get instant help</span>
-            </div>
-
-            <div className="intelligence-connector">
-              <ArrowRight size={18} />
-            </div>
-
-            <div className="intelligence-stage">
-              <div className="intelligence-node">
-                <Brain size={23} />
-              </div>
-
-              <span className="intelligence-step">NEXT</span>
-
-              <strong>Predictive Intelligence</strong>
-              <span>Spot risks & opportunities</span>
-            </div>
-
-            <div className="intelligence-connector">
-              <ArrowRight size={18} />
-            </div>
-
-            <div className="intelligence-stage future">
-              <div className="intelligence-node">
-                <Zap size={23} />
-              </div>
-
-              <span className="intelligence-step">FUTURE</span>
-
-              <strong>AI Project Agent</strong>
-              <span>Take action automatically</span>
-            </div>
-          </div>
-        </section>
-
-        {/* =======================================================
-            SHOWCASE
-        ======================================================= */}
-
-        <section className="landing-showcase-section">
-          <div className="landing-showcase-header">
-            <div>
-              <div className="landing-section-label">
-                <Layers3 size={15} />
-                BUILT TO EVOLVE
-              </div>
-
+        {/* STAGE 02: 3D ISOMETRIC LAYER STACK */}
+        <section className="cinematic-section" id="features">
+          <div className="cinematic-inner iso-wrapper">
+            <div className="compact-stage-header iso-header-fix">
+              <span className="landing-section-label"></span>
               <h2>
-                From organized work
-                <span>to intelligent work.</span>
+                Two distinct deployment models.
+                <span className="block-span">
+                  One unified intelligence core.
+                </span>
               </h2>
             </div>
 
-            <p>
-              ZYRA starts with a powerful project workspace and creates a
-              foundation for progressively deeper intelligence.
-            </p>
-          </div>
-
-          <div className="landing-showcase-grid">
-            <div className="showcase-card showcase-large">
-              <div className="showcase-card-top">
-                <span>01</span>
-                <FolderKanban size={20} />
-              </div>
-
-              <h3>Projects & Teams</h3>
-
-              <p>
-                Keep your people, projects and progress connected in one
-                intelligent workspace.
-              </p>
-
-              <div className="showcase-mini-ui">
-                <div className="showcase-ui-sidebar">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
+            <div className="zyra-iso-stage">
+              {/* Card Container 1 (Not Clickable) */}
+              <div className="iso-card-wrapper">
+                <div className="iso-3d-stage">
+                  <div className="iso-stack">
+                    <div className="iso-data-stream cyan-stream" />
+                    <div className="iso-layer iso-layer-3 cyan-layer">
+                      <Sparkles size={16} /> <span>Personal AI Co-Pilot</span>
+                    </div>
+                    <div className="iso-layer iso-layer-2 cyan-layer">
+                      <CircleCheck size={16} /> <span>Smart Task Sprints</span>
+                    </div>
+                    <div className="iso-layer iso-layer-1 cyan-layer">
+                      <FolderKanban size={16} />{" "}
+                      <span>Independent Workspace</span>
+                    </div>
+                    <div className="iso-base cyan-base" />
+                  </div>
                 </div>
+                {/* The Button (Clickable) */}
+                <button
+                  type="button"
+                  className="iso-action-btn cyan-iso-btn"
+                  onClick={handleStartIndividual}
+                >
+                  Start with Individual <ArrowRight size={14} />
+                </button>
+              </div>
 
-                <div className="showcase-ui-content">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                  <span />
+              {/* Card Container 2 (Not Clickable) */}
+              <div className="iso-card-wrapper">
+                <div className="iso-3d-stage">
+                  <div className="iso-stack">
+                    <div className="iso-data-stream purple-stream" />
+                    <div className="iso-layer iso-layer-5 purple-layer">
+                      <Brain size={16} /> <span>Organization Context AI</span>
+                    </div>
+                    <div className="iso-layer iso-layer-4 purple-layer">
+                      <ShieldCheck size={16} />{" "}
+                      <span>Role-Based Permissions</span>
+                    </div>
+                    <div className="iso-layer iso-layer-3 purple-layer">
+                      <Users size={16} /> <span>Departments & Teams</span>
+                    </div>
+                    <div className="iso-layer iso-layer-2 purple-layer">
+                      <Activity size={16} /> <span>Global Activity Stream</span>
+                    </div>
+                    <div className="iso-layer iso-layer-1 purple-layer">
+                      <Building2 size={16} />{" "}
+                      <span>Verified Organization Base</span>
+                    </div>
+                    <div className="iso-base purple-base" />
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="showcase-card">
-              <div className="showcase-card-top">
-                <span>02</span>
-                <CircleCheck size={20} />
-              </div>
-
-              <h3>Tasks & Milestones</h3>
-
-              <p>Turn project goals into clear, trackable work.</p>
-
-              <div className="showcase-kanban">
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-
-            <div className="showcase-card">
-              <div className="showcase-card-top">
-                <span>03</span>
-                <Sparkles size={20} />
-              </div>
-
-              <h3>AI Assistant</h3>
-
-              <p>
-                Ask questions, understand your workspace and get intelligent
-                assistance.
-              </p>
-
-              <div className="showcase-ai-message">
-                <Sparkles size={14} />
-                <span>3 tasks may need attention.</span>
-              </div>
-            </div>
-
-            <div className="showcase-card">
-              <div className="showcase-card-top">
-                <span>04</span>
-                <Brain size={20} />
-              </div>
-
-              <h3>Predictive Intelligence</h3>
-
-              <p>Progressively identify patterns, risks and opportunities.</p>
-
-              <div className="showcase-chart">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
+                {/* The Button (Clickable) */}
+                <button
+                  type="button"
+                  className="iso-action-btn purple-iso-btn"
+                  onClick={handleStartCompany}
+                >
+                  Start with Company <ArrowRight size={14} />
+                </button>
               </div>
             </div>
           </div>
         </section>
 
         {/* =======================================================
-            VISION
+            STAGE 03: THE TELEMETRY RADAR
         ======================================================= */}
-
-        <section className="landing-vision-section" id="vision">
-          <div className="vision-background-word">ZYRA</div>
-
-          <div className="vision-orbit vision-orbit-one" />
-          <div className="vision-orbit vision-orbit-two" />
-
-          <div className="vision-content">
-            <div className="landing-section-label">
-              <Sparkles size={15} />
-              THE ZYRA VISION
+        <section className="cinematic-section" id="intelligence">
+          <div className="cinematic-inner radar-intel-wrapper">
+            <div className="compact-stage-header">
+              <span className="landing-section-label"></span>
+              <h2>
+                Real-time context. <span>Continuous AI monitoring.</span>
+              </h2>
             </div>
 
-            <h2>
-              Plan.
-              <span>Collaborate.</span>
-              Build.
-              <span>Evolve.</span>
-            </h2>
+            <div className="radar-stage">
+              {/* Left-side Terminal Output */}
+              <div className="terminal-log">
+                <div className="term-line">
+                  &gt; ZYRA_OS: INITIALIZING NEURAL SWEEP...
+                </div>
+                <div className="term-line">
+                  &gt; INGESTING 482 WORKSPACE NODES... [OK]
+                </div>
+                <div className="term-line">
+                  &gt; CROSS-REFERENCING DEPARTMENT VELOCITY...
+                </div>
+                <div className="term-line">
+                  &gt; DETECTED ANOMALY IN PROJECT NEXUS.
+                </div>
+                <div className="term-line highlight-term">
+                  &gt; REBALANCING WORKLOAD HEURISTICS... [RESOLVED]
+                </div>
+                <div className="term-line">&gt; MONITORING...</div>
+              </div>
 
-            <p>
-              ZYRA is designed to progressively evolve from organization into
-              intelligence — helping teams not only manage work, but understand
-              it.
-            </p>
+              {/* Central 3D Radar Hologram */}
+              <div className="radar-3d-container">
+                <div className="radar-grid">
+                  <div className="radar-circle rc-1"></div>
+                  <div className="radar-circle rc-2"></div>
+                  <div className="radar-circle rc-3"></div>
+                  <div className="radar-crosshair-x"></div>
+                  <div className="radar-crosshair-y"></div>
+                  <div className="radar-sweep"></div>
 
-            <button
-              type="button"
-              className="landing-primary-btn"
-              onClick={handleEnterZYRA}
-            >
-              Enter ZYRA
-              <ArrowRight size={18} />
-            </button>
+                  {/* Radar Nodes (Counter-rotated in CSS to stand up) */}
+                  <div className="radar-node node-a">
+                    <span className="node-dot"></span>
+                    <div className="node-tooltip">
+                      <strong>Project Nexus</strong>
+                      <span>Status: Optimized</span>
+                    </div>
+                  </div>
+
+                  <div className="radar-node node-b">
+                    <span className="node-dot warning-dot"></span>
+                    <div className="node-tooltip warning-tooltip">
+                      <strong>Design Dept</strong>
+                      <span>Alert: Capacity at 95%</span>
+                    </div>
+                  </div>
+
+                  <div className="radar-node node-c">
+                    <span className="node-dot"></span>
+                    <div className="node-tooltip">
+                      <strong>Helix UX</strong>
+                      <span>Action: Auto-Scheduled</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="hud-evolution-bar">
+              {EVOLUTION_STEPS.map((item, idx) => {
+                const IconComponent = item.icon;
+                return (
+                  <div key={item.title} className="hud-evo-group">
+                    <div
+                      className={`hud-evo-pill ${item.active ? "active" : ""} ${item.future ? "future" : ""}`}
+                    >
+                      <IconComponent size={14} />
+                      <small>{item.step}</small>
+                      <strong>{item.title}</strong>
+                    </div>
+                    {idx < EVOLUTION_STEPS.length - 1 && (
+                      <ArrowRight size={13} className="hud-evo-arrow" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        {/* =======================================================
-            FINAL CTA
-        ======================================================= */}
+        {/* STAGE 04 */}
+        <section className="cinematic-section" id="vision">
+          <div className="cinematic-inner landing-vision-section">
+            <div className="vision-orbit vision-orbit-one" />
+            <div className="vision-orbit vision-orbit-two" />
 
-        <section className="landing-final-cta">
-          <div className="final-cta-aura" />
-          <div className="final-cta-grid" />
+            <div className="vision-finale-stack">
+              <div className="vision-kinetic-title">
+                <div className="landing-section-label"></div>
+                <h2>
+                  Plan. <span>Collaborate.</span> Build. <span>Evolve.</span>
+                </h2>
+              </div>
 
-          <div className="final-cta-content">
-            <div className="landing-section-label">
-              <Sparkles size={15} />
-              START BUILDING
+              <div className="holo-portals-grid">
+                {/* Individual Card Container (Not Clickable) */}
+                <div className="holo-portal-card cyan-portal">
+                  <div className="portal-orb-glow" />
+                  <div className="portal-icon">
+                    <User size={24} />
+                  </div>
+                  <span className="portal-eyebrow">01 // SOLO BUILDERS</span>
+                  <h3>Start with Individual</h3>
+                  <div className="portal-tags">
+                    <span>Personal Projects</span>
+                    <span>•</span>
+                    <span>Smart Tasks</span>
+                    <span>•</span>
+                    <span>Personal AI</span>
+                  </div>
+                  {/* The Button (Clickable) */}
+                  <button
+                    type="button"
+                    className="portal-launch-btn"
+                    onClick={handleStartIndividual}
+                  >
+                    Start with Individual <ArrowRight size={16} />
+                  </button>
+                </div>
+
+                {/* Company Card Container (Not Clickable) */}
+                <div className="holo-portal-card purple-portal">
+                  <div className="portal-orb-glow" />
+                  <div className="portal-icon">
+                    <Building2 size={24} />
+                  </div>
+                  <span className="portal-eyebrow">02 // ORGANIZATIONS</span>
+                  <h3>Start with Company</h3>
+                  <div className="portal-tags">
+                    <span>Verified Org</span>
+                    <span>•</span>
+                    <span>Depts & Teams</span>
+                    <span>•</span>
+                    <span>Role Shield</span>
+                  </div>
+                  {/* The Button (Clickable) */}
+                  <button
+                    type="button"
+                    className="portal-launch-btn"
+                    onClick={handleStartCompany}
+                  >
+                    Start with Company <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <footer className="landing-footer">
+                <div className="landing-footer-brand">
+                  <div className="footer-logo-mark">Z</div>
+                  <div>
+                    <strong>ZYRA</strong>
+                    <span>Intelligent Project Workspace</span>
+                  </div>
+                </div>
+                <div className="landing-footer-tagline">
+                  Your work. Connected intelligently.
+                </div>
+                <div className="landing-footer-copy">© 2026 ZYRA</div>
+              </footer>
             </div>
-
-            <h2>
-              Your workspace.
-              <span>Ready to evolve.</span>
-            </h2>
-
-            <p>Bring your projects, people and ideas together with ZYRA.</p>
-
-            <button
-              type="button"
-              className="landing-primary-btn final-cta-button"
-              onClick={handleGetStarted}
-            >
-              Get Started
-              <ArrowRight size={18} />
-            </button>
           </div>
         </section>
       </main>
-
-      {/* =========================================================
-          FOOTER
-      ========================================================= */}
-
-      <footer className="landing-footer">
-        <div className="landing-footer-brand">
-          <div className="footer-logo-mark">Z</div>
-
-          <div>
-            <strong>ZYRA</strong>
-            <span>Intelligent Project Workspace</span>
-          </div>
-        </div>
-
-        <div className="landing-footer-tagline">
-          Plan. Collaborate. Build. Evolve.
-        </div>
-
-        <div className="landing-footer-copy">© 2026 ZYRA</div>
-      </footer>
     </div>
   );
 }

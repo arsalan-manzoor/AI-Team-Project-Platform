@@ -28,17 +28,177 @@ import {
 } from "../services/ProjectService";
 
 import { getTeams, getTeamMembers } from "../services/teamService";
+
 import { getCurrentUser } from "../services/authService";
+import { apiRequest } from "../services/api";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import "../styles/projects.css";
+
+// ============================================================
+// RESPONSE HELPERS
+// ============================================================
+
+function getResponseArray(response, key) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (key && Array.isArray(response?.[key])) {
+    return response[key];
+  }
+
+  if (key && Array.isArray(response?.data?.[key])) {
+    return response.data[key];
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  return [];
+}
+
+function getProjectId(project) {
+  return project?.id ?? project?.project_id ?? project?.projectId;
+}
+
+function getProjectTeamId(project) {
+  return project?.team_id ?? project?.teamId ?? project?.team?.id;
+}
+
+function getTeamId(team) {
+  return team?.id ?? team?.team_id ?? team?.teamId;
+}
+
+function getTeamWorkspaceId(team) {
+  return team?.workspace_id ?? team?.workspaceId ?? team?.workspace?.id;
+}
+
+function getProjectWorkspaceId(project) {
+  return (
+    project?.workspace_id ?? project?.workspaceId ?? project?.workspace?.id
+  );
+}
+
+function getTeamLeaderId(team) {
+  return (
+    team?.team_leader_id ??
+    team?.teamLeaderId ??
+    team?.leader_id ??
+    team?.leaderId
+  );
+}
+
+function getTeamCreatorId(team) {
+  return (
+    team?.created_by ?? team?.createdBy ?? team?.creator_id ?? team?.creatorId
+  );
+}
+
+function sameId(first, second) {
+  if (
+    first === null ||
+    first === undefined ||
+    second === null ||
+    second === undefined
+  ) {
+    return false;
+  }
+
+  return String(first) === String(second);
+}
+
+function isTeamUnderLeader(team, userId) {
+  const assignedLeaderId = getTeamLeaderId(team);
+
+  if (
+    assignedLeaderId !== null &&
+    assignedLeaderId !== undefined &&
+    assignedLeaderId !== ""
+  ) {
+    return sameId(assignedLeaderId, userId);
+  }
+
+  return sameId(getTeamCreatorId(team), userId);
+}
+
+function getProjectMemberUserId(member) {
+  return (
+    member?.user_id ??
+    member?.userId ??
+    member?.user?.id ??
+    member?.account_id ??
+    member?.accountId
+  );
+}
+
+// ============================================================
+// PROJECTS PAGE
+// ============================================================
 
 function Projects() {
   const navigate = useNavigate();
 
+  const {
+    activeWorkspace,
+    workspaceId,
+    workspaceRole,
+    loading: workspaceLoading,
+  } = useWorkspace();
+
+  // ============================================================
+  // ACTIVE WORKSPACE CONTEXT
+  // ============================================================
+
+  const normalizedWorkspaceRole = String(workspaceRole || "")
+    .trim()
+    .toUpperCase();
+
+  const normalizedWorkspaceType = String(
+    activeWorkspace?.type ||
+      activeWorkspace?.workspace_type ||
+      activeWorkspace?.workspaceType ||
+      "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const isIndividualUser =
+    normalizedWorkspaceType === "INDIVIDUAL" &&
+    normalizedWorkspaceRole === "USER";
+
+  const isIndividualTeamLeader =
+    normalizedWorkspaceType === "INDIVIDUAL" &&
+    normalizedWorkspaceRole === "TEAM_LEADER";
+
+  const isWorkspaceUser =
+    normalizedWorkspaceRole === "USER" &&
+    normalizedWorkspaceType !== "INDIVIDUAL";
+
+  const isTeamLeader = normalizedWorkspaceRole === "TEAM_LEADER";
+
+  // Existing project management permissions.
+  const canManageProjects = isTeamLeader;
+
+  // New project creation permissions.
+  const canCreateProjects = ["ADMIN", "HR", "TEAM_LEADER"].includes(
+    normalizedWorkspaceRole,
+  );
+
+  const activeContextKey = workspaceId
+    ? `${workspaceId}:${normalizedWorkspaceType}:${normalizedWorkspaceRole}`
+    : "";
+
+  // ============================================================
+  // STATE
+  // ============================================================
+
   const [projects, setProjects] = useState([]);
   const [memberCounts, setMemberCounts] = useState({});
-
   const [currentUser, setCurrentUser] = useState(null);
+
+  const [loadedContextKey, setLoadedContextKey] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,6 +206,7 @@ function Projects() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
+
   const [updatingProjectId, setUpdatingProjectId] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
 
@@ -54,37 +215,291 @@ function Projects() {
   const [sortOrder, setSortOrder] = useState("name");
   const [viewMode, setViewMode] = useState("grid");
 
+  // ============================================================
+  // WORKSPACE LOADING GUARD
+  // ============================================================
+
+  const contextIsLoaded =
+    Boolean(workspaceId) && loadedContextKey === activeContextKey;
+
+  const pageLoading =
+    workspaceLoading || loading || (Boolean(workspaceId) && !contextIsLoaded);
+
+  const activeProjects = contextIsLoaded ? projects : [];
+
+  // ============================================================
+  // LOAD PROJECT MEMBERSHIP
+  // ============================================================
+
+  async function isCurrentUserProjectMember(projectId, userId) {
+    if (
+      projectId === null ||
+      projectId === undefined ||
+      projectId === "" ||
+      userId === null ||
+      userId === undefined
+    ) {
+      return false;
+    }
+
+    try {
+      const membersResponse = await apiRequest(
+        `/projects/${encodeURIComponent(projectId)}/members`,
+      );
+
+      const members = getResponseArray(membersResponse, "members");
+
+      return members.some((member) =>
+        sameId(getProjectMemberUserId(member), userId),
+      );
+    } catch (membershipError) {
+      console.warn(
+        `Unable to verify membership for project ${projectId}:`,
+        membershipError.message,
+      );
+
+      return false;
+    }
+  }
+
+  // ============================================================
+  // LOAD PROJECTS FOR THE ACTIVE WORKSPACE AND ROLE
+  // ============================================================
+
   useEffect(() => {
+    let cancelled = false;
+
     async function loadProjects() {
-      try {
+      if (workspaceLoading) {
         setLoading(true);
-        setError("");
+        return;
+      }
+
+      setLoadedContextKey("");
+      setProjects([]);
+      setMemberCounts({});
+      setCurrentUser(null);
+      setError("");
+
+      setEditingProjectId(null);
+      setProjectName("");
+      setProjectDescription("");
+
+      setLoading(true);
+
+      if (!workspaceId) {
+        setError("No active workspace was found.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        let projectRequest;
+
+        if (isIndividualUser) {
+          projectRequest = apiRequest(
+            `/workspaces/individual/${encodeURIComponent(
+              workspaceId,
+            )}/my-assigned-projects`,
+          );
+        } else if (isIndividualTeamLeader) {
+          projectRequest = apiRequest(
+            `/workspaces/individual/${encodeURIComponent(
+              workspaceId,
+            )}/projects`,
+          );
+        } else {
+          projectRequest = getProjects();
+        }
 
         const [projectsData, teamsData, userData] = await Promise.all([
-          getProjects(),
+          projectRequest,
           getTeams(),
           getCurrentUser(),
         ]);
 
-        const loadedProjects = Array.isArray(projectsData) ? projectsData : [];
+        if (cancelled) return;
 
-        const loadedTeams = Array.isArray(teamsData) ? teamsData : [];
+        const loadedProjects = getResponseArray(projectsData, "projects");
+        const loadedTeamsRaw = getResponseArray(teamsData, "teams");
 
-        setProjects(loadedProjects);
-        setCurrentUser(userData);
+        const loadedTeams = loadedTeamsRaw.map((team) => ({
+          ...team,
+          id: getTeamId(team),
+          workspace_id: getTeamWorkspaceId(team),
+        }));
+
+        const normalizedProjects = loadedProjects.map((project) => ({
+          ...project,
+          id: getProjectId(project),
+          team_id: getProjectTeamId(project),
+          workspace_id: getProjectWorkspaceId(project),
+        }));
+
+        const normalizedCurrentUser =
+          userData?.user || userData?.data?.user || userData;
+
+        const currentUserId = normalizedCurrentUser?.id;
+
+        // ------------------------------------------------------
+        // FIND TEAMS BELONGING TO THE ACTIVE WORKSPACE
+        // ------------------------------------------------------
+
+        const workspaceTeams = loadedTeams.filter((team) =>
+          sameId(team.workspace_id, workspaceId),
+        );
+
+        const workspaceTeamMap = new Map(
+          workspaceTeams
+            .filter(
+              (team) =>
+                team.id !== null && team.id !== undefined && team.id !== "",
+            )
+            .map((team) => [String(team.id), team]),
+        );
+
+        // ------------------------------------------------------
+        // PROJECT WORKSPACE VALIDATION
+        // ------------------------------------------------------
+
+        function projectBelongsToActiveWorkspace(project) {
+          const projectWorkspaceId = getProjectWorkspaceId(project);
+
+          if (
+            projectWorkspaceId !== null &&
+            projectWorkspaceId !== undefined &&
+            projectWorkspaceId !== ""
+          ) {
+            return sameId(projectWorkspaceId, workspaceId);
+          }
+
+          const teamId = getProjectTeamId(project);
+
+          if (teamId === null || teamId === undefined || teamId === "") {
+            return false;
+          }
+
+          const team = workspaceTeamMap.get(String(teamId));
+
+          if (!team) return false;
+
+          return sameId(getTeamWorkspaceId(team), workspaceId);
+        }
+
+        // ------------------------------------------------------
+        // TEAM LEADER VALIDATION
+        // ------------------------------------------------------
+
+        function projectBelongsToCurrentTeamLeader(project) {
+          const teamId = getProjectTeamId(project);
+
+          if (teamId === null || teamId === undefined || teamId === "") {
+            return false;
+          }
+
+          const team = workspaceTeamMap.get(String(teamId));
+
+          if (!team) return false;
+
+          return isTeamUnderLeader(team, currentUserId);
+        }
+
+        // ------------------------------------------------------
+        // FILTER PROJECTS BY WORKSPACE AND ROLE
+        // ------------------------------------------------------
+
+        let visibleProjects = [];
+
+        if (isIndividualUser) {
+          visibleProjects = normalizedProjects.filter((project) => {
+            const projectWorkspaceId = getProjectWorkspaceId(project);
+
+            if (
+              projectWorkspaceId !== null &&
+              projectWorkspaceId !== undefined &&
+              projectWorkspaceId !== ""
+            ) {
+              return sameId(projectWorkspaceId, workspaceId);
+            }
+
+            return true;
+          });
+        } else if (isWorkspaceUser) {
+          const workspaceProjects = normalizedProjects.filter(
+            projectBelongsToActiveWorkspace,
+          );
+
+          const membershipResults = await Promise.all(
+            workspaceProjects.map(async (project) => ({
+              project,
+              isMember: await isCurrentUserProjectMember(
+                getProjectId(project),
+                currentUserId,
+              ),
+            })),
+          );
+
+          if (cancelled) return;
+
+          visibleProjects = membershipResults
+            .filter((result) => result.isMember)
+            .map((result) => result.project);
+        } else if (isIndividualTeamLeader) {
+          visibleProjects = normalizedProjects.filter(
+            (project) =>
+              projectBelongsToActiveWorkspace(project) &&
+              projectBelongsToCurrentTeamLeader(project),
+          );
+        } else {
+          const workspaceProjects = normalizedProjects.filter(
+            projectBelongsToActiveWorkspace,
+          );
+
+          if (isTeamLeader) {
+            visibleProjects = workspaceProjects.filter(
+              projectBelongsToCurrentTeamLeader,
+            );
+          } else {
+            visibleProjects = workspaceProjects;
+          }
+        }
+
+        if (cancelled) return;
+
+        setProjects(visibleProjects);
+        setCurrentUser(normalizedCurrentUser);
+
+        // ------------------------------------------------------
+        // LOAD MEMBER COUNTS
+        // ------------------------------------------------------
+
+        const visibleProjectTeamIds = new Set(
+          visibleProjects
+            .map((project) => getProjectTeamId(project))
+            .filter(
+              (teamId) =>
+                teamId !== null && teamId !== undefined && teamId !== "",
+            )
+            .map(String),
+        );
+
+        const teamsForVisibleProjects = workspaceTeams.filter((team) =>
+          visibleProjectTeamIds.has(String(team.id)),
+        );
 
         const counts = {};
 
         await Promise.all(
-          loadedTeams.map(async (team) => {
+          teamsForVisibleProjects.map(async (team) => {
             try {
-              const members = await getTeamMembers(team.id);
+              const membersData = await getTeamMembers(team.id);
+              const members = getResponseArray(membersData, "members");
 
-              counts[team.id] = Array.isArray(members) ? members.length : 0;
-            } catch (error) {
-              console.error(
-                `Failed to load members for team ${team.id}:`,
-                error,
+              counts[team.id] = members.length;
+            } catch (memberError) {
+              console.warn(
+                `Unable to load members for team ${team.id}:`,
+                memberError.message,
               );
 
               counts[team.id] = 0;
@@ -92,20 +507,59 @@ function Projects() {
           }),
         );
 
-        setMemberCounts(counts);
-      } catch (error) {
-        console.error("Projects loading error:", error);
+        if (cancelled) return;
 
-        setError(error.message || "Failed to load projects.");
+        setMemberCounts(counts);
+        setLoadedContextKey(activeContextKey);
+      } catch (loadError) {
+        if (!cancelled) {
+          console.error("Projects loading error:", loadError);
+
+          setProjects([]);
+          setMemberCounts({});
+          setCurrentUser(null);
+
+          setError(
+            loadError.message ||
+              "Failed to load projects for the selected workspace.",
+          );
+
+          setLoadedContextKey(activeContextKey);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadProjects();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    workspaceId,
+    workspaceLoading,
+    normalizedWorkspaceRole,
+    normalizedWorkspaceType,
+    isIndividualUser,
+    isIndividualTeamLeader,
+    isWorkspaceUser,
+    isTeamLeader,
+    activeContextKey,
+  ]);
+
+  // ============================================================
+  // EDIT PROJECT
+  // ============================================================
 
   function handleOpenEdit(project) {
+    if (!canManageProjects) {
+      setError("Only a Team Leader can manage projects from this screen.");
+      return;
+    }
+
     setEditingProjectId(project.id);
     setProjectName(project.name || "");
     setProjectDescription(project.description || "");
@@ -121,10 +575,15 @@ function Projects() {
   async function handleUpdateProject(event) {
     event.preventDefault();
 
+    if (!canManageProjects) {
+      setError("You do not have permission to edit projects.");
+      return;
+    }
+
     const name = projectName.trim();
     const description = projectDescription.trim();
 
-    if (!editingProjectId) {
+    if (editingProjectId === null || editingProjectId === undefined) {
       return;
     }
 
@@ -142,35 +601,46 @@ function Projects() {
         description,
       });
 
+      const updatedData =
+        updatedProject?.project ??
+        updatedProject?.data?.project ??
+        updatedProject;
+
       setProjects((currentProjects) =>
         currentProjects.map((project) =>
-          project.id === editingProjectId
+          sameId(project.id, editingProjectId)
             ? {
                 ...project,
-                ...updatedProject,
+                ...updatedData,
               }
             : project,
         ),
       );
 
       handleCancelEdit();
-    } catch (error) {
-      console.error("Project update error:", error);
-
-      setError(error.message || "Failed to update project.");
+    } catch (updateError) {
+      console.error("Project update error:", updateError);
+      setError(updateError.message || "Failed to update project.");
     } finally {
       setUpdatingProjectId(null);
     }
   }
 
+  // ============================================================
+  // DELETE PROJECT
+  // ============================================================
+
   async function handleDeleteProject(project) {
+    if (!canManageProjects) {
+      setError("You do not have permission to delete projects.");
+      return;
+    }
+
     const confirmed = window.confirm(
       `Are you sure you want to delete "${project.name}"?`,
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       setDeletingProjectId(project.id);
@@ -180,76 +650,82 @@ function Projects() {
 
       setProjects((currentProjects) =>
         currentProjects.filter(
-          (currentProject) => currentProject.id !== project.id,
+          (currentProject) => !sameId(currentProject.id, project.id),
         ),
       );
 
-      if (editingProjectId === project.id) {
+      if (sameId(editingProjectId, project.id)) {
         handleCancelEdit();
       }
-    } catch (error) {
-      console.error("Project deletion error:", error);
-
-      setError(error.message || "Failed to delete project.");
+    } catch (deleteError) {
+      console.error("Project deletion error:", deleteError);
+      setError(deleteError.message || "Failed to delete project.");
     } finally {
       setDeletingProjectId(null);
     }
   }
 
+  // ============================================================
+  // PROJECT HELPERS
+  // ============================================================
+
   function isProjectCreator(project) {
-    if (!currentUser?.id || !project?.created_by) {
+    if (
+      currentUser?.id === null ||
+      currentUser?.id === undefined ||
+      project?.created_by === null ||
+      project?.created_by === undefined
+    ) {
       return false;
     }
 
-    return Number(project.created_by) === Number(currentUser.id);
+    return sameId(project.created_by, currentUser.id);
   }
 
+  // ============================================================
+  // SEARCH, FILTER AND SORT
+  // ============================================================
+
   const filteredProjects = useMemo(() => {
-    let result = [...projects];
+    let result = [...activeProjects];
 
     const search = searchTerm.trim().toLowerCase();
 
     if (search) {
       result = result.filter((project) => {
-        const name = project.name?.toLowerCase() || "";
-        const description = project.description?.toLowerCase() || "";
+        const name = String(project.name || "").toLowerCase();
+        const description = String(project.description || "").toLowerCase();
 
         return name.includes(search) || description.includes(search);
       });
-    }
-
-    /*
-     * The current backend does not expose a project status field.
-     * Therefore:
-     * - All Projects = all projects
-     * - Active = all current projects because existing UI treats them as active
-     * - Planning / Completed are intentionally not fabricated
-     */
-    if (activeFilter === "All Projects" || activeFilter === "Active") {
-      // Keep all current projects.
     }
 
     if (activeFilter === "Planning" || activeFilter === "Completed") {
       result = [];
     }
 
-    result.sort((a, b) => {
+    result.sort((first, second) => {
       if (sortOrder === "newest") {
-        return Number(b.id) - Number(a.id);
+        return Number(second.id) - Number(first.id);
       }
 
       if (sortOrder === "oldest") {
-        return Number(a.id) - Number(b.id);
+        return Number(first.id) - Number(second.id);
       }
 
-      return (a.name || "").localeCompare(b.name || "");
+      return String(first.name || "").localeCompare(String(second.name || ""));
     });
 
     return result;
-  }, [projects, searchTerm, activeFilter, sortOrder]);
+  }, [activeProjects, searchTerm, activeFilter, sortOrder]);
 
-  const totalCollaborators = projects.reduce((total, project) => {
-    const count = memberCounts[project.team_id] || 0;
+  // ============================================================
+  // PROJECT SUMMARY
+  // ============================================================
+
+  const totalCollaborators = activeProjects.reduce((total, project) => {
+    const teamId = getProjectTeamId(project);
+    const count = memberCounts[teamId] ?? memberCounts[String(teamId)] ?? 0;
 
     return total + count;
   }, 0);
@@ -260,15 +736,42 @@ function Projects() {
   const secondaryProjects =
     filteredProjects.length > 1 ? filteredProjects.slice(1) : [];
 
+  // ============================================================
+  // RENDER
+  // ============================================================
+
   return (
     <div className="zyra-projects">
-      {/* Background decoration */}
       <div className="projects-background-grid" />
       <div className="projects-background-glow projects-glow-one" />
       <div className="projects-background-glow projects-glow-two" />
 
       {/* Back */}
-      <button className="back-page-btn" onClick={() => navigate("/dashboard")}>
+      <button
+        type="button"
+        className="back-page-btn"
+        onClick={() => {
+          if (normalizedWorkspaceType === "INDIVIDUAL") {
+            navigate(
+              normalizedWorkspaceRole === "USER"
+                ? "/dashboard/individual/user"
+                : "/dashboard/individual/team-leader",
+            );
+            return;
+          }
+
+          const companyDashboardPaths = {
+            ADMIN: "/dashboard/company/admin",
+            HR: "/dashboard/company/hr",
+            TEAM_LEADER: "/dashboard/company/team-leader",
+            USER: "/dashboard/company/user",
+          };
+
+          navigate(
+            companyDashboardPaths[normalizedWorkspaceRole] || "/dashboard",
+          );
+        }}
+      >
         <ArrowLeft size={15} />
         Back to Dashboard
       </button>
@@ -287,22 +790,34 @@ function Projects() {
               <h2>My Projects</h2>
 
               <p className="projects-subtitle">
-                Manage your team's workspaces, tasks and progress
+                {isIndividualUser
+                  ? "View projects assigned to you and track your progress"
+                  : `Projects for ${
+                      activeWorkspace?.name || "your active workspace"
+                    }`}
               </p>
             </div>
           </div>
         </div>
 
-        <button
-          className="projects-create-btn"
-          onClick={() => navigate("/projects/create")}
-        >
-          <Plus size={17} />
-          Create Project
-        </button>
+        {/* CREATE PROJECT BUTTON */}
+        {canCreateProjects && (
+          <button
+            type="button"
+            className="projects-create-btn"
+            onClick={() => navigate("/projects/create")}
+          >
+            <Plus size={17} />
+            Create Project
+          </button>
+        )}
       </div>
 
-      {error && <div className="dashboard-error">{error}</div>}
+      {error && (
+        <div className="dashboard-error" role="alert">
+          {error}
+        </div>
+      )}
 
       {/* Statistics */}
       <div className="projects-summary">
@@ -313,7 +828,9 @@ function Projects() {
 
           <div className="project-summary-content">
             <strong>
-              {loading ? "..." : String(projects.length).padStart(2, "0")}
+              {pageLoading
+                ? "..."
+                : String(activeProjects.length).padStart(2, "0")}
             </strong>
 
             <span>Projects</span>
@@ -355,10 +872,12 @@ function Projects() {
 
           <div className="project-summary-content">
             <strong>
-              {loading ? "..." : String(totalCollaborators).padStart(2, "0")}
+              {pageLoading
+                ? "..."
+                : String(totalCollaborators).padStart(2, "0")}
             </strong>
 
-            <span>Teams</span>
+            <span>Collaborators</span>
           </div>
 
           <TrendingUp className="summary-trend" size={17} />
@@ -381,6 +900,7 @@ function Projects() {
         <div className="projects-filters">
           {["All Projects", "Active", "Planning", "Completed"].map((filter) => (
             <button
+              type="button"
               key={filter}
               className={
                 activeFilter === filter
@@ -396,6 +916,7 @@ function Projects() {
 
         <div className="projects-toolbar-actions">
           <button
+            type="button"
             className="projects-sort-btn"
             onClick={() =>
               setSortOrder((current) =>
@@ -413,6 +934,7 @@ function Projects() {
 
           <div className="projects-view-toggle">
             <button
+              type="button"
               className={
                 viewMode === "grid"
                   ? "view-toggle-btn active"
@@ -420,11 +942,13 @@ function Projects() {
               }
               onClick={() => setViewMode("grid")}
               title="Grid view"
+              aria-label="Grid view"
             >
               <LayoutGrid size={15} />
             </button>
 
             <button
+              type="button"
               className={
                 viewMode === "list"
                   ? "view-toggle-btn active"
@@ -432,6 +956,7 @@ function Projects() {
               }
               onClick={() => setViewMode("list")}
               title="List view"
+              aria-label="List view"
             >
               <List size={15} />
             </button>
@@ -441,29 +966,51 @@ function Projects() {
 
       {/* Projects */}
       <section className="projects-panel">
-        {loading ? (
+        {pageLoading ? (
           <div className="dashboard-empty">
             <FolderKanban size={30} />
 
             <h4>Loading projects...</h4>
 
-            <p>Getting your projects from the ZYRA workspace.</p>
+            <p>
+              {isIndividualUser
+                ? "Finding the projects assigned to your account."
+                : `Loading projects for ${
+                    activeWorkspace?.name || "your workspace"
+                  }.`}
+            </p>
           </div>
-        ) : projects.length === 0 ? (
+        ) : activeProjects.length === 0 ? (
           <div className="dashboard-empty">
             <FolderKanban size={30} />
 
-            <h4>No projects yet</h4>
+            <h4>
+              {isIndividualUser
+                ? "No assigned projects yet"
+                : "No projects in this workspace"}
+            </h4>
 
-            <p>Create your first project to start working with ZYRA.</p>
+            <p>
+              {isIndividualUser
+                ? "Projects assigned to you through an accepted invitation will appear here."
+                : isWorkspaceUser
+                  ? "Projects you belong to in this workspace will appear here."
+                  : isTeamLeader
+                    ? "Projects belonging to teams under you will appear here when available."
+                    : "Projects belonging to the selected workspace will appear here when available to your account."}
+            </p>
 
-            <button
-              className="empty-action"
-              onClick={() => navigate("/projects/create")}
-            >
-              <Plus size={16} />
-              Create Project
-            </button>
+            {/* CREATE PROJECT BUTTON FOR EMPTY STATE */}
+            {canCreateProjects && (
+              <button
+                type="button"
+                className="empty-action"
+                onClick={() => navigate("/projects/create")}
+              >
+                <Plus size={16} />
+                Create Project
+              </button>
+            )}
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="dashboard-empty">
@@ -508,7 +1055,9 @@ function Projects() {
 
                       <span>
                         <Users size={13} />
-                        {memberCounts[featuredProject.team_id] || 0} Members
+                        {memberCounts[getProjectTeamId(featuredProject)] ||
+                          0}{" "}
+                        Members
                       </span>
 
                       <div className="featured-divider" />
@@ -522,6 +1071,7 @@ function Projects() {
                 </div>
 
                 <button
+                  type="button"
                   className="project-open-btn"
                   onClick={() => navigate(`/projects/${featuredProject.id}`)}
                 >
@@ -540,15 +1090,16 @@ function Projects() {
                 }
               >
                 {secondaryProjects.map((project) => {
-                  const teamMemberCount = memberCounts[project.team_id] || 0;
+                  const teamMemberCount =
+                    memberCounts[getProjectTeamId(project)] || 0;
 
                   const isCreator = isProjectCreator(project);
 
-                  const isUpdating = updatingProjectId === project.id;
+                  const isUpdating = sameId(updatingProjectId, project.id);
 
-                  const isDeleting = deletingProjectId === project.id;
+                  const isDeleting = sameId(deletingProjectId, project.id);
 
-                  const isEditing = editingProjectId === project.id;
+                  const isEditing = sameId(editingProjectId, project.id);
 
                   return (
                     <div className="project-card" key={project.id}>
@@ -648,7 +1199,6 @@ function Projects() {
                               <div className="project-card-progress">
                                 <div className="progress-label">
                                   <span>Progress</span>
-
                                   <span>—</span>
                                 </div>
 
@@ -673,6 +1223,7 @@ function Projects() {
 
                           <div className="project-card-actions">
                             <button
+                              type="button"
                               className="project-open-btn"
                               onClick={() =>
                                 navigate(`/projects/${project.id}`)
@@ -681,9 +1232,10 @@ function Projects() {
                               Open Project
                             </button>
 
-                            {isCreator && (
+                            {canManageProjects && isCreator && (
                               <>
                                 <button
+                                  type="button"
                                   className="project-edit-btn"
                                   onClick={() => handleOpenEdit(project)}
                                   disabled={isDeleting}
@@ -693,6 +1245,7 @@ function Projects() {
                                 </button>
 
                                 <button
+                                  type="button"
                                   className="project-delete-btn"
                                   onClick={() => handleDeleteProject(project)}
                                   disabled={isDeleting}

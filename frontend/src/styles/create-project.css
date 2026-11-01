@@ -1314,3 +1314,70 @@
     transition: none;
   }
 }
+/* COMPANY PROJECT — HR ASSIGNMENT NOTE */
+
+.create-project-assignment-note {
+  margin: 10px 0 0;
+  padding: 11px 14px;
+
+  color: #9bb5c9;
+  font-size: 12px;
+  line-height: 1.7;
+  font-weight: 400;
+
+  background: rgba(34, 211, 238, 0.055);
+  border: 1px solid rgba(34, 211, 238, 0.14);
+  border-left: 3px solid rgba(34, 211, 238, 0.65);
+
+  border-radius: 8px;
+}
+
+.create-project-assignment-note::before {
+  content: "ⓘ";
+  margin-right: 8px;
+
+  color: #67e8f9;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* =========================================================
+   CHROME AUTOFILL — DARK THEME FIX
+   ========================================================= */
+
+.create-field input:-webkit-autofill,
+.create-field input:-webkit-autofill:hover,
+.create-field input:-webkit-autofill:focus,
+.create-field input:-webkit-autofill:active,
+.create-field textarea:-webkit-autofill,
+.create-field textarea:-webkit-autofill:hover,
+.create-field textarea:-webkit-autofill:focus,
+.team-select-wrapper select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #171e29 inset !important;
+  box-shadow: 0 0 0 1000px #171e29 inset !important;
+
+  -webkit-text-fill-color: #f4faff !important;
+  caret-color: #22d3ee !important;
+
+  background-color: #171e29 !important;
+
+  transition: background-color 9999s ease-out 0s !important;
+}
+
+/* Standard autofill support */
+
+.create-field input:autofill,
+.create-field textarea:autofill,
+.team-select-wrapper select:autofill {
+  background-color: #171e29 !important;
+  color: #f4faff !important;
+}
+
+/* Preserve focus highlight */
+
+.create-field input:-webkit-autofill:focus {
+  border-color: rgba(34, 211, 238, 0.75) !important;
+
+  -webkit-box-shadow:
+    0 0 0 1000px #171e29 inset,
+    0 0 0 2px rgba(34, 211, 238, 0.09) !important;
+}

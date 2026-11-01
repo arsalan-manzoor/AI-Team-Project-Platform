@@ -1730,3 +1730,130 @@
   color: #67e8f9;
   pointer-events: none;
 }
+/* =========================================================
+   INDIVIDUAL SIGNUP WORKFLOW NOTES + SUCCESS STATE
+   Append this to the bottom of frontend/src/styles/signup.css
+   ========================================================= */
+
+.signup-workflow-note {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  border-radius: 11px;
+  background: linear-gradient(
+    110deg,
+    rgba(34, 211, 238, 0.055),
+    rgba(99, 102, 241, 0.065)
+  );
+  color: #94a3b8;
+}
+
+.signup-workflow-note > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #67e8f9;
+}
+
+.signup-workflow-note > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.signup-workflow-note strong {
+  color: #dbeafe;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.signup-workflow-note span {
+  color: #718096;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.signup-success-icon {
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.25);
+  background: linear-gradient(
+    145deg,
+    rgba(16, 185, 129, 0.14),
+    rgba(34, 211, 238, 0.08)
+  );
+  box-shadow:
+    0 0 32px rgba(16, 185, 129, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.signup-success-workspace {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(52, 211, 153, 0.16);
+  border-radius: 13px;
+  background: linear-gradient(
+    120deg,
+    rgba(16, 185, 129, 0.07),
+    rgba(8, 15, 30, 0.55)
+  );
+}
+
+.signup-success-workspace-icon {
+  flex: 0 0 auto;
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(34, 211, 238, 0.17);
+  border-radius: 11px;
+  background: rgba(34, 211, 238, 0.07);
+  color: #67e8f9;
+}
+
+.signup-success-workspace > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.signup-success-workspace > div:last-child > span {
+  color: #64748b;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.signup-success-workspace strong {
+  overflow-wrap: anywhere;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.signup-success-workspace small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #6ee7b7;
+  font-size: 9px;
+}
+
+.signup-success-note {
+  margin-top: 14px;
+}
+
+.signup-success-continue {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+}

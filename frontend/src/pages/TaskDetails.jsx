@@ -11,6 +11,9 @@ import {
   Trash2,
   Circle,
   CheckCircle2,
+  ArrowRight,
+  LoaderCircle,
+  Eye,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -23,7 +26,11 @@ import {
   createSubtask,
   updateSubtask,
   deleteSubtask,
+  updateTask,
 } from "../services/taskService";
+
+import { getCurrentUser } from "../services/authService";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import {
   getTaskComments,
@@ -36,11 +43,28 @@ function TaskDetails() {
   const navigate = useNavigate();
   const { projectId, taskId } = useParams();
 
+  const {
+    activeWorkspace,
+    workspaceRole,
+    loading: workspaceLoading,
+  } = useWorkspace();
+
+  const normalizedWorkspaceRole = String(
+    workspaceRole || activeWorkspace?.role || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const isTeamLeader = normalizedWorkspaceRole === "TEAM_LEADER";
+
   const [task, setTask] = useState(null);
   const [subtasks, setSubtasks] = useState([]);
   const [comments, setComments] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [updatingTaskStatus, setUpdatingTaskStatus] = useState(false);
+
   const [creatingSubtask, setCreatingSubtask] = useState(false);
   const [creatingComment, setCreatingComment] = useState(false);
 
@@ -52,7 +76,6 @@ function TaskDetails() {
   const [deletingCommentId, setDeletingCommentId] = useState(null);
 
   const [showSubtaskForm, setShowSubtaskForm] = useState(false);
-
   const [editingSubtaskId, setEditingSubtaskId] = useState(null);
 
   const [subtaskTitle, setSubtaskTitle] = useState("");
@@ -62,39 +85,64 @@ function TaskDetails() {
 
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function loadTask() {
-      try {
-        setLoading(true);
-        setError("");
+  // ======================================================
+  // LOAD TASK
+  // ======================================================
 
-        const taskData = await getTaskById(taskId);
-        const subtasksData = await getTaskSubtasks(taskId);
-        const commentsData = await getTaskComments(taskId);
+  async function loadTask() {
+    try {
+      setLoading(true);
+      setError("");
 
-        setTask(taskData);
+      const [taskData, subtasksData, commentsData, userData] =
+        await Promise.all([
+          getTaskById(taskId),
+          getTaskSubtasks(taskId),
+          getTaskComments(taskId),
+          getCurrentUser(),
+        ]);
 
-        setSubtasks(Array.isArray(subtasksData) ? subtasksData : []);
+      const signedInUser =
+        userData?.user || userData?.data?.user || userData?.data || userData;
 
-        setComments(Array.isArray(commentsData) ? commentsData : []);
-      } catch (error) {
-        console.error("Task details loading error:", error);
-
-        setError(error.message || "Failed to load task details.");
-      } finally {
-        setLoading(false);
-      }
+      setTask(taskData);
+      setSubtasks(Array.isArray(subtasksData) ? subtasksData : []);
+      setComments(Array.isArray(commentsData) ? commentsData : []);
+      setCurrentUser(signedInUser);
+    } catch (error) {
+      console.error("Task details loading error:", error);
+      setError(error.message || "Failed to load task details.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    if (taskId) {
+  useEffect(() => {
+    if (taskId && !workspaceLoading) {
       loadTask();
     }
-  }, [taskId]);
+  }, [taskId, workspaceLoading]);
+
+  // ======================================================
+  // TASK STATUS HELPERS
+  // ======================================================
+
+  function normalizeStatus(status) {
+    return String(status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+  }
 
   function getDisplayStatus(status) {
-    switch (status) {
+    const normalized = normalizeStatus(status);
+
+    switch (normalized) {
       case "in_progress":
         return "In Progress";
+
+      case "in_review":
+        return "In Review";
 
       case "completed":
       case "complete":
@@ -102,27 +150,248 @@ function TaskDetails() {
         return "Completed";
 
       case "todo":
-        return "To Do";
-
+      case "to_do":
       case "pending":
-        return "Pending";
-
       default:
-        return status || "To Do";
+        return "To Do";
     }
   }
 
-  function isSubtaskCompleted(subtask) {
+  function getTaskProgress(status, progress) {
+    const numericProgress = Number(progress);
+
+    if (
+      progress !== null &&
+      progress !== undefined &&
+      progress !== "" &&
+      Number.isFinite(numericProgress) &&
+      numericProgress >= 0 &&
+      numericProgress <= 100
+    ) {
+      return numericProgress;
+    }
+
+    const normalized = normalizeStatus(status);
+
+    switch (normalized) {
+      case "in_progress":
+        return 50;
+
+      case "in_review":
+        return 80;
+
+      case "completed":
+      case "complete":
+      case "done":
+        return 100;
+
+      case "pending":
+      case "todo":
+      case "to_do":
+      default:
+        return 0;
+    }
+  }
+
+  function getNextTaskStatus(status) {
+    const normalized = normalizeStatus(status);
+
+    switch (normalized) {
+      case "pending":
+      case "todo":
+      case "to_do":
+        return "in_progress";
+
+      case "in_progress":
+        return "in_review";
+
+      case "in_review":
+        return "completed";
+
+      case "completed":
+      case "complete":
+      case "done":
+      default:
+        return null;
+    }
+  }
+
+  function getNextStatusLabel(status) {
+    const normalized = normalizeStatus(status);
+
+    switch (normalized) {
+      case "pending":
+      case "todo":
+      case "to_do":
+        return "Start Task";
+
+      case "in_progress":
+        return "Send for Review";
+
+      case "in_review":
+        return "Complete Task";
+
+      default:
+        return "";
+    }
+  }
+
+  function getProgressLabel(progress) {
+    if (progress === 0) return "Not Started";
+    if (progress === 50) return "In Progress";
+    if (progress === 80) return "In Review";
+    if (progress === 100) return "Completed";
+
+    return "In Progress";
+  }
+
+  // ======================================================
+  // TASK PERMISSIONS
+  // ======================================================
+
+  function getTaskAssigneeId() {
+    if (!task) {
+      return null;
+    }
+
+    return task.assigned_to ?? task.assignedTo ?? null;
+  }
+
+  function isTaskAssignedToCurrentUser() {
+    if (!task || currentUser?.id === null || currentUser?.id === undefined) {
+      return false;
+    }
+
+    const assignedTo = getTaskAssigneeId();
+
     return (
-      subtask.status === "completed" ||
-      subtask.status === "complete" ||
-      subtask.status === "done" ||
-      subtask.status === "Completed"
+      assignedTo !== null &&
+      assignedTo !== undefined &&
+      assignedTo !== "" &&
+      Number(assignedTo) === Number(currentUser.id)
     );
   }
 
+  function canUpdateTask() {
+    return isTaskAssignedToCurrentUser();
+  }
+
+  // ======================================================
+  // COMMENT OWNERSHIP AND DISPLAY HELPERS
+  // ======================================================
+
+  function isCommentAuthor(comment) {
+    if (
+      comment?.user_id === null ||
+      comment?.user_id === undefined ||
+      currentUser?.id === null ||
+      currentUser?.id === undefined
+    ) {
+      return false;
+    }
+
+    return Number(comment.user_id) === Number(currentUser.id);
+  }
+
+  function getCommenterName(comment) {
+    const savedName = String(comment?.user_name || "").trim();
+
+    if (savedName) {
+      return savedName;
+    }
+
+    if (isCommentAuthor(comment)) {
+      return "You";
+    }
+
+    if (comment?.user_id !== null && comment?.user_id !== undefined) {
+      return `User #${comment.user_id}`;
+    }
+
+    return "Unknown user";
+  }
+
+  function formatCommentDate(createdAt) {
+    if (!createdAt) {
+      return "";
+    }
+
+    const date = new Date(createdAt);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  }
+
+  // ======================================================
+  // ADVANCE TASK
+  // ======================================================
+
+  async function handleAdvanceTask() {
+    if (!task || updatingTaskStatus) {
+      return;
+    }
+
+    if (!canUpdateTask()) {
+      setError("You can update only tasks assigned to your account.");
+      return;
+    }
+
+    const nextStatus = getNextTaskStatus(task.status);
+
+    if (!nextStatus) {
+      return;
+    }
+
+    try {
+      setUpdatingTaskStatus(true);
+      setError("");
+
+      const updatedTask = await updateTask(task.id, {
+        status: nextStatus,
+      });
+
+      setTask((currentTask) => ({
+        ...currentTask,
+        ...(updatedTask || {}),
+        status: updatedTask?.status || nextStatus,
+        progress:
+          updatedTask?.progress ?? getTaskProgress(nextStatus, undefined),
+      }));
+    } catch (error) {
+      console.error("Task status update error:", error);
+      setError(error.message || "Failed to update task status.");
+    } finally {
+      setUpdatingTaskStatus(false);
+    }
+  }
+
+  // ======================================================
+  // SUBTASK HELPERS
+  // ======================================================
+
+  function isSubtaskCompleted(subtask) {
+    return ["completed", "complete", "done"].includes(
+      normalizeStatus(subtask?.status),
+    );
+  }
+
+  // ======================================================
+  // CREATE SUBTASK
+  // ======================================================
+
   async function handleCreateSubtask(event) {
     event.preventDefault();
+
+    if (!isTeamLeader) {
+      setError("Only the Workspace Team Leader can create subtasks.");
+      return;
+    }
 
     const title = subtaskTitle.trim();
 
@@ -146,14 +415,22 @@ function TaskDetails() {
       setShowSubtaskForm(false);
     } catch (error) {
       console.error("Subtask creation error:", error);
-
       setError(error.message || "Failed to create subtask.");
     } finally {
       setCreatingSubtask(false);
     }
   }
 
+  // ======================================================
+  // UPDATE SUBTASK STATUS
+  // ======================================================
+
   async function handleToggleSubtask(subtask) {
+    if (!isTeamLeader) {
+      setError("Only the Workspace Team Leader can update subtasks.");
+      return;
+    }
+
     const newStatus = isSubtaskCompleted(subtask) ? "pending" : "completed";
 
     try {
@@ -178,14 +455,22 @@ function TaskDetails() {
       );
     } catch (error) {
       console.error("Subtask status update error:", error);
-
       setError(error.message || "Failed to update subtask.");
     } finally {
       setUpdatingSubtaskId(null);
     }
   }
 
+  // ======================================================
+  // EDIT SUBTASK
+  // ======================================================
+
   function handleStartEditSubtask(subtask) {
+    if (!isTeamLeader) {
+      setError("Only the Workspace Team Leader can update subtasks.");
+      return;
+    }
+
     setEditingSubtaskId(subtask.id);
     setEditSubtaskTitle(subtask.title || "");
     setError("");
@@ -198,6 +483,11 @@ function TaskDetails() {
 
   async function handleUpdateSubtask(event, subtask) {
     event.preventDefault();
+
+    if (!isTeamLeader) {
+      setError("Only the Workspace Team Leader can update subtasks.");
+      return;
+    }
 
     const title = editSubtaskTitle.trim();
 
@@ -230,14 +520,22 @@ function TaskDetails() {
       handleCancelEditSubtask();
     } catch (error) {
       console.error("Subtask update error:", error);
-
       setError(error.message || "Failed to update subtask.");
     } finally {
       setUpdatingSubtaskId(null);
     }
   }
 
+  // ======================================================
+  // DELETE SUBTASK
+  // ======================================================
+
   async function handleDeleteSubtask(subtask) {
+    if (!isTeamLeader) {
+      setError("Only the Workspace Team Leader can delete subtasks.");
+      return;
+    }
+
     const confirmed = window.confirm(
       `Are you sure you want to delete "${subtask.title}"?`,
     );
@@ -263,12 +561,15 @@ function TaskDetails() {
       }
     } catch (error) {
       console.error("Subtask deletion error:", error);
-
       setError(error.message || "Failed to delete subtask.");
     } finally {
       setDeletingSubtaskId(null);
     }
   }
+
+  // ======================================================
+  // COMMENTS
+  // ======================================================
 
   async function handleCreateComment(event) {
     event.preventDefault();
@@ -294,7 +595,6 @@ function TaskDetails() {
       setCommentContent("");
     } catch (error) {
       console.error("Comment creation error:", error);
-
       setError(error.message || "Failed to create comment.");
     } finally {
       setCreatingComment(false);
@@ -302,6 +602,11 @@ function TaskDetails() {
   }
 
   function handleStartEditComment(comment) {
+    if (!isCommentAuthor(comment)) {
+      setError("You can edit only comments you wrote.");
+      return;
+    }
+
     setEditingCommentId(comment.id);
     setEditCommentContent(comment.content || "");
     setError("");
@@ -314,6 +619,11 @@ function TaskDetails() {
 
   async function handleUpdateComment(event, comment) {
     event.preventDefault();
+
+    if (!isCommentAuthor(comment)) {
+      setError("You can edit only comments you wrote.");
+      return;
+    }
 
     const content = editCommentContent.trim();
 
@@ -345,7 +655,6 @@ function TaskDetails() {
       handleCancelEditComment();
     } catch (error) {
       console.error("Comment update error:", error);
-
       setError(error.message || "Failed to update comment.");
     } finally {
       setUpdatingCommentId(null);
@@ -353,8 +662,13 @@ function TaskDetails() {
   }
 
   async function handleDeleteComment(comment) {
+    if (!isCommentAuthor(comment)) {
+      setError("You can delete only comments you wrote.");
+      return;
+    }
+
     const confirmed = window.confirm(
-      "Are you sure you want to delete this comment?",
+      "Are you sure you want to delete your comment?",
     );
 
     if (!confirmed) {
@@ -378,12 +692,27 @@ function TaskDetails() {
       }
     } catch (error) {
       console.error("Comment deletion error:", error);
-
       setError(error.message || "Failed to delete comment.");
     } finally {
       setDeletingCommentId(null);
     }
   }
+
+  // ======================================================
+  // DISPLAY VALUES
+  // ======================================================
+
+  const taskProgress = task ? getTaskProgress(task.status, task.progress) : 0;
+
+  const nextTaskStatus = task ? getNextTaskStatus(task.status) : null;
+
+  const nextStatusLabel = task ? getNextStatusLabel(task.status) : "";
+
+  const taskCanBeUpdated = canUpdateTask();
+
+  // ======================================================
+  // RENDER
+  // ======================================================
 
   return (
     <div className="zyra-task-details">
@@ -391,6 +720,7 @@ function TaskDetails() {
         className="back-page-btn"
         onClick={() => navigate(`/projects/${projectId}/tasks`)}
         disabled={
+          updatingTaskStatus ||
           creatingSubtask ||
           creatingComment ||
           updatingSubtaskId !== null ||
@@ -408,17 +738,13 @@ function TaskDetails() {
       {loading ? (
         <div className="task-details-empty">
           <CheckSquare size={28} />
-
           <h3>Loading task...</h3>
-
           <p>Getting task details from the ZYRA workspace.</p>
         </div>
       ) : !task ? (
         <div className="task-details-empty">
           <CheckSquare size={28} />
-
           <h3>Task not found</h3>
-
           <p>The requested task could not be found.</p>
         </div>
       ) : (
@@ -430,14 +756,13 @@ function TaskDetails() {
 
             <div>
               <p className="task-details-eyebrow">TASK WORKSPACE</p>
-
               <h2>{task.title}</h2>
-
               <p>View task information, manage subtasks, and track progress.</p>
             </div>
           </div>
 
           <section className="task-details-panel">
+            {/* TASK INFORMATION */}
             <div className="task-details-section">
               <h3>Task Information</h3>
 
@@ -459,17 +784,133 @@ function TaskDetails() {
                   Deadline: {task.deadline || "No deadline"}
                 </span>
               </div>
+
+              <div
+                style={{
+                  marginTop: "20px",
+                  padding: "16px",
+                  borderRadius: "14px",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  background: "rgba(255, 255, 255, 0.025)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "10px",
+                    gap: "12px",
+                  }}
+                >
+                  <div>
+                    <strong>Task Progress</strong>
+
+                    <p
+                      style={{
+                        margin: "4px 0 0",
+                        opacity: 0.65,
+                        fontSize: "13px",
+                      }}
+                    >
+                      {getProgressLabel(taskProgress)}
+                    </p>
+                  </div>
+
+                  <strong>{taskProgress}%</strong>
+                </div>
+
+                <div
+                  style={{
+                    width: "100%",
+                    height: "8px",
+                    borderRadius: "999px",
+                    background: "rgba(255, 255, 255, 0.08)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${taskProgress}%`,
+                      height: "100%",
+                      borderRadius: "999px",
+                      background: "linear-gradient(90deg, #22d3ee, #6366f1)",
+                      transition: "width 0.35s ease",
+                    }}
+                  />
+                </div>
+
+                {nextTaskStatus && taskCanBeUpdated ? (
+                  <button
+                    type="button"
+                    className="submit-project-btn"
+                    onClick={handleAdvanceTask}
+                    disabled={updatingTaskStatus}
+                    style={{
+                      marginTop: "16px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    {updatingTaskStatus ? (
+                      <>
+                        <LoaderCircle
+                          size={16}
+                          style={{
+                            animation: "zyra-spin 1s linear infinite",
+                          }}
+                        />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        {nextStatusLabel}
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                ) : nextTaskStatus && !taskCanBeUpdated ? (
+                  <div
+                    style={{
+                      marginTop: "16px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "7px",
+                      opacity: 0.75,
+                      fontSize: "14px",
+                    }}
+                  >
+                    <Eye size={17} />
+                    {isTeamLeader ? "Tracking only" : "View only"}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: "16px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "7px",
+                      opacity: 0.75,
+                      fontSize: "14px",
+                    }}
+                  >
+                    <CheckCircle2 size={17} />
+                    Task completed
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* SUBTASKS */}
             <div className="task-details-section">
               <div className="task-details-section-header">
                 <div>
                   <h3>Subtasks</h3>
-
                   <p>Break this task into smaller pieces of work.</p>
                 </div>
 
-                {!showSubtaskForm && (
+                {isTeamLeader && !showSubtaskForm && (
                   <button
                     type="button"
                     className="task-details-add-btn"
@@ -484,7 +925,7 @@ function TaskDetails() {
                 )}
               </div>
 
-              {showSubtaskForm && (
+              {isTeamLeader && showSubtaskForm && (
                 <form
                   className="task-subtask-form"
                   onSubmit={handleCreateSubtask}
@@ -523,7 +964,6 @@ function TaskDetails() {
                       disabled={creatingSubtask || !subtaskTitle.trim()}
                     >
                       <Plus size={15} />
-
                       {creatingSubtask ? "Adding..." : "Add Subtask"}
                     </button>
                   </div>
@@ -533,9 +973,7 @@ function TaskDetails() {
               {subtasks.length === 0 ? (
                 <div className="task-details-empty">
                   <CheckSquare size={28} />
-
                   <h3>No subtasks yet</h3>
-
                   <p>
                     Add subtasks to divide this task into smaller, manageable
                     steps.
@@ -545,11 +983,8 @@ function TaskDetails() {
                 <div className="task-subtask-list">
                   {subtasks.map((subtask) => {
                     const completed = isSubtaskCompleted(subtask);
-
                     const updating = updatingSubtaskId === subtask.id;
-
                     const deleting = deletingSubtaskId === subtask.id;
-
                     const editing = editingSubtaskId === subtask.id;
 
                     return (
@@ -565,20 +1000,29 @@ function TaskDetails() {
                         <button
                           type="button"
                           onClick={() => handleToggleSubtask(subtask)}
-                          disabled={updating || deleting || editing}
+                          disabled={
+                            !isTeamLeader || updating || deleting || editing
+                          }
                           style={{
                             border: "none",
                             background: "transparent",
                             padding: "2px",
                             cursor:
-                              updating || deleting || editing
+                              !isTeamLeader || updating || deleting || editing
                                 ? "default"
                                 : "pointer",
                             display: "flex",
                             alignItems: "center",
                           }}
                           title={
-                            completed ? "Mark as pending" : "Mark as completed"
+                            !isTeamLeader
+                              ? "View only"
+                              : completed
+                                ? "Mark as pending"
+                                : "Mark as completed"
+                          }
+                          aria-label={
+                            completed ? "Subtask completed" : "Subtask pending"
                           }
                         >
                           {completed ? (
@@ -588,7 +1032,7 @@ function TaskDetails() {
                           )}
                         </button>
 
-                        {editing ? (
+                        {isTeamLeader && editing ? (
                           <form
                             onSubmit={(event) =>
                               handleUpdateSubtask(event, subtask)
@@ -608,9 +1052,7 @@ function TaskDetails() {
                               }
                               autoFocus
                               disabled={updating}
-                              style={{
-                                flex: 1,
-                              }}
+                              style={{ flex: 1 }}
                             />
 
                             <button
@@ -633,36 +1075,61 @@ function TaskDetails() {
                           </form>
                         ) : (
                           <>
-                            <span
+                            <div
                               style={{
                                 flex: 1,
+                                minWidth: 0,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "4px",
                               }}
                             >
-                              {subtask.title}
-                            </span>
+                              <span>{subtask.title}</span>
 
-                            <button
-                              type="button"
-                              className="cancel-form-btn"
-                              onClick={() => handleStartEditSubtask(subtask)}
-                              disabled={updating || deleting}
-                              title="Edit subtask"
-                            >
-                              <Pencil size={14} />
-                              Edit
-                            </button>
+                              <small
+                                style={{
+                                  fontSize: "11px",
+                                  opacity: 0.65,
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                {subtask.created_by_name
+                                  ? `Created by ${subtask.created_by_name}`
+                                  : "Creator unavailable"}
 
-                            <button
-                              type="button"
-                              className="cancel-form-btn"
-                              onClick={() => handleDeleteSubtask(subtask)}
-                              disabled={updating || deleting}
-                              title="Delete subtask"
-                            >
-                              <Trash2 size={14} />
+                                {subtask.created_at
+                                  ? ` · ${formatCommentDate(subtask.created_at)}`
+                                  : ""}
+                              </small>
+                            </div>
 
-                              {deleting ? "Deleting..." : "Delete"}
-                            </button>
+                            {isTeamLeader && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="cancel-form-btn"
+                                  onClick={() =>
+                                    handleStartEditSubtask(subtask)
+                                  }
+                                  disabled={updating || deleting}
+                                  title="Edit subtask"
+                                >
+                                  <Pencil size={14} />
+                                  Edit
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="cancel-form-btn"
+                                  onClick={() => handleDeleteSubtask(subtask)}
+                                  disabled={updating || deleting}
+                                  title="Delete subtask"
+                                >
+                                  <Trash2 size={14} />
+                                  {deleting ? "Deleting..." : "Delete"}
+                                </button>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -672,11 +1139,11 @@ function TaskDetails() {
               )}
             </div>
 
+            {/* COMMENTS */}
             <div className="task-details-section">
               <div className="task-details-section-header">
                 <div>
                   <h3>Comments</h3>
-
                   <p>Discuss this task with your team.</p>
                 </div>
               </div>
@@ -704,7 +1171,6 @@ function TaskDetails() {
                     disabled={creatingComment || !commentContent.trim()}
                   >
                     <MessageSquare size={15} />
-
                     {creatingComment ? "Posting..." : "Post Comment"}
                   </button>
                 </div>
@@ -713,18 +1179,15 @@ function TaskDetails() {
               {comments.length === 0 ? (
                 <div className="task-details-empty">
                   <MessageSquare size={28} />
-
                   <h3>No comments yet</h3>
-
                   <p>Start a conversation about this task.</p>
                 </div>
               ) : (
                 <div className="task-subtask-list">
                   {comments.map((comment) => {
-                    const editing = editingCommentId === comment.id;
-
+                    const isAuthor = isCommentAuthor(comment);
+                    const editing = isAuthor && editingCommentId === comment.id;
                     const updating = updatingCommentId === comment.id;
-
                     const deleting = deletingCommentId === comment.id;
 
                     return (
@@ -733,71 +1196,125 @@ function TaskDetails() {
                         key={comment.id}
                         style={{
                           display: "flex",
-                          alignItems: "center",
+                          alignItems: "flex-start",
                           gap: "10px",
+                          padding: "12px",
                         }}
                       >
-                        <MessageSquare size={17} />
+                        <MessageSquare
+                          size={17}
+                          style={{
+                            flexShrink: 0,
+                            marginTop: "3px",
+                          }}
+                        />
 
-                        {editing ? (
-                          <form
-                            onSubmit={(event) =>
-                              handleUpdateComment(event, comment)
-                            }
+                        <div
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "5px",
+                          }}
+                        >
+                          {/* COMMENT AUTHOR */}
+                          <strong
                             style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              flex: 1,
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              color: "#67e8f9",
                             }}
                           >
-                            <input
-                              type="text"
-                              value={editCommentContent}
-                              onChange={(event) =>
-                                setEditCommentContent(event.target.value)
+                            {getCommenterName(comment)}
+                          </strong>
+
+                          {/* COMMENT CONTENT */}
+                          {editing ? (
+                            <form
+                              onSubmit={(event) =>
+                                handleUpdateComment(event, comment)
                               }
-                              autoFocus
-                              disabled={updating}
                               style={{
-                                flex: 1,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                flexWrap: "wrap",
                               }}
-                            />
-
-                            <button
-                              type="submit"
-                              className="submit-project-btn"
-                              disabled={updating || !editCommentContent.trim()}
                             >
-                              {updating ? "Saving..." : "Save"}
-                            </button>
+                              <input
+                                type="text"
+                                value={editCommentContent}
+                                onChange={(event) =>
+                                  setEditCommentContent(event.target.value)
+                                }
+                                autoFocus
+                                disabled={updating}
+                                style={{
+                                  flex: "1 1 180px",
+                                  minWidth: 0,
+                                }}
+                              />
 
-                            <button
-                              type="button"
-                              className="cancel-form-btn"
-                              onClick={handleCancelEditComment}
-                              disabled={updating}
-                            >
-                              <X size={15} />
-                              Cancel
-                            </button>
-                          </form>
-                        ) : (
-                          <>
+                              <button
+                                type="submit"
+                                className="submit-project-btn"
+                                disabled={
+                                  updating || !editCommentContent.trim()
+                                }
+                              >
+                                {updating ? "Saving..." : "Save"}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="cancel-form-btn"
+                                onClick={handleCancelEditComment}
+                                disabled={updating}
+                              >
+                                <X size={15} />
+                                Cancel
+                              </button>
+                            </form>
+                          ) : (
                             <span
                               style={{
-                                flex: 1,
+                                overflowWrap: "anywhere",
+                                lineHeight: 1.5,
                               }}
                             >
                               {comment.content}
                             </span>
+                          )}
 
+                          {/* COMMENT TIMESTAMP */}
+                          {comment.created_at && (
+                            <small
+                              style={{
+                                fontSize: "11px",
+                                opacity: 0.6,
+                              }}
+                            >
+                              {formatCommentDate(comment.created_at)}
+                            </small>
+                          )}
+                        </div>
+
+                        {/* ONLY THE AUTHOR CAN EDIT OR DELETE */}
+                        {!editing && isAuthor && (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "6px",
+                              flexShrink: 0,
+                            }}
+                          >
                             <button
                               type="button"
                               className="cancel-form-btn"
                               onClick={() => handleStartEditComment(comment)}
                               disabled={updating || deleting}
-                              title="Edit comment"
+                              title="Edit your comment"
                             >
                               <Pencil size={14} />
                               Edit
@@ -808,13 +1325,12 @@ function TaskDetails() {
                               className="cancel-form-btn"
                               onClick={() => handleDeleteComment(comment)}
                               disabled={updating || deleting}
-                              title="Delete comment"
+                              title="Delete your comment"
                             >
                               <Trash2 size={14} />
-
                               {deleting ? "Deleting..." : "Delete"}
                             </button>
-                          </>
+                          </div>
                         )}
                       </div>
                     );

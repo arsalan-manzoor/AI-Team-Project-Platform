@@ -8,17 +8,100 @@ import {
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import { logout } from "../services/authService";
+import { logout, getCurrentUser } from "../services/authService";
+
 import { getUnreadNotifications } from "../services/notificationService";
+import { useWorkspace } from "../context/WorkspaceContext";
+
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const { activeWorkspace } = useWorkspace();
+
+  const [currentUser, setCurrentUser] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // ======================================================
+  // CURRENT USER
+  // ======================================================
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCurrentUser() {
+      try {
+        const response = await getCurrentUser();
+
+        const user =
+          response?.user || response?.data?.user || response?.data || response;
+
+        if (isMounted && user && typeof user === "object") {
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+
+        if (isMounted) {
+          setCurrentUser(null);
+        }
+      }
+    }
+
+    loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname]);
+
+  // ======================================================
+  // DISPLAY NAME AND AVATAR
+  // ======================================================
+
+  const displayName =
+    currentUser?.name ||
+    currentUser?.full_name ||
+    currentUser?.username ||
+    currentUser?.email?.split("@")[0] ||
+    "ZYRA User";
+
+  const avatarInitial = displayName.trim().charAt(0).toUpperCase() || "Z";
+
+  // ======================================================
+  // WORKSPACE ROLE LABEL
+  // ======================================================
+
+  function getWorkspaceRoleLabel() {
+    const role = String(
+      activeWorkspace?.role ||
+        activeWorkspace?.workspace_role ||
+        activeWorkspace?.membership_role ||
+        "",
+    )
+      .trim()
+      .toUpperCase();
+
+    const roleLabels = {
+      ADMIN: "Administrator",
+      HR: "Human Resources",
+      TEAM_LEADER: "Team Leader",
+      USER: "Team Member",
+    };
+
+    return roleLabels[role] || "Workspace Member";
+  }
+
+  const displayRole = getWorkspaceRoleLabel();
+
+  // ======================================================
+  // NOTIFICATIONS
+  // ======================================================
 
   useEffect(() => {
     let isMounted = true;
@@ -51,11 +134,32 @@ function Navbar() {
     };
   }, []);
 
+  // ======================================================
+  // LOGOUT
+  // ======================================================
+
   function handleLogout() {
-    logout();
+    // Close the profile menu.
     setShowProfileMenu(false);
-    navigate("/login");
+
+    // Clear user-related Navbar state.
+    setCurrentUser(null);
+    setUnreadCount(0);
+
+    // Clear authentication token, active workspace,
+    // dashboard history and saved portal session.
+    logout();
+
+    // Send EVERY account type to the main ZYRA landing page.
+    // Replace the current browser history entry.
+    navigate("/", {
+      replace: true,
+    });
   }
+
+  // ======================================================
+  // NAVIGATION
+  // ======================================================
 
   function handleNotificationClick() {
     setUnreadCount(0);
@@ -64,7 +168,20 @@ function Navbar() {
 
   function handleProfileClick(event) {
     event.stopPropagation();
+
     setShowProfileMenu((current) => !current);
+  }
+
+  function handleProfileKeyDown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+
+      setShowProfileMenu((current) => !current);
+    }
+
+    if (event.key === "Escape") {
+      setShowProfileMenu(false);
+    }
   }
 
   function handleOpenProfile() {
@@ -72,19 +189,26 @@ function Navbar() {
     navigate("/profile");
   }
 
+  // ======================================================
+  // RENDER
+  // ======================================================
+
   return (
     <nav className="zyra-navbar">
-      {/* Search */}
+      {/* SEARCH */}
+
       <div className="navbar-search">
         <Search size={17} />
 
         <input type="text" placeholder="Search ZYRA..." />
       </div>
 
-      {/* Workspace Switcher */}
+      {/* WORKSPACE SWITCHER */}
+
       <WorkspaceSwitcher />
 
-      {/* Notification Bell */}
+      {/* NOTIFICATION BELL */}
+
       <button
         type="button"
         className="navbar-icon-btn"
@@ -124,23 +248,34 @@ function Navbar() {
         )}
       </button>
 
-      {/* Profile */}
+      {/* PROFILE */}
+
       <div
         className="navbar-profile"
         onClick={handleProfileClick}
+        onKeyDown={handleProfileKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-expanded={showProfileMenu}
+        aria-label={`Profile menu for ${displayName}`}
         style={{
           position: "relative",
           cursor: "pointer",
         }}
       >
-        <div className="profile-avatar">A</div>
+        {/* DYNAMIC AVATAR */}
+
+        <div className="profile-avatar">{avatarInitial}</div>
+
+        {/* DYNAMIC USER DETAILS */}
 
         <div className="profile-info">
-          <strong>Arsalan</strong>
-          <span>Workspace Member</span>
+          <strong>{displayName}</strong>
+          <span>{displayRole}</span>
         </div>
 
-        {/* Visible dropdown indicator */}
+        {/* DROPDOWN INDICATOR */}
+
         <div
           style={{
             display: "flex",
@@ -157,7 +292,8 @@ function Navbar() {
           )}
         </div>
 
-        {/* Profile Dropdown */}
+        {/* PROFILE DROPDOWN */}
+
         {showProfileMenu && (
           <div
             style={{
@@ -175,7 +311,8 @@ function Navbar() {
             }}
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Profile Header */}
+            {/* PROFILE HEADER */}
+
             <div
               style={{
                 display: "flex",
@@ -186,6 +323,8 @@ function Navbar() {
                 marginBottom: "6px",
               }}
             >
+              {/* DYNAMIC DROPDOWN AVATAR */}
+
               <div
                 style={{
                   width: "38px",
@@ -201,8 +340,10 @@ function Navbar() {
                   flexShrink: 0,
                 }}
               >
-                A
+                {avatarInitial}
               </div>
+
+              {/* DYNAMIC DROPDOWN NAME */}
 
               <div
                 style={{
@@ -216,9 +357,12 @@ function Navbar() {
                   style={{
                     color: "#f8fafc",
                     fontSize: "14px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  Arsalan
+                  {displayName}
                 </strong>
 
                 <span
@@ -227,12 +371,13 @@ function Navbar() {
                     fontSize: "12px",
                   }}
                 >
-                  Workspace Member
+                  {displayRole}
                 </span>
               </div>
             </div>
 
-            {/* Profile */}
+            {/* PROFILE */}
+
             <button
               type="button"
               onClick={handleOpenProfile}
@@ -261,7 +406,8 @@ function Navbar() {
               Profile
             </button>
 
-            {/* Logout */}
+            {/* LOGOUT */}
+
             <button
               type="button"
               onClick={handleLogout}

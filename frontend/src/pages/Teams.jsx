@@ -13,13 +13,46 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import { getTeams, getTeamMembers, deleteTeam } from "../services/teamService";
-
 import { getProjects } from "../services/ProjectService";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import "../styles/teams.css";
 
 function Teams() {
   const navigate = useNavigate();
+
+  const {
+    activeWorkspace,
+    workspaceId,
+    workspaceRole,
+    workspaceType,
+    loading: workspaceLoading,
+  } = useWorkspace();
+
+  const normalizedWorkspaceType = String(
+    activeWorkspace?.type ||
+      activeWorkspace?.workspace_type ||
+      workspaceType ||
+      "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const normalizedWorkspaceRoles = [
+    workspaceRole,
+    activeWorkspace?.role,
+    ...(Array.isArray(activeWorkspace?.roles)
+      ? activeWorkspace.roles
+      : []),
+  ]
+    .map((role) => String(role || "").trim().toUpperCase())
+    .filter(Boolean);
+
+  const canInviteIndividualMembers =
+    normalizedWorkspaceType === "INDIVIDUAL" &&
+    normalizedWorkspaceRoles.includes("TEAM_LEADER");
+
+
 
   const [teams, setTeams] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -28,6 +61,35 @@ function Teams() {
   const [loading, setLoading] = useState(true);
   const [deletingTeamId, setDeletingTeamId] = useState(null);
   const [error, setError] = useState("");
+
+  const isCompanyWorkspace = workspaceType === "COMPANY";
+  const isCompanyTeamLeader =
+    isCompanyWorkspace && workspaceRole === "TEAM_LEADER";
+
+  // Preserve existing non-Company behavior.
+  // In Company workspaces, only a Team Leader can create teams.
+  const canCreateTeam =
+    !workspaceLoading &&
+    (isCompanyWorkspace ? isCompanyTeamLeader && workspaceId != null : true);
+
+  // For Company teams, allow deletion only when the team belongs
+  // to the active company workspace and the user is its Team Leader.
+  function canDeleteTeam(team) {
+    if (workspaceLoading) {
+      return false;
+    }
+
+    if (!isCompanyWorkspace) {
+      return true;
+    }
+
+    return (
+      isCompanyTeamLeader &&
+      workspaceId != null &&
+      team.workspace_id != null &&
+      String(team.workspace_id) === String(workspaceId)
+    );
+  }
 
   async function loadTeams() {
     try {
@@ -40,7 +102,6 @@ function Teams() {
       ]);
 
       const loadedTeams = Array.isArray(teamsData) ? teamsData : [];
-
       const loadedProjects = Array.isArray(projectsData) ? projectsData : [];
 
       setTeams(loadedTeams);
@@ -75,6 +136,14 @@ function Teams() {
   }, []);
 
   async function handleDeleteTeam(team) {
+    // Defensive permission check before making the API request.
+    if (!canDeleteTeam(team)) {
+      setError(
+        "Only a Company Team Leader can delete teams belonging to the active company workspace.",
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
       `Are you sure you want to delete "${team.name}"? This action cannot be undone.`,
     );
@@ -188,18 +257,40 @@ function Teams() {
           <p className="teams-subtitle">
             Organize your collaborators and work together across projects.
           </p>
+
+          {!workspaceLoading && isCompanyWorkspace && !canCreateTeam && (
+            <p className="teams-subtitle">
+              Team creation and deletion are available only to a Company Team
+              Leader in the active company workspace.
+            </p>
+          )}
         </div>
 
-        <button
-          type="button"
-          className="teams-create-btn"
-          onClick={() => navigate("/teams/create")}
-          disabled={deletingTeamId !== null}
-        >
-          <UserPlus size={16} />
-          Create Team
-          <span className="create-btn-plus">+</span>
-        </button>
+        {canCreateTeam && (
+          <button
+            type="button"
+            className="teams-create-btn"
+            onClick={() => navigate("/teams/create")}
+            disabled={deletingTeamId !== null}
+          >
+            <UserPlus size={16} />
+            Create Team
+            <span className="create-btn-plus">+</span>
+          </button>
+        )}
+        {canInviteIndividualMembers && (
+          <button
+            type="button"
+            className="teams-create-btn"
+            onClick={() =>
+              navigate("/dashboard/individual/team-leader?openInvite=1")
+            }
+            title="Invite a member to an existing project"
+          >
+            <UserPlus size={16} />
+            Invite Member
+          </button>
+        )}
       </header>
 
       {error && <div className="dashboard-error">{error}</div>}
@@ -303,25 +394,25 @@ function Teams() {
               members in ZYRA.
             </p>
 
-            <button
-              type="button"
-              className="teams-empty-btn"
-              onClick={() => navigate("/teams/create")}
-            >
-              <UserPlus size={16} />
-              Create Your First Team
-            </button>
+            {canCreateTeam && (
+              <button
+                type="button"
+                className="teams-empty-btn"
+                onClick={() => navigate("/teams/create")}
+              >
+                <UserPlus size={16} />
+                Create Your First Team
+              </button>
+            )}
           </div>
         ) : (
           <div className="team-list">
             {teams.map((team, index) => {
               const teamProjects = getTeamProjects(team.id);
-
               const memberCount = memberCounts[team.id] || 0;
-
               const isDeleting = deletingTeamId === team.id;
-
               const initials = getTeamInitials(team.name);
+              const showDeleteAction = canDeleteTeam(team);
 
               return (
                 <article
@@ -338,15 +429,20 @@ function Teams() {
                       <span>{initials}</span>
                     </div>
 
-                    <button
-                      type="button"
-                      className="team-card-menu"
-                      onClick={() => handleDeleteTeam(team)}
-                      disabled={isDeleting}
-                      title="Delete team"
-                    >
-                      <MoreHorizontal size={17} />
-                    </button>
+                    {/* Keep the existing non-Company action unchanged.
+                        Company teams use the single Delete button below. */}
+                    {!workspaceLoading && !isCompanyWorkspace && (
+                      <button
+                        type="button"
+                        className="team-card-menu"
+                        onClick={() => handleDeleteTeam(team)}
+                        disabled={isDeleting}
+                        title="Delete team"
+                        aria-label={`Delete ${team.name}`}
+                      >
+                        <MoreHorizontal size={17} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Team identity */}
@@ -422,17 +518,19 @@ function Teams() {
                         <ArrowRight size={14} />
                       </button>
 
-                      <button
-                        type="button"
-                        className="team-delete-btn"
-                        onClick={() => handleDeleteTeam(team)}
-                        disabled={isDeleting}
-                        title="Delete team"
-                      >
-                        <Trash2 size={14} />
+                      {showDeleteAction && (
+                        <button
+                          type="button"
+                          className="team-delete-btn"
+                          onClick={() => handleDeleteTeam(team)}
+                          disabled={isDeleting}
+                          title="Delete team"
+                        >
+                          <Trash2 size={14} />
 
-                        {isDeleting ? "Deleting..." : "Delete"}
-                      </button>
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </article>

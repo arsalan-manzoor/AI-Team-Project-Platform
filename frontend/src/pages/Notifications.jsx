@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import {
   Bell,
   CheckCheck,
@@ -15,8 +17,6 @@ import {
   Eye,
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
-
 import {
   getNotifications,
   markNotificationAsRead,
@@ -25,17 +25,26 @@ import {
   deleteAllNotifications,
 } from "../services/notificationService";
 
+import { apiRequest } from "../services/api";
+
 import "../styles/notifications.css";
 
 function Notifications() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+
   const [deletingNotificationId, setDeletingNotificationId] = useState(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [openingInvitationId, setOpeningInvitationId] = useState(null);
+
+  // ======================================================
+  // LOAD NOTIFICATIONS
+  // ======================================================
 
   async function loadNotifications() {
     try {
@@ -43,63 +52,53 @@ function Notifications() {
       setError("");
 
       const data = await getNotifications();
-
       const loadedNotifications = Array.isArray(data) ? data : [];
 
-      /*
-       * When the Notifications page is opened, automatically mark
-       * all currently unread notifications as read.
-       *
-       * This keeps the notification bell badge synchronized with
-       * the actual notification state in the backend.
-       */
-      const unreadNotifications = loadedNotifications.filter(
-        (notification) => !notification.is_read,
-      );
-
-      if (unreadNotifications.length > 0) {
-        await Promise.all(
-          unreadNotifications.map((notification) =>
-            markNotificationAsRead(notification.id),
-          ),
-        );
-      }
-
-      setNotifications(
-        loadedNotifications.map((notification) => ({
-          ...notification,
-          is_read: true,
-        })),
-      );
-    } catch (err) {
-      setError(err.message || "Failed to load notifications");
+      // Do not automatically mark unread notifications as read.
+      setNotifications(loadedNotifications);
+    } catch (requestError) {
+      setError(requestError?.message || "Failed to load notifications.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadNotifications();
+    void loadNotifications();
   }, []);
+
+  // ======================================================
+  // MARK ONE NOTIFICATION AS READ
+  // ======================================================
 
   async function handleMarkAsRead(notificationId) {
     try {
+      setError("");
+
       await markNotificationAsRead(notificationId);
 
       setNotifications((currentNotifications) =>
         currentNotifications.map((notification) =>
-          notification.id === notificationId
+          String(notification.id) === String(notificationId)
             ? { ...notification, is_read: true }
             : notification,
         ),
       );
-    } catch (err) {
-      setError(err.message || "Failed to mark notification as read");
+    } catch (requestError) {
+      setError(
+        requestError?.message || "Failed to mark the notification as read.",
+      );
     }
   }
 
+  // ======================================================
+  // MARK ALL NOTIFICATIONS AS READ
+  // ======================================================
+
   async function handleMarkAllAsRead() {
     try {
+      setError("");
+
       await markAllNotificationsAsRead();
 
       setNotifications((currentNotifications) =>
@@ -108,10 +107,16 @@ function Notifications() {
           is_read: true,
         })),
       );
-    } catch (err) {
-      setError(err.message || "Failed to mark all notifications as read");
+    } catch (requestError) {
+      setError(
+        requestError?.message || "Failed to mark all notifications as read.",
+      );
     }
   }
+
+  // ======================================================
+  // DELETE ONE NOTIFICATION
+  // ======================================================
 
   async function handleDeleteNotification(notificationId) {
     try {
@@ -122,15 +127,19 @@ function Notifications() {
 
       setNotifications((currentNotifications) =>
         currentNotifications.filter(
-          (notification) => notification.id !== notificationId,
+          (notification) => String(notification.id) !== String(notificationId),
         ),
       );
-    } catch (err) {
-      setError(err.message || "Failed to delete notification");
+    } catch (requestError) {
+      setError(requestError?.message || "Failed to delete the notification.");
     } finally {
       setDeletingNotificationId(null);
     }
   }
+
+  // ======================================================
+  // DELETE ALL NOTIFICATIONS
+  // ======================================================
 
   async function handleDeleteAllNotifications() {
     const confirmed = window.confirm(
@@ -148,61 +157,166 @@ function Notifications() {
       await deleteAllNotifications();
 
       setNotifications([]);
-    } catch (err) {
-      setError(err.message || "Failed to delete all notifications");
+    } catch (requestError) {
+      setError(requestError?.message || "Failed to delete all notifications.");
     } finally {
       setDeletingAll(false);
     }
   }
+
+  // ======================================================
+  // GET INVITATION ID FROM NOTIFICATION
+  // ======================================================
 
   function getInvitationId(notification) {
     if (!notification) {
       return null;
     }
 
-    if (notification.invitation_id) {
-      return Number(notification.invitation_id);
+    // Prefer a dedicated invitation ID if the API provides one.
+    if (
+      notification.invitation_id !== undefined &&
+      notification.invitation_id !== null
+    ) {
+      const invitationId = Number(notification.invitation_id);
+
+      return Number.isInteger(invitationId) && invitationId > 0
+        ? invitationId
+        : null;
     }
 
-    const message = notification.message || "";
+    // Current backend stores the invitation ID in reference_id.
+    if (
+      String(notification.notification_type || "").toUpperCase() ===
+        "EMPLOYEE_INVITATION" &&
+      notification.reference_id !== undefined &&
+      notification.reference_id !== null
+    ) {
+      const invitationId = Number(notification.reference_id);
 
+      return Number.isInteger(invitationId) && invitationId > 0
+        ? invitationId
+        : null;
+    }
+
+    // Fallback for older notifications.
+    const message = String(notification.message || "");
     const match = message.match(/Invitation ID:\s*(\d+)/i);
 
-    return match ? Number(match[1]) : null;
+    if (match) {
+      const invitationId = Number(match[1]);
+
+      return Number.isInteger(invitationId) && invitationId > 0
+        ? invitationId
+        : null;
+    }
+
+    return null;
   }
 
-  function isCompanyInvitation(notification) {
+  // ======================================================
+  // DETECT INVITATION NOTIFICATIONS
+  // ======================================================
+
+  function isEmployeeInvitation(notification) {
+    if (!notification) {
+      return false;
+    }
+
+    const title = String(notification.title || "").toLowerCase();
+    const type = String(notification.notification_type || "").toUpperCase();
+
     return (
-      notification?.title?.toLowerCase() === "company invitation" ||
-      notification?.title?.toLowerCase().includes("company invitation")
+      type === "EMPLOYEE_INVITATION" ||
+      title.includes("company invitation") ||
+      title.includes("individual workspace invitation")
     );
   }
 
-  function handleReviewInvitation(notification) {
+  function isCompanyInvitation(notification) {
+    const title = String(notification?.title || "").toLowerCase();
+
+    return title.includes("company invitation");
+  }
+
+  function isIndividualInvitation(notification) {
+    const title = String(notification?.title || "").toLowerCase();
+
+    return title.includes("individual workspace invitation");
+  }
+
+  // ======================================================
+  // REVIEW INVITATION
+  // ======================================================
+  //
+  // 1. Read the invitation ID from the notification.
+  // 2. Validate that exact invitation with the backend.
+  // 3. Open its detail page only if the invitation is available.
+  // 4. If the invitation has expired or is unavailable, remain
+  //    on Notifications and show an actionable error.
+  //
+  // This avoids sending users to an empty invitation list or
+  // to the landing page when a notification is stale.
+  // ======================================================
+
+  async function handleReviewInvitation(notification) {
+    if (openingInvitationId !== null) {
+      return;
+    }
+
     const invitationId = getInvitationId(notification);
 
     if (!invitationId) {
       setError(
-        "This invitation notification does not contain a valid invitation ID.",
+        "This notification does not contain a valid invitation ID. Ask the company administrator to send a new invitation.",
       );
       return;
     }
 
-    /*
-     * The invitation page now supports ID-based invitations.
-     *
-     * Notification
-     *      ↓
-     * /employee-invitation/id/:invitationId
-     *      ↓
-     * EmployeeInvitation.jsx
-     */
-    navigateToInvitation(invitationId);
+    setOpeningInvitationId(String(invitationId));
+    setError("");
+
+    try {
+      // Check that this specific invitation is still available.
+      await apiRequest(
+        `/workspaces/invitations/id/${encodeURIComponent(invitationId)}`,
+      );
+
+      // The invitation is available. Open that exact invitation.
+      // Preserve the page the user came from for return navigation.
+      navigate(`/employee-invitation/id/${encodeURIComponent(invitationId)}`, {
+        state: {
+          returnTo: `${location.pathname}${location.search}`,
+          sourceNotificationId: notification.id,
+          sourcePage: "notifications",
+        },
+      });
+    } catch (requestError) {
+      const message = String(requestError?.message || "");
+
+      const isUnavailable =
+        /expired|no longer active|invalid invitation|invitation not found/i.test(
+          message,
+        );
+
+      if (isUnavailable) {
+        setError(
+          "This invitation has expired or is no longer active. You are still on Notifications. Ask the company administrator to send a new invitation.",
+        );
+      } else {
+        setError(
+          message ||
+            "We could not verify this invitation. Please refresh Notifications and try again.",
+        );
+      }
+    } finally {
+      setOpeningInvitationId(null);
+    }
   }
 
-  function navigateToInvitation(invitationId) {
-    navigate(`/employee-invitation/id/${invitationId}`);
-  }
+  // ======================================================
+  // NOTIFICATION COUNTS
+  // ======================================================
 
   const totalNotifications = notifications.length;
 
@@ -214,30 +328,42 @@ function Notifications() {
     (notification) => notification.created_at,
   ).length;
 
-  const taskNotifications = notifications.filter((notification) => {
-    const text = `${notification.title || ""} ${
-      notification.message || ""
-    }`.toLowerCase();
+  const taskNotifications = useMemo(
+    () =>
+      notifications.filter((notification) => {
+        const text = `${notification.title || ""} ${
+          notification.message || ""
+        }`.toLowerCase();
 
-    return (
-      text.includes("task") ||
-      text.includes("assigned") ||
-      text.includes("deadline")
-    );
-  });
+        return (
+          text.includes("task") ||
+          text.includes("assigned") ||
+          text.includes("deadline")
+        );
+      }),
+    [notifications],
+  );
 
-  const teamNotifications = notifications.filter((notification) => {
-    const text = `${notification.title || ""} ${
-      notification.message || ""
-    }`.toLowerCase();
+  const teamNotifications = useMemo(
+    () =>
+      notifications.filter((notification) => {
+        const text = `${notification.title || ""} ${
+          notification.message || ""
+        }`.toLowerCase();
 
-    return (
-      text.includes("team") ||
-      text.includes("member") ||
-      text.includes("invited") ||
-      text.includes("joined")
-    );
-  });
+        return (
+          text.includes("team") ||
+          text.includes("member") ||
+          text.includes("invited") ||
+          text.includes("joined")
+        );
+      }),
+    [notifications],
+  );
+
+  // ======================================================
+  // FILTER NOTIFICATIONS
+  // ======================================================
 
   const filteredNotifications = useMemo(() => {
     switch (activeFilter) {
@@ -280,6 +406,10 @@ function Notifications() {
         return notifications;
     }
   }, [activeFilter, notifications, taskNotifications, teamNotifications]);
+
+  // ======================================================
+  // NOTIFICATION CATEGORIES
+  // ======================================================
 
   function getNotificationCategory(notification) {
     const text = `${notification.title || ""} ${
@@ -370,6 +500,10 @@ function Notifications() {
     };
   }
 
+  // ======================================================
+  // FORMAT NOTIFICATION TIMESTAMPS
+  // ======================================================
+
   function formatNotificationTime(createdAt) {
     if (!createdAt) {
       return "Recent";
@@ -383,7 +517,6 @@ function Notifications() {
 
     const now = new Date();
     const difference = now.getTime() - date.getTime();
-
     const minutes = Math.floor(difference / (1000 * 60));
 
     if (minutes < 1) {
@@ -411,6 +544,10 @@ function Notifications() {
       month: "short",
     });
   }
+
+  // ======================================================
+  // NOTIFICATION DISTRIBUTION
+  // ======================================================
 
   const statusDistribution = [
     {
@@ -455,11 +592,13 @@ function Notifications() {
     },
   ];
 
+  // ======================================================
+  // PAGE
+  // ======================================================
+
   return (
     <div className="zyra-notifications">
-      {/* =====================================================
-          BACKGROUND
-          ===================================================== */}
+      {/* BACKGROUND */}
 
       <div className="notifications-background-grid" />
 
@@ -476,9 +615,7 @@ function Notifications() {
         <span />
       </div>
 
-      {/* =====================================================
-          HEADER
-          ===================================================== */}
+      {/* HEADER */}
 
       <header className="notifications-header">
         <div className="notifications-header-main">
@@ -504,17 +641,30 @@ function Notifications() {
         </div>
       </header>
 
-      {error && <div className="notifications-error">{error}</div>}
+      {/* ERROR / STATUS MESSAGE */}
 
-      {/* =====================================================
-          STATISTICS
-          ===================================================== */}
+      {error && (
+        <div className="notifications-error" role="alert">
+          <span>{error}</span>
+
+          <button
+            type="button"
+            className="notification-error-close"
+            onClick={() => setError("")}
+            aria-label="Dismiss notification message"
+            title="Dismiss message"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* STATISTICS */}
 
       <section className="notifications-summary">
         <div className="notification-summary-card">
           <div className="notification-summary-content">
             <span>Total Notifications</span>
-
             <strong>{loading ? "..." : totalNotifications}</strong>
           </div>
 
@@ -524,7 +674,6 @@ function Notifications() {
         <div className="notification-summary-card">
           <div className="notification-summary-content">
             <span>Unread</span>
-
             <strong>{loading ? "..." : unreadNotifications}</strong>
           </div>
 
@@ -534,7 +683,6 @@ function Notifications() {
         <div className="notification-summary-card">
           <div className="notification-summary-content">
             <span>Task Updates</span>
-
             <strong>{loading ? "..." : taskNotifications.length}</strong>
           </div>
 
@@ -544,7 +692,6 @@ function Notifications() {
         <div className="notification-summary-card">
           <div className="notification-summary-content">
             <span>Team Activity</span>
-
             <strong>{loading ? "..." : teamNotifications.length}</strong>
           </div>
 
@@ -552,14 +699,10 @@ function Notifications() {
         </div>
       </section>
 
-      {/* =====================================================
-          MAIN WORKSPACE
-          ===================================================== */}
+      {/* MAIN WORKSPACE */}
 
       <div className="notifications-workspace">
-        {/* ===================================================
-            LIVE ACTIVITY
-            =================================================== */}
+        {/* LIVE ACTIVITY */}
 
         <section className="notifications-panel">
           <div className="notifications-panel-header">
@@ -648,7 +791,7 @@ function Notifications() {
               <button
                 type="button"
                 className="notifications-mark-all"
-                onClick={handleMarkAllAsRead}
+                onClick={() => void handleMarkAllAsRead()}
                 disabled={unreadNotifications === 0}
               >
                 <CheckCheck size={13} />
@@ -658,7 +801,7 @@ function Notifications() {
               <button
                 type="button"
                 className="notifications-delete-all"
-                onClick={handleDeleteAllNotifications}
+                onClick={() => void handleDeleteAllNotifications()}
                 disabled={totalNotifications === 0 || deletingAll}
               >
                 <Trash2 size={13} />
@@ -701,16 +844,24 @@ function Notifications() {
 
               {filteredNotifications.map((notification, index) => {
                 const category = getNotificationCategory(notification);
-
                 const CategoryIcon = category.icon;
 
-                const isDeleting = deletingNotificationId === notification.id;
+                const isDeleting =
+                  String(deletingNotificationId) === String(notification.id);
+
+                const employeeInvitation = isEmployeeInvitation(notification);
 
                 const companyInvitation = isCompanyInvitation(notification);
 
-                const invitationId = companyInvitation
+                const individualInvitation =
+                  isIndividualInvitation(notification);
+
+                const invitationId = employeeInvitation
                   ? getInvitationId(notification)
                   : null;
+
+                const isOpeningInvitation =
+                  String(openingInvitationId) === String(invitationId);
 
                 return (
                   <article
@@ -747,9 +898,9 @@ function Notifications() {
                           type="button"
                           className="notification-delete-action"
                           onClick={() =>
-                            handleDeleteNotification(notification.id)
+                            void handleDeleteNotification(notification.id)
                           }
-                          disabled={isDeleting}
+                          disabled={isDeleting || deletingAll}
                           aria-label="Delete notification"
                           title="Delete notification"
                         >
@@ -759,23 +910,37 @@ function Notifications() {
 
                       <div className="notification-card-content">
                         <h3>{notification.title}</h3>
-
                         <p>{notification.message}</p>
                       </div>
 
-                      {/* =================================================
-                          COMPANY INVITATION
-                          ================================================= */}
+                      {/* EMPLOYEE / WORKSPACE INVITATION */}
 
-                      {companyInvitation && invitationId && (
+                      {employeeInvitation && (
                         <div className="company-invitation-actions">
                           <button
                             type="button"
                             className="company-invitation-review"
-                            onClick={() => handleReviewInvitation(notification)}
+                            onClick={() =>
+                              void handleReviewInvitation(notification)
+                            }
+                            disabled={
+                              openingInvitationId !== null || !invitationId
+                            }
+                            title={
+                              !invitationId
+                                ? "This notification has no valid invitation ID."
+                                : "Verify and review this invitation"
+                            }
                           >
                             <Eye size={14} />
-                            Review Invitation
+
+                            {isOpeningInvitation
+                              ? "Checking invitation..."
+                              : companyInvitation
+                                ? "Review Company Invitation"
+                                : individualInvitation
+                                  ? "Review Workspace Invitation"
+                                  : "Review Invitation"}
                           </button>
                         </div>
                       )}
@@ -784,7 +949,8 @@ function Notifications() {
                         <button
                           type="button"
                           className="notification-read-action"
-                          onClick={() => handleMarkAsRead(notification.id)}
+                          onClick={() => void handleMarkAsRead(notification.id)}
+                          disabled={isDeleting}
                         >
                           Mark as read
                         </button>
@@ -803,12 +969,10 @@ function Notifications() {
           )}
         </section>
 
-        {/* ===================================================
-            RIGHT SIDEBAR
-            =================================================== */}
+        {/* RIGHT SIDEBAR */}
 
         <aside className="notifications-side">
-          {/* Notification Status */}
+          {/* NOTIFICATION STATUS */}
 
           <section className="notification-status-panel">
             <div className="notification-side-header">
@@ -834,7 +998,6 @@ function Notifications() {
                   <div className="notification-status-row" key={status.label}>
                     <div className="notification-status-top">
                       <span>{status.label}</span>
-
                       <strong>{percentage}%</strong>
                     </div>
 
@@ -856,7 +1019,7 @@ function Notifications() {
             </div>
           </section>
 
-          {/* Activity Counts */}
+          {/* ACTIVITY COUNTS */}
 
           <section className="activity-counts-panel">
             <div className="notification-side-header">
@@ -871,7 +1034,6 @@ function Notifications() {
 
             <div className="activity-count-highlight">
               <strong>{loading ? "..." : recentActivity}</strong>
-
               <span>tracked notifications</span>
             </div>
 

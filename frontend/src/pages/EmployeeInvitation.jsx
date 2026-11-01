@@ -1,11 +1,76 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiRequest, getAuthToken } from "../services/api";
+
 import "../styles/employee-invitation.css";
+
+/*
+|--------------------------------------------------------------------------
+| ZYRA DASHBOARD ROUTING
+|--------------------------------------------------------------------------
+|
+| Individual:
+|   TEAM_LEADER -> LeadDash
+|   USER        -> UserDash
+|
+| Company:
+|   ADMIN       -> AdminDash
+|   HR          -> HRDash
+|   TEAM_LEADER -> TeamDash
+|   USER        -> MemberDash
+|
+| Workspace role must come from workspace_members.role.
+|
+*/
+
+function getDashboardPath(workspaceType, membershipRole) {
+  const normalizedWorkspaceType = String(workspaceType || "")
+    .trim()
+    .toUpperCase();
+
+  const normalizedRole = String(membershipRole || "")
+    .trim()
+    .toUpperCase();
+
+  if (normalizedWorkspaceType === "INDIVIDUAL") {
+    switch (normalizedRole) {
+      case "TEAM_LEADER":
+        return "/dashboard/individual/team-leader";
+
+      case "USER":
+        return "/dashboard/individual/user";
+
+      default:
+        return null;
+    }
+  }
+
+  if (normalizedWorkspaceType === "COMPANY") {
+    switch (normalizedRole) {
+      case "ADMIN":
+        return "/dashboard/company/admin";
+
+      case "HR":
+        return "/dashboard/company/hr";
+
+      case "TEAM_LEADER":
+        return "/dashboard/company/team-leader";
+
+      case "USER":
+        return "/dashboard/company/user";
+
+      default:
+        return null;
+    }
+  }
+
+  return null;
+}
 
 function EmployeeInvitation() {
   const { token, invitationId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [invitation, setInvitation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,34 +80,112 @@ function EmployeeInvitation() {
 
   const isIdBasedInvitation = Boolean(invitationId);
 
+  /*
+  |--------------------------------------------------------------------------
+  | RETURN NAVIGATION
+  |--------------------------------------------------------------------------
+  |
+  | If Notifications opened the invitation, return to Notifications.
+  | If the invitation was opened directly from an email or external link,
+  | return to the ZYRA dashboard instead of the public landing page.
+  |
+  | Only accept a safe internal application path from navigation state.
+  |
+  */
+
+  function getReturnDestination() {
+    const returnTo = location.state?.returnTo;
+
+    if (
+      typeof returnTo === "string" &&
+      returnTo.startsWith("/") &&
+      !returnTo.startsWith("//") &&
+      !returnTo.startsWith("/employee-invitation/")
+    ) {
+      return returnTo;
+    }
+
+    return "/dashboard";
+  }
+
+  function handleReturnFromInvitation() {
+    const destination = getReturnDestination();
+
+    navigate(destination, {
+      replace: true,
+    });
+  }
+
+  const returnToNotifications =
+    typeof location.state?.returnTo === "string" &&
+    location.state.returnTo.startsWith("/notifications");
+
+  /*
+  |--------------------------------------------------------------------------
+  | Load and validate the invitation
+  |--------------------------------------------------------------------------
+  */
+
   useEffect(() => {
+    let cancelled = false;
+
     async function loadInvitation() {
       try {
         setLoading(true);
         setError("");
+        setAcceptError("");
 
         let data;
 
         if (isIdBasedInvitation) {
-          data = await apiRequest(`/workspaces/invitations/id/${invitationId}`);
+          data = await apiRequest(
+            `/workspaces/invitations/id/${encodeURIComponent(invitationId)}`,
+          );
         } else if (token) {
-          data = await apiRequest(`/workspaces/invitations/${token}`);
+          data = await apiRequest(
+            `/workspaces/invitations/${encodeURIComponent(token)}`,
+          );
         } else {
           throw new Error("Invitation reference is missing.");
         }
 
-        setInvitation(data);
-      } catch (err) {
-        console.error("Invitation loading error:", err);
+        if (!cancelled) {
+          setInvitation(data);
+        }
+      } catch (requestError) {
+        console.error("Invitation loading error:", requestError);
 
-        setError(err.message || "Unable to load this invitation.");
+        if (!cancelled) {
+          setError(requestError.message || "Unable to load this invitation.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    loadInvitation();
+    void loadInvitation();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token, invitationId, isIdBasedInvitation]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Accept the invitation
+  |--------------------------------------------------------------------------
+  |
+  | The frontend does not create memberships.
+  |
+  | The backend validates the signed-in account and invitation, then
+  | creates workspace membership and the appropriate existing team or
+  | organization membership in a transaction.
+  |
+  | The frontend uses the acceptance response to select the destination.
+  |
+  */
 
   async function handleAcceptInvitation() {
     if (accepting) {
@@ -53,8 +196,9 @@ function EmployeeInvitation() {
 
     if (!authToken) {
       setAcceptError(
-        "Please log in to the invited ZYRA account before entering this workspace.",
+        "Please log in to the ZYRA account that received this invitation before accepting it.",
       );
+
       return;
     }
 
@@ -62,31 +206,99 @@ function EmployeeInvitation() {
       setAccepting(true);
       setAcceptError("");
 
+      let acceptanceResult;
+
       if (isIdBasedInvitation) {
-        await apiRequest(`/workspaces/invitations/id/${invitationId}/accept`, {
-          method: "POST",
-        });
+        acceptanceResult = await apiRequest(
+          `/workspaces/invitations/id/${encodeURIComponent(
+            invitationId,
+          )}/accept`,
+          {
+            method: "POST",
+          },
+        );
       } else {
-        await apiRequest(`/workspaces/invitations/${token}/accept`, {
-          method: "POST",
-        });
+        acceptanceResult = await apiRequest(
+          `/workspaces/invitations/${encodeURIComponent(token)}/accept`,
+          {
+            method: "POST",
+          },
+        );
       }
 
-      window.location.href = "/dashboard";
-    } catch (err) {
-      console.error("Invitation acceptance error:", err);
+      /*
+       * Use the accepted workspace and membership returned by the backend.
+       * The validation response is the fallback for missing response fields.
+       */
+
+      const acceptedWorkspaceType =
+        acceptanceResult?.workspace?.type ??
+        invitation?.workspace?.type ??
+        invitation?.workspace_type;
+
+      const acceptedMembershipRole =
+        acceptanceResult?.membership?.role ??
+        acceptanceResult?.invitation?.role ??
+        invitation?.invitation?.role ??
+        invitation?.role;
+
+      const destination = getDashboardPath(
+        acceptedWorkspaceType,
+        acceptedMembershipRole,
+      );
+
+      if (!destination) {
+        /*
+         * The invitation might already have been accepted by the backend.
+         * Do not pretend acceptance failed or submit it again automatically.
+         */
+
+        setAcceptError(
+          "The invitation was processed, but ZYRA could not determine the correct dashboard from the returned workspace role. Please sign in again or contact your workspace administrator.",
+        );
+
+        return;
+      }
+
+      /*
+       * Reload at the correct dashboard route so the application can
+       * retrieve the user's latest memberships.
+       */
+
+      window.location.assign(destination);
+    } catch (requestError) {
+      console.error("Invitation acceptance error:", requestError);
 
       setAcceptError(
-        err.message || "Unable to accept this invitation. Please try again.",
+        requestError.message ||
+          "Unable to accept this invitation. Please try again.",
       );
     } finally {
       setAccepting(false);
     }
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Leave the invitation screen
+  |--------------------------------------------------------------------------
+  */
+
   function handleDeclineInvitation() {
-    navigate("/");
+    if (accepting) {
+      return;
+    }
+
+    navigate(getReturnDestination(), {
+      replace: true,
+    });
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Loading state
+  |--------------------------------------------------------------------------
+  */
 
   if (loading) {
     return (
@@ -110,6 +322,12 @@ function EmployeeInvitation() {
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Invalid or unavailable invitation
+  |--------------------------------------------------------------------------
+  */
+
   if (error) {
     return (
       <main className="employee-invitation-state">
@@ -125,24 +343,40 @@ function EmployeeInvitation() {
           <button
             type="button"
             className="state-back-button"
-            onClick={() => navigate("/dashboard")}
+            onClick={handleReturnFromInvitation}
           >
-            RETURN TO ZYRA
+            {returnToNotifications
+              ? "RETURN TO NOTIFICATIONS"
+              : "RETURN TO DASHBOARD"}
           </button>
         </div>
       </main>
     );
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Prepare invitation information
+  |--------------------------------------------------------------------------
+  */
+
+  const workspaceType = String(
+    invitation?.workspace?.type || invitation?.workspace_type || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const isIndividualWorkspace = workspaceType === "INDIVIDUAL";
+
   const organizationName =
     invitation?.organization?.name ||
     invitation?.organization_name ||
-    "ZYRA Technologies";
+    (isIndividualWorkspace ? "Individual Workspace" : "ZYRA Technologies");
 
   const workspaceName =
     invitation?.workspace?.name ||
     invitation?.workspace_name ||
-    "Company Workspace";
+    (isIndividualWorkspace ? "Individual Workspace" : "Company Workspace");
 
   const assignedRole =
     invitation?.invitation?.role || invitation?.role || "USER";
@@ -150,9 +384,22 @@ function EmployeeInvitation() {
   const invitationStatus =
     invitation?.invitation?.status || invitation?.status || "PENDING";
 
+  const assignedProject =
+    invitation?.project || invitation?.invitation?.project || null;
+
+  const assignedProjectName =
+    assignedProject?.name || assignedProject?.title || "";
+
+  /*
+  |--------------------------------------------------------------------------
+  | Invitation page
+  |--------------------------------------------------------------------------
+  */
+
   return (
     <main className="employee-invitation-page">
       {/* Ambient background */}
+
       <div className="employee-invitation-grid" />
 
       <div className="employee-invitation-glow employee-invitation-glow-one" />
@@ -160,9 +407,11 @@ function EmployeeInvitation() {
       <div className="employee-invitation-glow employee-invitation-glow-two" />
 
       {/* Moving scan line */}
+
       <div className="employee-invitation-scanline" />
 
       {/* Decorative technical elements */}
+
       <div className="employee-tech-corner employee-tech-corner-tl">
         <span />
         <span />
@@ -176,7 +425,8 @@ function EmployeeInvitation() {
       </div>
 
       <div className="employee-invitation-content">
-        {/* Top navigation / system header */}
+        {/* System header */}
+
         <header className="employee-system-header">
           <div className="employee-brand">
             <div className="employee-brand-mark">
@@ -197,6 +447,7 @@ function EmployeeInvitation() {
         </header>
 
         {/* Main access area */}
+
         <section className="employee-access-section">
           <div className="employee-access-intro">
             <div className="access-code">
@@ -215,12 +466,13 @@ function EmployeeInvitation() {
             </h1>
 
             <p className="employee-access-description">
-              You have been invited to join a secure ZYRA company workspace.
-              Review your access details before continuing.
+              You have been invited to join a secure ZYRA workspace. Review your
+              access details before continuing.
             </p>
           </div>
 
-          {/* Main command center panel */}
+          {/* Main access card */}
+
           <section className="employee-access-card">
             <div className="employee-card-topline">
               <div>
@@ -248,14 +500,19 @@ function EmployeeInvitation() {
             </div>
 
             {/* Access information */}
+
             <div className="employee-access-details">
               <div className="employee-detail">
                 <span className="detail-number">01</span>
 
                 <div className="detail-content">
-                  <span className="detail-label">ORGANIZATION</span>
+                  <span className="detail-label">WORKSPACE TYPE</span>
 
-                  <strong>{organizationName}</strong>
+                  <strong>
+                    {isIndividualWorkspace
+                      ? "INDIVIDUAL WORKSPACE"
+                      : "COMPANY WORKSPACE"}
+                  </strong>
                 </div>
               </div>
 
@@ -263,7 +520,7 @@ function EmployeeInvitation() {
                 <span className="detail-number">02</span>
 
                 <div className="detail-content">
-                  <span className="detail-label">ROLE</span>
+                  <span className="detail-label">ASSIGNED ROLE</span>
 
                   <div className="role-value">
                     <span className="role-pulse" />
@@ -277,14 +534,23 @@ function EmployeeInvitation() {
                 <span className="detail-number">03</span>
 
                 <div className="detail-content">
-                  <span className="detail-label">ACCESS LEVEL</span>
+                  <span className="detail-label">
+                    {isIndividualWorkspace
+                      ? "ASSIGNED PROJECT"
+                      : "ACCESS LEVEL"}
+                  </span>
 
-                  <strong>STANDARD</strong>
+                  <strong>
+                    {isIndividualWorkspace
+                      ? assignedProjectName || "No project assigned"
+                      : "STANDARD"}
+                  </strong>
                 </div>
               </div>
             </div>
 
             {/* Invitation status */}
+
             <div className="employee-status-panel">
               <div className="status-heading">
                 <span className="status-icon">
@@ -305,8 +571,9 @@ function EmployeeInvitation() {
             </div>
 
             {/* Acceptance error */}
+
             {acceptError && (
-              <div className="employee-invitation-error">
+              <div className="employee-invitation-error" role="alert">
                 <span className="error-icon">!</span>
 
                 <div>
@@ -318,12 +585,13 @@ function EmployeeInvitation() {
             )}
 
             {/* Actions */}
+
             <div className="employee-access-actions">
               <button
                 type="button"
                 className="employee-invitation-enter"
                 onClick={handleAcceptInvitation}
-                disabled={accepting}
+                disabled={accepting || invitationStatus !== "PENDING"}
               >
                 <span className="enter-button-content">
                   <span>
@@ -342,11 +610,12 @@ function EmployeeInvitation() {
                 onClick={handleDeclineInvitation}
                 disabled={accepting}
               >
-                DECLINE INVITATION
+                LEAVE INVITATION
               </button>
             </div>
 
             {/* Footer */}
+
             <div className="employee-card-footer">
               <div className="footer-security">
                 <span className="footer-lock">◇</span>
@@ -362,6 +631,7 @@ function EmployeeInvitation() {
         </section>
 
         {/* Bottom system indicator */}
+
         <footer className="employee-system-footer">
           <span>SYSTEM ONLINE</span>
 

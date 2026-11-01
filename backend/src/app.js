@@ -1,5 +1,6 @@
 const cors = require("cors");
 const express = require("express");
+const helmet = require("helmet");
 const path = require("path");
 
 const userRoutes = require("./routes/userRoutes");
@@ -19,12 +20,55 @@ const organizationAnalyticsRoutes = require("./routes/organizationAnalyticsRoute
 
 const app = express();
 
-app.use(cors());
+// Hide Express framework identification.
+app.disable("x-powered-by");
+
+// Add HTTP security headers using Helmet.
+app.use(
+  helmet({
+    // Enable HSTS only in production, where HTTPS is configured.
+    strictTransportSecurity:
+      process.env.NODE_ENV === "production" ? undefined : false,
+  }),
+);
+
+// Configure allowed frontend origins.
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const developmentOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+const allowedOrigins = configuredOrigins.length
+  ? configuredOrigins
+  : process.env.NODE_ENV === "production"
+    ? []
+    : developmentOrigins;
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+  }),
+);
 
 app.use(express.json());
 
-// Serve uploaded resource files
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Serve uploaded resource files.
+// Allow the frontend to load uploaded files from the backend.
+app.use(
+  "/uploads",
+  helmet.crossOriginResourcePolicy({
+    policy: "cross-origin",
+  }),
+  express.static(path.join(__dirname, "../uploads")),
+);
 
 app.get("/", (req, res) => {
   res.send("Backend is working");

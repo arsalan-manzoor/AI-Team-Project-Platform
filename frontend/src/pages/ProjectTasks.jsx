@@ -24,12 +24,38 @@ import {
 } from "../services/taskService";
 import { getTeamMembers } from "../services/teamService";
 import { getCurrentUser } from "../services/authService";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import "../styles/project-tasks.css";
 
 function ProjectTasks() {
   const navigate = useNavigate();
   const { projectId } = useParams();
+
+  const {
+    activeWorkspace,
+    workspaceId,
+    workspaceRole,
+    loading: workspaceLoading,
+  } = useWorkspace();
+
+  const normalizedWorkspaceRole = String(
+    workspaceRole || activeWorkspace?.role || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const normalizedWorkspaceType = String(
+    activeWorkspace?.type ||
+      activeWorkspace?.workspace_type ||
+      activeWorkspace?.workspaceType ||
+      "INDIVIDUAL",
+  )
+    .trim()
+    .toUpperCase();
+
+  const isTeamLeader = normalizedWorkspaceRole === "TEAM_LEADER";
+  const isRegularUser = normalizedWorkspaceRole === "USER";
 
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -39,7 +65,6 @@ function ProjectTasks() {
   const [loading, setLoading] = useState(true);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
-  const [pendingAssignees, setPendingAssignees] = useState({});
   const [error, setError] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,141 +72,348 @@ function ProjectTasks() {
   const [assigneeFilter, setAssigneeFilter] = useState("all");
   const [dueDateFilter, setDueDateFilter] = useState("all");
 
+  // ======================================================
+  // LOAD PROJECT, TASKS, USER AND TEAM MEMBERS
+  // WITH ACTIVE WORKSPACE VALIDATION
+  // ======================================================
+
   useEffect(() => {
+    let cancelled = false;
+
+    setProject(null);
+    setTasks([]);
+    setTeamMembers([]);
+    setCurrentUser(null);
+    setError("");
+    setLoading(true);
+
+    if (workspaceLoading) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     async function loadProjectTasks() {
       try {
         setLoading(true);
         setError("");
 
-        const [projectData, tasksData, userData] = await Promise.all([
-          getProjectById(projectId),
+        if (!workspaceId) {
+          throw new Error(
+            "No active workspace was found. Please select a workspace and try again.",
+          );
+        }
+
+        if (!projectId) {
+          throw new Error("The project ID is missing.");
+        }
+
+        // STEP 1: Load and validate project ownership.
+
+        const projectData = await getProjectById(projectId);
+
+        if (cancelled) return;
+
+        const loadedProject =
+          projectData?.project ||
+          projectData?.data?.project ||
+          projectData?.data ||
+          projectData;
+
+        if (
+          !loadedProject ||
+          typeof loadedProject !== "object" ||
+          Array.isArray(loadedProject)
+        ) {
+          throw new Error("The requested project could not be found.");
+        }
+
+        const projectWorkspaceId =
+          loadedProject.workspace_id ??
+          loadedProject.workspaceId ??
+          loadedProject.workspace?.id ??
+          loadedProject.workspace?.workspace_id ??
+          loadedProject.team_workspace_id ??
+          loadedProject.teamWorkspaceId ??
+          loadedProject.team?.workspace_id ??
+          loadedProject.team?.workspaceId ??
+          loadedProject.team?.workspace?.id;
+
+        if (
+          projectWorkspaceId === null ||
+          projectWorkspaceId === undefined ||
+          projectWorkspaceId === ""
+        ) {
+          throw new Error(
+            "This project does not include workspace ownership information. Refresh My Projects and open the project from the correct workspace.",
+          );
+        }
+
+        if (Number(projectWorkspaceId) !== Number(workspaceId)) {
+          throw new Error(
+            "This project does not belong to the active workspace. Open it from the correct workspace.",
+          );
+        }
+
+        const projectWorkspaceType = String(
+          loadedProject.workspace_type ||
+            loadedProject.workspaceType ||
+            loadedProject.workspace?.type ||
+            loadedProject.workspace?.workspace_type ||
+            loadedProject.team_workspace_type ||
+            "",
+        )
+          .trim()
+          .toUpperCase();
+
+        if (
+          projectWorkspaceType &&
+          normalizedWorkspaceType &&
+          projectWorkspaceType !== normalizedWorkspaceType
+        ) {
+          throw new Error(
+            "The project's workspace type does not match the active workspace.",
+          );
+        }
+
+        if (cancelled) return;
+
+        // STEP 2: Load tasks and signed-in user.
+
+        const [tasksData, userData] = await Promise.all([
           getProjectTasks(projectId),
           getCurrentUser(),
         ]);
 
-        setProject(projectData);
-        setTasks(Array.isArray(tasksData) ? tasksData : []);
-        setCurrentUser(userData);
+        if (cancelled) return;
 
-        if (projectData?.team_id) {
-          const membersData = await getTeamMembers(projectData.team_id);
+        const loadedTasks = Array.isArray(tasksData)
+          ? tasksData
+          : Array.isArray(tasksData?.tasks)
+            ? tasksData.tasks
+            : Array.isArray(tasksData?.data?.tasks)
+              ? tasksData.data.tasks
+              : [];
 
-          setTeamMembers(Array.isArray(membersData) ? membersData : []);
+        const signedInUser =
+          userData?.user || userData?.data?.user || userData?.data || userData;
+
+        if (signedInUser?.id === null || signedInUser?.id === undefined) {
+          throw new Error("Unable to identify the signed-in user.");
+        }
+
+        // STEP 3: Keep tasks belonging to this project only.
+
+        const currentProjectId = Number(projectId);
+
+        const projectTasks = loadedTasks.filter((task) => {
+          const taskProjectId =
+            task?.project_id ??
+            task?.projectId ??
+            task?.project?.id ??
+            task?.project?.project_id;
+
+          if (
+            taskProjectId === null ||
+            taskProjectId === undefined ||
+            taskProjectId === ""
+          ) {
+            return false;
+          }
+
+          return Number(taskProjectId) === currentProjectId;
+        });
+
+        // STEP 4: Apply workspace-role visibility.
+
+        const visibleTasks = isRegularUser
+          ? projectTasks.filter((task) => {
+              const assignedTo = task.assigned_to ?? task.assignedTo;
+
+              return (
+                assignedTo !== null &&
+                assignedTo !== undefined &&
+                Number(assignedTo) === Number(signedInUser.id)
+              );
+            })
+          : projectTasks;
+
+        if (cancelled) return;
+
+        setProject(loadedProject);
+        setCurrentUser(signedInUser);
+        setTasks(visibleTasks);
+
+        // STEP 5: Load members of the validated project's team.
+
+        const projectTeamId = loadedProject.team_id ?? loadedProject.teamId;
+
+        if (
+          projectTeamId !== null &&
+          projectTeamId !== undefined &&
+          projectTeamId !== ""
+        ) {
+          try {
+            const membersData = await getTeamMembers(projectTeamId);
+
+            if (!cancelled) {
+              const loadedMembers = Array.isArray(membersData)
+                ? membersData
+                : Array.isArray(membersData?.members)
+                  ? membersData.members
+                  : Array.isArray(membersData?.data?.members)
+                    ? membersData.data.members
+                    : [];
+
+              setTeamMembers(loadedMembers);
+            }
+          } catch (memberError) {
+            console.error("Project team members loading error:", memberError);
+
+            if (!cancelled) {
+              setTeamMembers([]);
+            }
+          }
         } else {
           setTeamMembers([]);
         }
-      } catch (error) {
-        console.error("Project tasks loading error:", error);
+      } catch (requestError) {
+        console.error("Project tasks loading error:", requestError);
 
-        setError(error.message || "Failed to load project tasks.");
+        if (!cancelled) {
+          setProject(null);
+          setTasks([]);
+          setTeamMembers([]);
+          setCurrentUser(null);
+
+          setError(requestError.message || "Failed to load project tasks.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    if (projectId) {
-      loadProjectTasks();
-    }
-  }, [projectId]);
+    loadProjectTasks();
 
-  const completedTasks = tasks.filter((task) => isCompletedStatus(task.status));
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    projectId,
+    workspaceId,
+    workspaceLoading,
+    normalizedWorkspaceRole,
+    normalizedWorkspaceType,
+    isRegularUser,
+  ]);
 
-  const inProgressTasks = tasks.filter((task) =>
-    isInProgressStatus(task.status),
-  );
-
-  const todoTasks = tasks.filter((task) => isTodoStatus(task.status));
-
-  const reviewTasks = tasks.filter((task) => isReviewStatus(task.status));
-
-  const overdueTasks = tasks.filter((task) => {
-    if (!task.deadline || isCompletedStatus(task.status)) {
-      return false;
-    }
-
-    const deadline = new Date(task.deadline);
-    const today = new Date();
-
-    deadline.setHours(23, 59, 59, 999);
-
-    return deadline < today;
-  });
-
-  const progressPercentage =
-    tasks.length > 0
-      ? Math.round((completedTasks.length / tasks.length) * 100)
-      : 0;
+  // ======================================================
+  // TASK STATUS HELPERS
+  // ======================================================
 
   function normalizeStatus(status) {
     return String(status || "")
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, "_");
+      .replace(/[\s-]+/g, "_");
   }
 
   function isCompletedStatus(status) {
     const normalized = normalizeStatus(status);
 
-    return (
-      normalized === "completed" ||
-      normalized === "complete" ||
-      normalized === "done"
-    );
+    return ["completed", "complete", "done"].includes(normalized);
   }
 
   function isInProgressStatus(status) {
-    return normalizeStatus(status) === "in_progress";
+    return ["in_progress", "active", "doing"].includes(normalizeStatus(status));
   }
 
   function isReviewStatus(status) {
-    const normalized = normalizeStatus(status);
-
-    return (
-      normalized === "in_review" ||
-      normalized === "review" ||
-      normalized === "under_review"
+    return ["in_review", "review", "under_review"].includes(
+      normalizeStatus(status),
     );
   }
 
   function isTodoStatus(status) {
-    const normalized = normalizeStatus(status);
-
-    return normalized === "" || normalized === "todo" || normalized === "to_do";
+    return ["", "todo", "to_do", "pending"].includes(normalizeStatus(status));
   }
 
   function getDisplayStatus(status) {
-    if (isCompletedStatus(status)) {
-      return "Completed";
-    }
-
-    if (isInProgressStatus(status)) {
-      return "In Progress";
-    }
-
-    if (isReviewStatus(status)) {
-      return "In Review";
-    }
+    if (isCompletedStatus(status)) return "Completed";
+    if (isInProgressStatus(status)) return "In Progress";
+    if (isReviewStatus(status)) return "In Review";
 
     return "To Do";
   }
 
-  function getMemberName(member) {
-    return (
-      member.name ||
-      member.user_name ||
-      member.username ||
-      member.email ||
-      `User ${member.id}`
-    );
+  function getNextTaskStatus(status) {
+    if (isTodoStatus(status)) return "in_progress";
+    if (isInProgressStatus(status)) return "in_review";
+    if (isReviewStatus(status)) return "completed";
+
+    return null;
+  }
+
+  function getNextStatusLabel(status) {
+    if (isTodoStatus(status)) return "Start Task";
+    if (isInProgressStatus(status)) return "Send for Review";
+    if (isReviewStatus(status)) return "Complete Task";
+
+    return "Completed";
+  }
+
+  function getTaskProgress(task) {
+    const numericProgress = Number(task?.progress);
+
+    if (
+      Number.isFinite(numericProgress) &&
+      numericProgress >= 0 &&
+      numericProgress <= 100
+    ) {
+      return numericProgress;
+    }
+
+    if (isCompletedStatus(task?.status)) return 100;
+    if (isReviewStatus(task?.status)) return 80;
+    if (isInProgressStatus(task?.status)) return 50;
+
+    return 0;
+  }
+
+  // ======================================================
+  // USER AND TASK HELPERS
+  // ======================================================
+
+  function getTaskId(task) {
+    return task?.id ?? task?.task_id;
+  }
+
+  function getTaskAssigneeId(task) {
+    return task?.assigned_to ?? task?.assignedTo ?? null;
   }
 
   function getMemberId(member) {
-    return member.id || member.user_id;
+    return member?.id ?? member?.user_id;
+  }
+
+  function getMemberName(member) {
+    return (
+      member?.name ||
+      member?.user_name ||
+      member?.username ||
+      member?.email ||
+      `User ${getMemberId(member)}`
+    );
+  }
+
+  function getMemberEmail(member) {
+    return member?.email || member?.user_email || member?.user?.email || "";
   }
 
   function getMemberInitials(member) {
     const name = getMemberName(member);
-
     const parts = name.trim().split(/\s+/).filter(Boolean);
 
     if (parts.length >= 2) {
@@ -192,191 +424,155 @@ function ProjectTasks() {
   }
 
   function getTaskAssignee(task) {
-    if (
-      task.assigned_to === null ||
-      task.assigned_to === undefined ||
-      task.assigned_to === ""
-    ) {
+    const assignedTo = getTaskAssigneeId(task);
+
+    if (assignedTo === null || assignedTo === undefined || assignedTo === "") {
       return null;
     }
 
-    return teamMembers.find(
-      (member) => Number(getMemberId(member)) === Number(task.assigned_to),
+    return (
+      teamMembers.find(
+        (member) => Number(getMemberId(member)) === Number(assignedTo),
+      ) || null
     );
   }
 
-  function getCurrentAssignee(task) {
-    if (
-      task.assigned_to === null ||
-      task.assigned_to === undefined ||
-      task.assigned_to === ""
-    ) {
-      return "";
-    }
-
-    return String(task.assigned_to);
-  }
-
-  function getSelectedAssignee(task) {
-    if (Object.prototype.hasOwnProperty.call(pendingAssignees, task.id)) {
-      return pendingAssignees[task.id];
-    }
-
-    return getCurrentAssignee(task);
-  }
-
-  function handleAssigneeSelection(taskId, newAssignee) {
-    setError("");
-
-    setPendingAssignees((current) => ({
-      ...current,
-      [taskId]: newAssignee,
-    }));
-  }
-
-  function isTaskCreator(task) {
-    if (!currentUser?.id || !task?.created_by) {
+  function isTaskAssignedToCurrentUser(task) {
+    if (currentUser?.id === null || currentUser?.id === undefined) {
       return false;
     }
 
-    return Number(task.created_by) === Number(currentUser.id);
+    const assignedTo = getTaskAssigneeId(task);
+
+    return (
+      assignedTo !== null &&
+      assignedTo !== undefined &&
+      Number(assignedTo) === Number(currentUser.id)
+    );
   }
 
-  async function handleAssigneeUpdate(task) {
-    const selectedAssignee = getSelectedAssignee(task);
-    const currentAssignee = getCurrentAssignee(task);
+  function canUpdateTask(task) {
+    return isTaskAssignedToCurrentUser(task);
+  }
 
-    if (selectedAssignee === currentAssignee) {
+  function canCreateTask() {
+    return isTeamLeader;
+  }
+
+  function canDeleteTask() {
+    return isTeamLeader;
+  }
+
+  // ======================================================
+  // TASK STATUS UPDATE
+  // ======================================================
+
+  async function handleStatusChange(task) {
+    const taskId = getTaskId(task);
+
+    if (!canUpdateTask(task)) {
+      setError("You can update only tasks assigned to your account.");
       return;
     }
 
-    try {
-      setError("");
-      setUpdatingTaskId(task.id);
-
-      const assignedTo = selectedAssignee ? Number(selectedAssignee) : null;
-
-      const updatedTask = await updateTask(task.id, {
-        title: task.title,
-        description: task.description || "",
-        status: task.status || "todo",
-        priority: task.priority || "medium",
-        deadline: task.deadline || null,
-        assignedTo,
-      });
-
-      setTasks((currentTasks) =>
-        currentTasks.map((currentTask) =>
-          currentTask.id === task.id
-            ? {
-                ...currentTask,
-                ...(updatedTask || {}),
-                assigned_to: updatedTask?.assigned_to ?? assignedTo,
-              }
-            : currentTask,
-        ),
-      );
-
-      setPendingAssignees((current) => {
-        const updated = { ...current };
-        delete updated[task.id];
-        return updated;
-      });
-    } catch (error) {
-      console.error("Task reassignment error:", error);
-
-      setError(error.message || "Failed to reassign task.");
-    } finally {
-      setUpdatingTaskId(null);
+    if (updatingTaskId !== null || deletingTaskId !== null) {
+      return;
     }
-  }
 
-  async function handleStatusChange(taskId, newStatus) {
+    const nextStatus = getNextTaskStatus(task.status);
+
+    if (!nextStatus) return;
+
     try {
       setError("");
       setUpdatingTaskId(taskId);
 
-      const currentTask = tasks.find((task) => task.id === taskId);
-
-      if (!currentTask) {
-        setError("Task could not be found.");
-        return;
-      }
-
       const updatedTask = await updateTask(taskId, {
-        title: currentTask.title,
-        description: currentTask.description || "",
-        status: newStatus,
-        priority: currentTask.priority || "medium",
-        deadline: currentTask.deadline || null,
-        assignedTo:
-          currentTask.assigned_to !== null &&
-          currentTask.assigned_to !== undefined
-            ? Number(currentTask.assigned_to)
-            : null,
+        status: nextStatus,
       });
 
       setTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task.id === taskId
+        currentTasks.map((currentTask) =>
+          Number(getTaskId(currentTask)) === Number(taskId)
             ? {
-                ...task,
+                ...currentTask,
                 ...(updatedTask || {}),
-                status: updatedTask?.status || newStatus,
+                status: updatedTask?.status || nextStatus,
+                progress:
+                  updatedTask?.progress ??
+                  getTaskProgress({
+                    ...currentTask,
+                    status: nextStatus,
+                  }),
               }
-            : task,
+            : currentTask,
         ),
       );
-    } catch (error) {
-      console.error("Task status update error:", error);
+    } catch (requestError) {
+      console.error("Task status update error:", requestError);
 
-      setError(error.message || "Failed to update task status.");
+      setError(requestError.message || "Failed to update task status.");
     } finally {
       setUpdatingTaskId(null);
     }
   }
 
-  async function handleDeleteTask(task) {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${task.title}"?`,
-    );
+  // ======================================================
+  // DELETE TASK
+  // ======================================================
 
-    if (!confirmed) {
+  async function handleDeleteTask(task) {
+    if (!canDeleteTask(task)) {
+      setError("Only a Team Leader can delete tasks.");
       return;
     }
 
+    const taskId = getTaskId(task);
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${task.title || "this task"}"?`,
+    );
+
+    if (!confirmed) return;
+
     try {
       setError("");
-      setDeletingTaskId(task.id);
+      setDeletingTaskId(taskId);
 
-      await deleteTask(task.id);
+      await deleteTask(taskId);
 
       setTasks((currentTasks) =>
-        currentTasks.filter((currentTask) => currentTask.id !== task.id),
+        currentTasks.filter(
+          (currentTask) => Number(getTaskId(currentTask)) !== Number(taskId),
+        ),
       );
+    } catch (requestError) {
+      console.error("Task deletion error:", requestError);
 
-      setPendingAssignees((current) => {
-        const updated = { ...current };
-        delete updated[task.id];
-        return updated;
-      });
-    } catch (error) {
-      console.error("Task deletion error:", error);
-
-      setError(error.message || "Failed to delete task.");
+      setError(requestError.message || "Failed to delete task.");
     } finally {
       setDeletingTaskId(null);
     }
   }
 
+  // ======================================================
+  // NAVIGATION
+  // ======================================================
+
   function openTaskDetails(taskId) {
-    navigate(`/projects/${projectId}/tasks/${taskId}`);
+    navigate(
+      `/projects/${encodeURIComponent(
+        projectId,
+      )}/tasks/${encodeURIComponent(taskId)}`,
+    );
   }
 
+  // ======================================================
+  // DATE FILTER
+  // ======================================================
+
   function matchesDueDate(task) {
-    if (dueDateFilter === "all") {
-      return true;
-    }
+    if (dueDateFilter === "all") return true;
 
     if (!task.deadline) {
       return dueDateFilter === "none";
@@ -384,6 +580,10 @@ function ProjectTasks() {
 
     const deadline = new Date(task.deadline);
     const today = new Date();
+
+    if (Number.isNaN(deadline.getTime())) {
+      return dueDateFilter === "none";
+    }
 
     deadline.setHours(23, 59, 59, 999);
     today.setHours(0, 0, 0, 0);
@@ -411,15 +611,23 @@ function ProjectTasks() {
     return true;
   }
 
+  // ======================================================
+  // TASK FILTERING
+  // ======================================================
+
   const filteredTasks = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
     return tasks.filter((task) => {
       const matchesSearch =
         !query ||
-        task.title?.toLowerCase().includes(query) ||
-        task.description?.toLowerCase().includes(query) ||
-        String(task.id).includes(query);
+        String(task.title || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(task.description || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(getTaskId(task)).includes(query);
 
       const matchesPriority =
         priorityFilter === "all" ||
@@ -427,7 +635,7 @@ function ProjectTasks() {
 
       const matchesAssignee =
         assigneeFilter === "all" ||
-        String(task.assigned_to || "") === assigneeFilter;
+        String(getTaskAssigneeId(task) || "") === assigneeFilter;
 
       return (
         matchesSearch &&
@@ -440,40 +648,65 @@ function ProjectTasks() {
 
   const groupedTasks = {
     todo: filteredTasks.filter((task) => isTodoStatus(task.status)),
+
     in_progress: filteredTasks.filter((task) =>
       isInProgressStatus(task.status),
     ),
+
     in_review: filteredTasks.filter((task) => isReviewStatus(task.status)),
+
     completed: filteredTasks.filter((task) => isCompletedStatus(task.status)),
   };
+
+  // ======================================================
+  // SUMMARY AND DISPLAY HELPERS
+  // ======================================================
+
+  const completedTasks = tasks.filter((task) => isCompletedStatus(task.status));
+
+  const overdueTasks = tasks.filter((task) => {
+    if (!task.deadline || isCompletedStatus(task.status)) {
+      return false;
+    }
+
+    const deadline = new Date(task.deadline);
+
+    if (Number.isNaN(deadline.getTime())) {
+      return false;
+    }
+
+    const today = new Date();
+
+    deadline.setHours(23, 59, 59, 999);
+
+    return deadline < today;
+  });
+
+  const progressPercentage =
+    tasks.length > 0
+      ? Math.round(
+          tasks.reduce((total, task) => total + getTaskProgress(task), 0) /
+            tasks.length,
+        )
+      : 0;
 
   function getPriorityClass(priority) {
     const value = String(priority || "medium").toLowerCase();
 
-    if (value === "critical") {
-      return "critical";
-    }
-
-    if (value === "high") {
-      return "high";
-    }
-
-    if (value === "low") {
-      return "low";
-    }
+    if (value === "critical") return "critical";
+    if (value === "high") return "high";
+    if (value === "low") return "low";
 
     return "medium";
   }
 
   function formatDeadline(deadline) {
-    if (!deadline) {
-      return "No deadline";
-    }
+    if (!deadline) return "No deadline";
 
     const date = new Date(deadline);
 
     if (Number.isNaN(date.getTime())) {
-      return deadline;
+      return "No deadline";
     }
 
     return date.toLocaleDateString("en-IN", {
@@ -482,29 +715,36 @@ function ProjectTasks() {
     });
   }
 
+  // ======================================================
+  // TASK CARD
+  // ======================================================
+
   function renderTaskCard(task) {
+    const taskId = getTaskId(task);
     const assignee = getTaskAssignee(task);
-    const selectedAssignee = getSelectedAssignee(task);
-    const currentAssignee = getCurrentAssignee(task);
 
-    const assigneeChanged = selectedAssignee !== currentAssignee;
+    const canEdit = canUpdateTask(task);
+    const canDelete = canDeleteTask(task);
 
-    const isUpdating = updatingTaskId === task.id;
-    const isDeleting = deletingTaskId === task.id;
-    const isCreator = isTaskCreator(task);
+    const isUpdating = Number(updatingTaskId) === Number(taskId);
+    const isDeleting = Number(deletingTaskId) === Number(taskId);
 
     const priority = String(task.priority || "medium").toLowerCase();
+
+    const progress = getTaskProgress(task);
+    const nextStatus = getNextTaskStatus(task.status);
+    const nextStatusLabel = getNextStatusLabel(task.status);
 
     return (
       <article
         className="workflow-task-card"
-        key={task.id}
-        onClick={() => openTaskDetails(task.id)}
+        key={taskId}
+        onClick={() => openTaskDetails(taskId)}
       >
         <div className="workflow-task-card-top">
-          <h4>{task.title}</h4>
+          <h4>{task.title || "Untitled task"}</h4>
 
-          <span className="task-reference">ZYRA-{task.id}</span>
+          <span className="task-reference">ZYRA-{taskId}</span>
         </div>
 
         <p className="workflow-task-description">
@@ -528,6 +768,7 @@ function ProjectTasks() {
 
           <div className="workflow-deadline">
             <span>Deadline</span>
+
             <strong>
               <CalendarDays size={12} />
               {formatDeadline(task.deadline)}
@@ -544,70 +785,68 @@ function ProjectTasks() {
             className={`workflow-status-pill ${normalizeStatus(task.status)}`}
           >
             <CircleDot size={10} />
+
             {getDisplayStatus(task.status)}
           </span>
         </div>
+
+        {/* TASK PROGRESS */}
+
+        <div
+          className="workflow-task-progress"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="workflow-task-progress-label">
+            <span>Progress</span>
+            <strong>{progress}%</strong>
+          </div>
+
+          <div className="workflow-task-progress-track">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        {/* TASK CONTROLS */}
 
         <div
           className="workflow-task-controls"
           onClick={(event) => event.stopPropagation()}
         >
-          <select
-            value={selectedAssignee}
-            onChange={(event) =>
-              handleAssigneeSelection(task.id, event.target.value)
-            }
-            disabled={isUpdating || isDeleting}
-            aria-label="Change assignee"
-          >
-            <option value="">Unassigned</option>
-
-            {teamMembers.map((member) => (
-              <option key={getMemberId(member)} value={getMemberId(member)}>
-                {getMemberName(member)}
-              </option>
-            ))}
-          </select>
-
-          {assigneeChanged && (
-            <button
-              type="button"
-              className="workflow-update-btn"
-              onClick={() => handleAssigneeUpdate(task)}
-              disabled={isUpdating || isDeleting}
+          {canEdit ? (
+            nextStatus ? (
+              <button
+                type="button"
+                className="workflow-task-next-btn"
+                onClick={() => handleStatusChange(task)}
+                disabled={isUpdating || isDeleting}
+              >
+                {isUpdating ? "Updating..." : nextStatusLabel}
+              </button>
+            ) : (
+              <span
+                className="workflow-task-readonly"
+                title="This task is completed"
+              >
+                <CheckCircle2 size={13} />
+                Task completed
+              </span>
+            )
+          ) : (
+            <span
+              className="workflow-task-readonly"
+              title="Only the assigned user can update this task"
             >
-              {isUpdating ? "Updating..." : "Update"}
-            </button>
+              <Eye size={13} />
+              {isTeamLeader ? "Tracking only" : "View only"}
+            </span>
           )}
 
-          <select
-            value={
-              isReviewStatus(task.status)
-                ? "in_review"
-                : isInProgressStatus(task.status)
-                  ? "in_progress"
-                  : isCompletedStatus(task.status)
-                    ? "completed"
-                    : "todo"
-            }
-            onChange={(event) =>
-              handleStatusChange(task.id, event.target.value)
-            }
-            disabled={isUpdating || isDeleting}
-            aria-label="Change status"
-          >
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="in_review">In Review</option>
-            <option value="completed">Completed</option>
-          </select>
-
-          {isCreator && (
+          {canDelete && (
             <button
               type="button"
               className="workflow-delete-btn"
               onClick={() => handleDeleteTask(task)}
-              disabled={isDeleting}
+              disabled={isDeleting || isUpdating}
               aria-label="Delete task"
               title="Delete task"
             >
@@ -618,6 +857,10 @@ function ProjectTasks() {
       </article>
     );
   }
+
+  // ======================================================
+  // WORKFLOW COLUMN
+  // ======================================================
 
   function renderWorkflowColumn(key, title, count, icon, columnTasks) {
     return (
@@ -646,6 +889,10 @@ function ProjectTasks() {
     );
   }
 
+  // ======================================================
+  // RENDER
+  // ======================================================
+
   return (
     <div className="zyra-project-tasks">
       <button
@@ -658,6 +905,8 @@ function ProjectTasks() {
       </button>
 
       <header className="workflow-page-header">
+        {/* PROJECT TITLE */}
+
         <div className="workflow-title-block">
           <div className="workflow-brand-mark">Z</div>
 
@@ -676,15 +925,25 @@ function ProjectTasks() {
           </div>
         </div>
 
+        {/* PROJECT PROGRESS */}
+
         <div className="workflow-progress">
           <div className="workflow-progress-label">
-            <span>Progress:</span>
+            <span>Project Progress</span>
+
             <strong>
               {loading ? "..." : `${progressPercentage}% Complete`}
             </strong>
           </div>
 
-          <div className="workflow-progress-track">
+          <div
+            className="workflow-progress-track"
+            role="progressbar"
+            aria-label="Overall project task progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercentage}
+          >
             <span
               style={{
                 width: `${progressPercentage}%`,
@@ -693,45 +952,111 @@ function ProjectTasks() {
           </div>
         </div>
 
+        {/* PROJECT NAME, TEAM MEMBERS AND CREATE BUTTON */}
+
         <div className="workflow-header-actions">
           <div className="workflow-project-name">
             <span>Project Name</span>
-            <strong>
-              {project?.name || "Project"}
+
+            <strong title={project?.name || "Project"}>
+              <span className="workflow-project-name-text">
+                {project?.name || "Project"}
+              </span>
+
               <ChevronDown size={14} />
             </strong>
           </div>
 
-          <div className="workflow-team-avatars">
-            {teamMembers.slice(0, 4).map((member) => (
-              <span
-                className="workflow-header-avatar"
-                key={getMemberId(member)}
-                title={getMemberName(member)}
+          {/* CLICK THE AVATARS TO VIEW ALL PROJECT TEAM MEMBERS */}
+
+          {teamMembers.length > 0 && (
+            <details className="workflow-team-members">
+              <summary
+                className="workflow-team-avatars"
+                aria-label={`Show ${teamMembers.length} project team members`}
+                title="Click to view project team members"
               >
-                {getMemberInitials(member)}
-              </span>
-            ))}
+                {teamMembers.slice(0, 4).map((member) => (
+                  <span
+                    className="workflow-header-avatar"
+                    key={getMemberId(member)}
+                    aria-hidden="true"
+                  >
+                    {getMemberInitials(member)}
+                  </span>
+                ))}
 
-            {teamMembers.length > 4 && (
-              <span className="workflow-header-avatar more">
-                +{teamMembers.length - 4}
-              </span>
-            )}
-          </div>
+                {teamMembers.length > 4 && (
+                  <span
+                    className="workflow-header-avatar more"
+                    aria-hidden="true"
+                  >
+                    +{teamMembers.length - 4}
+                  </span>
+                )}
+              </summary>
 
-          <button
-            type="button"
-            className="workflow-create-btn"
-            onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
-          >
-            <Plus size={16} />
-            Create Task
-          </button>
+              <div
+                className="workflow-team-popover"
+                role="region"
+                aria-label="Project team members"
+              >
+                <div className="workflow-team-popover-header">
+                  <div>
+                    <span>PROJECT TEAM</span>
+                    <strong>Team Members</strong>
+                  </div>
+
+                  <span className="workflow-team-count">
+                    {teamMembers.length}
+                  </span>
+                </div>
+
+                <div className="workflow-team-member-list">
+                  {teamMembers.map((member, index) => {
+                    const memberName = getMemberName(member);
+                    const memberEmail = getMemberEmail(member);
+
+                    return (
+                      <div
+                        className="workflow-team-member"
+                        key={getMemberId(member) ?? index}
+                      >
+                        <span className="workflow-team-member-avatar">
+                          {getMemberInitials(member)}
+                        </span>
+
+                        <span className="workflow-team-member-info">
+                          <strong>{memberName}</strong>
+
+                          {memberEmail && <small>{memberEmail}</small>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
+          )}
+
+          {canCreateTask() && (
+            <button
+              type="button"
+              className="workflow-create-btn"
+              onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
+            >
+              <Plus size={16} />
+              Create Task
+            </button>
+          )}
         </div>
       </header>
 
-      {error && <div className="workflow-error">{error}</div>}
+      {error && (
+        <div className="workflow-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <main className="workflow-panel">
         <div className="workflow-panel-header">
@@ -765,6 +1090,7 @@ function ProjectTasks() {
               onChange={(event) => setAssigneeFilter(event.target.value)}
             >
               <option value="all">Assignee</option>
+
               {teamMembers.map((member) => (
                 <option key={getMemberId(member)} value={getMemberId(member)}>
                   {getMemberName(member)}
@@ -799,8 +1125,16 @@ function ProjectTasks() {
         {loading ? (
           <div className="workflow-loading">
             <div className="workflow-loading-spinner" />
+
             <h3>Loading project workflow...</h3>
+
             <p>Getting tasks from the ZYRA workspace.</p>
+          </div>
+        ) : error && tasks.length === 0 ? (
+          <div className="workflow-empty">
+            <h3>Unable to load project tasks</h3>
+
+            <p>{error}</p>
           </div>
         ) : tasks.length === 0 ? (
           <div className="workflow-empty">
@@ -808,20 +1142,24 @@ function ProjectTasks() {
               <CheckCircle2 size={28} />
             </div>
 
-            <h3>No tasks yet</h3>
+            <h3>No tasks available</h3>
 
             <p>
-              Create your first task to start building the project workflow.
+              {isRegularUser
+                ? "Tasks assigned to you will appear here."
+                : "Create your first task to start building the project workflow."}
             </p>
 
-            <button
-              type="button"
-              className="workflow-create-btn"
-              onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
-            >
-              <Plus size={16} />
-              Create Task
-            </button>
+            {canCreateTask() && (
+              <button
+                type="button"
+                className="workflow-create-btn"
+                onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
+              >
+                <Plus size={16} />
+                Create Task
+              </button>
+            )}
           </div>
         ) : (
           <div className="workflow-board">

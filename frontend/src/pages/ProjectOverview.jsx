@@ -42,14 +42,112 @@ import {
 } from "../services/resourceService";
 
 import { getCurrentUser } from "../services/authService";
+import { apiRequest } from "../services/api";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import "../styles/project-overview.css";
 
-const RESOURCE_BASE_URL = "http://localhost:5000";
+const RESOURCE_BASE_URL = "http://10.244.98.140:5000";
+
+/* =========================================================
+   RESPONSE HELPERS
+   ========================================================= */
+
+function getResponseArray(response, ...keys) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  for (const key of keys) {
+    if (Array.isArray(response?.[key])) {
+      return response[key];
+    }
+
+    if (Array.isArray(response?.data?.[key])) {
+      return response.data[key];
+    }
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  return [];
+}
+
+function getCandidateUserId(member) {
+  return (
+    member?.user_id ?? member?.userId ?? member?.user?.id ?? member?.id ?? null
+  );
+}
+
+function getCandidateRole(member) {
+  return String(
+    member?.workspace_role ??
+      member?.workspaceRole ??
+      member?.project_role ??
+      member?.projectRole ??
+      member?.membership_role ??
+      member?.role ??
+      member?.user_role ??
+      "",
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function getCandidateStatus(member) {
+  return String(
+    member?.account_status ?? member?.accountStatus ?? member?.status ?? "",
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function getCandidateName(member) {
+  return (
+    member?.name ||
+    member?.full_name ||
+    member?.fullName ||
+    member?.user_name ||
+    member?.username ||
+    member?.user?.name ||
+    member?.user?.full_name ||
+    member?.email ||
+    member?.user?.email ||
+    "Team Leader"
+  );
+}
+
+function sameId(first, second) {
+  if (
+    first === null ||
+    first === undefined ||
+    first === "" ||
+    second === null ||
+    second === undefined ||
+    second === ""
+  ) {
+    return false;
+  }
+
+  return String(first) === String(second);
+}
+
+/* =========================================================
+   PROJECT OVERVIEW
+   ========================================================= */
 
 function ProjectOverview() {
   const navigate = useNavigate();
   const { projectId } = useParams();
+
+  const {
+    activeWorkspace,
+    workspaceType,
+    workspaceRole,
+    loading: workspaceLoading,
+  } = useWorkspace();
 
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -60,6 +158,21 @@ function ProjectOverview() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  /* =========================================================
+     COMPANY PROJECT FORWARDING STATE
+     ========================================================= */
+
+  const [showForwardModal, setShowForwardModal] = useState(false);
+
+  const [loadingTeamLeaders, setLoadingTeamLeaders] = useState(false);
+  const [forwardingProject, setForwardingProject] = useState(false);
+
+  const [availableTeamLeaders, setAvailableTeamLeaders] = useState([]);
+  const [selectedTeamLeaderId, setSelectedTeamLeaderId] = useState("");
+
+  const [forwardedTeamLeader, setForwardedTeamLeader] = useState(null);
+  const [forwardError, setForwardError] = useState("");
 
   /* =========================================================
      MILESTONE STATE
@@ -105,59 +218,213 @@ function ProjectOverview() {
      ========================================================= */
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadProjectOverview() {
       try {
         setLoading(true);
         setError("");
 
+        setForwardedTeamLeader(null);
+
         const projectData = await getProjectById(projectId);
-        setProject(projectData);
+
+        if (cancelled) return;
+
+        const loadedProject =
+          projectData?.project ||
+          projectData?.data?.project ||
+          projectData?.data ||
+          projectData;
+
+        if (
+          !loadedProject ||
+          typeof loadedProject !== "object" ||
+          Array.isArray(loadedProject)
+        ) {
+          throw new Error("Unable to load the requested project.");
+        }
+
+        setProject(loadedProject);
+
+        /* -----------------------------------------------
+           LOAD PROJECT TASKS
+        ----------------------------------------------- */
 
         const loadedTasks = await getProjectTasks(projectId);
 
-        setTasks(Array.isArray(loadedTasks) ? loadedTasks : []);
+        if (cancelled) return;
+
+        const normalizedTasks = getResponseArray(loadedTasks, "tasks");
+
+        setTasks(normalizedTasks);
+
+        /* -----------------------------------------------
+           LOAD MILESTONES
+        ----------------------------------------------- */
 
         const loadedMilestones = await getProjectMilestones(projectId);
 
-        setMilestones(Array.isArray(loadedMilestones) ? loadedMilestones : []);
+        if (cancelled) return;
+
+        const normalizedMilestones = getResponseArray(
+          loadedMilestones,
+          "milestones",
+        );
+
+        setMilestones(normalizedMilestones);
+
+        /* -----------------------------------------------
+           LOAD RESOURCES
+        ----------------------------------------------- */
 
         const loadedResources = await getProjectResources(projectId);
 
-        setResources(Array.isArray(loadedResources) ? loadedResources : []);
+        if (cancelled) return;
+
+        const normalizedResources = getResponseArray(
+          loadedResources,
+          "resources",
+        );
+
+        setResources(normalizedResources);
+
+        /* -----------------------------------------------
+           LOAD CURRENT USER
+        ----------------------------------------------- */
 
         try {
           const userData = await getCurrentUser();
-          setCurrentUser(userData);
+
+          if (cancelled) return;
+
+          const signedInUser =
+            userData?.user ||
+            userData?.data?.user ||
+            userData?.data ||
+            userData;
+
+          setCurrentUser(signedInUser || null);
         } catch (userError) {
           console.error("Current user loading error:", userError);
           setCurrentUser(null);
         }
 
-        if (projectData?.team_id) {
+        /* -----------------------------------------------
+           LOAD COMPANY PROJECT MEMBERS
+
+           This is only needed for Company projects.
+           It allows the HR user to see whether a Team
+           Leader has already been forwarded the project.
+
+           Individual projects never call this endpoint.
+        ----------------------------------------------- */
+
+        const loadedWorkspaceType = String(
+          loadedProject?.workspace_type ||
+            loadedProject?.workspaceType ||
+            loadedProject?.workspace?.type ||
+            loadedProject?.workspace?.workspace_type ||
+            activeWorkspace?.type ||
+            activeWorkspace?.workspace_type ||
+            workspaceType ||
+            "",
+        )
+          .trim()
+          .toUpperCase();
+
+        if (loadedWorkspaceType === "COMPANY") {
           try {
-            await getTeamById(projectData.team_id);
+            const memberResponse = await apiRequest(
+              `/projects/${encodeURIComponent(projectId)}/members`,
+            );
 
-            const members = await getTeamMembers(projectData.team_id);
+            if (cancelled) return;
 
-            setTeamMembers(Array.isArray(members) ? members : []);
+            const projectMembers = getResponseArray(
+              memberResponse,
+              "members",
+              "projectMembers",
+              "project_members",
+            );
+
+            const assignedTeamLeader = projectMembers.find((member) => {
+              return getCandidateRole(member) === "TEAM_LEADER";
+            });
+
+            if (assignedTeamLeader) {
+              setForwardedTeamLeader(assignedTeamLeader);
+            }
+          } catch (memberError) {
+            /*
+             * The project overview should still load if
+             * the member lookup is unavailable.
+             *
+             * Forwarding itself will display its own
+             * error if the related endpoint is unavailable.
+             */
+            console.error("Company project member loading error:", memberError);
+          }
+        }
+
+        /* -----------------------------------------------
+           LOAD PROJECT TEAM
+
+           Independent Company projects may not have a
+           team yet, so this section is optional.
+        ----------------------------------------------- */
+
+        const projectTeamId =
+          loadedProject?.team_id ??
+          loadedProject?.teamId ??
+          loadedProject?.team?.id;
+
+        if (
+          projectTeamId !== null &&
+          projectTeamId !== undefined &&
+          projectTeamId !== ""
+        ) {
+          try {
+            await getTeamById(projectTeamId);
+
+            const members = await getTeamMembers(projectTeamId);
+
+            if (cancelled) return;
+
+            const normalizedMembers = getResponseArray(members, "members");
+
+            setTeamMembers(normalizedMembers);
           } catch (teamError) {
             console.error("Project team loading error:", teamError);
-            setTeamMembers([]);
+
+            if (!cancelled) {
+              setTeamMembers([]);
+            }
           }
+        } else {
+          setTeamMembers([]);
         }
       } catch (loadError) {
         console.error("Project overview loading error:", loadError);
 
-        setError(loadError.message || "Failed to load project information.");
+        if (!cancelled) {
+          setError(loadError.message || "Failed to load project information.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    if (projectId) {
+    if (projectId && !workspaceLoading) {
       loadProjectOverview();
     }
-  }, [projectId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, workspaceLoading, workspaceType, activeWorkspace?.id]);
 
   /* =========================================================
      TASK CALCULATIONS
@@ -165,11 +432,12 @@ function ProjectOverview() {
 
   const completedTasks = useMemo(
     () =>
-      tasks.filter(
-        (task) =>
-          task.status === "completed" ||
-          task.status === "complete" ||
-          task.status === "done",
+      tasks.filter((task) =>
+        ["completed", "complete", "done"].includes(
+          String(task.status || "")
+            .trim()
+            .toLowerCase(),
+        ),
       ),
     [tasks],
   );
@@ -178,9 +446,11 @@ function ProjectOverview() {
     () =>
       tasks.filter(
         (task) =>
-          task.status !== "completed" &&
-          task.status !== "complete" &&
-          task.status !== "done",
+          !["completed", "complete", "done"].includes(
+            String(task.status || "")
+              .trim()
+              .toLowerCase(),
+          ),
       ),
     [tasks],
   );
@@ -202,9 +472,11 @@ function ProjectOverview() {
 
       return (
         deadline < today &&
-        task.status !== "completed" &&
-        task.status !== "complete" &&
-        task.status !== "done"
+        !["completed", "complete", "done"].includes(
+          String(task.status || "")
+            .trim()
+            .toLowerCase(),
+        )
       );
     });
   }, [tasks]);
@@ -230,6 +502,111 @@ function ProjectOverview() {
         day: "numeric",
       })
     : "—";
+
+  /* =========================================================
+     COMPANY PROJECT PERMISSIONS
+     ========================================================= */
+
+  const normalizedWorkspaceType = String(
+    project?.workspace_type ||
+      project?.workspaceType ||
+      project?.workspace?.type ||
+      project?.workspace?.workspace_type ||
+      activeWorkspace?.type ||
+      activeWorkspace?.workspace_type ||
+      workspaceType ||
+      "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const normalizedWorkspaceRole = String(
+    workspaceRole || activeWorkspace?.role || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  const isCompanyProject = normalizedWorkspaceType === "COMPANY";
+
+  const isCompanyAdmin =
+    isCompanyProject && normalizedWorkspaceRole === "ADMIN";
+
+  const isCompanyHR = isCompanyProject && normalizedWorkspaceRole === "HR";
+
+  const isCompanyTeamLeader =
+    isCompanyProject && normalizedWorkspaceRole === "TEAM_LEADER";
+
+  const currentUserId =
+    currentUser?.id ?? currentUser?.user_id ?? currentUser?.userId ?? null;
+
+  const projectCreatorId = project?.created_by ?? project?.createdBy ?? null;
+
+  const assignedHrId =
+    project?.assigned_hr_user_id ??
+    project?.assignedHrUserId ??
+    project?.assigned_hr_id ??
+    null;
+
+  const isProjectCreator = sameId(currentUserId, projectCreatorId);
+
+  const isAssignedHR = sameId(currentUserId, assignedHrId);
+
+  const projectTeamId =
+    project?.team_id ?? project?.teamId ?? project?.team?.id ?? null;
+
+  const hasProjectTeam =
+    projectTeamId !== null &&
+    projectTeamId !== undefined &&
+    projectTeamId !== "";
+
+  /*
+   * COMPANY TASK CREATION RULES
+   *
+   * ADMIN:
+   *   Can create tasks.
+   *
+   * HR:
+   *   Can create tasks only if HR originally created
+   *   this project.
+   *
+   * TEAM LEADER:
+   *   Can create tasks after the project has been
+   *   attached to a team.
+   *
+   * USER:
+   *   Cannot create project tasks.
+   *
+   * NON-COMPANY:
+   *   Keep the original Create Task button.
+   *   This preserves the Individual workflow.
+   */
+
+  const canCreateProjectTask = !isCompanyProject
+    ? true
+    : isCompanyAdmin ||
+      (isCompanyHR && isProjectCreator) ||
+      (isCompanyTeamLeader && hasProjectTeam);
+
+  /*
+   * HR can forward an independent Company project
+   * when HR is either:
+   *
+   * 1. The original project creator, or
+   * 2. The HR assigned to the project by Admin.
+   *
+   * Forwarding is hidden after the project is attached
+   * to a team.
+   */
+
+  const canForwardProject =
+    isCompanyProject &&
+    isCompanyHR &&
+    !hasProjectTeam &&
+    (isProjectCreator || isAssignedHR);
+
+  const forwardedTeamLeaderName = forwardedTeamLeader
+    ? getCandidateName(forwardedTeamLeader)
+    : "";
 
   /* =========================================================
      MILESTONE HELPERS
@@ -280,43 +657,41 @@ function ProjectOverview() {
      ========================================================= */
 
   function getTaskStatusLabel(status) {
-    const normalized = String(status || "").toLowerCase();
+    const normalized = String(status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
 
-    if (
-      normalized === "completed" ||
-      normalized === "complete" ||
-      normalized === "done"
-    ) {
+    if (["completed", "complete", "done"].includes(normalized)) {
       return "Done";
     }
 
-    if (normalized === "in_progress" || normalized === "in-progress") {
+    if (["in_progress", "active", "doing"].includes(normalized)) {
       return "In Progress";
     }
 
-    if (normalized === "review") {
-      return "Review";
+    if (["in_review", "review", "under_review"].includes(normalized)) {
+      return "In Review";
     }
 
     return "Pending";
   }
 
   function getTaskStatusClass(status) {
-    const normalized = String(status || "").toLowerCase();
+    const normalized = String(status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
 
-    if (
-      normalized === "completed" ||
-      normalized === "complete" ||
-      normalized === "done"
-    ) {
+    if (["completed", "complete", "done"].includes(normalized)) {
       return "done";
     }
 
-    if (normalized === "in_progress" || normalized === "in-progress") {
+    if (["in_progress", "active", "doing"].includes(normalized)) {
       return "progress";
     }
 
-    if (normalized === "review") {
+    if (["in_review", "review", "under_review"].includes(normalized)) {
       return "review";
     }
 
@@ -340,35 +715,341 @@ function ProjectOverview() {
     });
   }
 
+  /* =========================================================
+     TEAM MEMBER HELPERS
+     ========================================================= */
+
+  function getMemberId(member) {
+    return (
+      member?.id ??
+      member?.user_id ??
+      member?.userId ??
+      member?.member_id ??
+      member?.user?.id ??
+      null
+    );
+  }
+
   function getMemberName(member) {
+    const nestedUser = member?.user || {};
+
     return (
       member?.name ||
       member?.full_name ||
+      member?.user_name ||
       member?.username ||
+      nestedUser?.name ||
+      nestedUser?.full_name ||
+      nestedUser?.username ||
       member?.email ||
+      nestedUser?.email ||
       "Member"
     );
   }
 
-  function getMemberInitials(member) {
-    const name = getMemberName(member);
-    const parts = name.trim().split(/\s+/);
-
-    if (parts.length === 1) {
-      return parts[0].slice(0, 2).toUpperCase();
-    }
-
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  function getMemberEmail(member) {
+    return member?.email || member?.user_email || member?.user?.email || "";
   }
 
+  function getMemberInitials(member) {
+    const name = getMemberName(member);
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  /* =========================================================
+     TASK ASSIGNEE LOOKUP
+     ========================================================= */
+
   function getTaskAssignee(task) {
-    return (
+    if (!task) {
+      return "Unassigned";
+    }
+
+    const directName =
       task?.assigned_to_name ||
+      task?.assignedToName ||
+      task?.assigned_user_name ||
+      task?.assignedUserName ||
       task?.assignee_name ||
+      task?.assigneeName ||
       task?.assigned_to_username ||
-      task?.assignee ||
-      "Unassigned"
+      task?.assignedToUsername;
+
+    if (
+      directName &&
+      String(directName).trim() &&
+      String(directName).trim().toLowerCase() !== "unassigned"
+    ) {
+      return String(directName).trim();
+    }
+
+    const nestedAssignee =
+      (task?.assignee && typeof task.assignee === "object"
+        ? task.assignee
+        : null) ||
+      (task?.assigned_user && typeof task.assigned_user === "object"
+        ? task.assigned_user
+        : null) ||
+      (task?.assignedUser && typeof task.assignedUser === "object"
+        ? task.assignedUser
+        : null) ||
+      null;
+
+    if (nestedAssignee) {
+      const nestedName = getMemberName(nestedAssignee);
+
+      if (nestedName !== "Member") {
+        return nestedName;
+      }
+    }
+
+    const rawAssignedId =
+      task?.assigned_to ??
+      task?.assignedTo ??
+      task?.assigned_user_id ??
+      task?.assignedUserId ??
+      task?.assignee_id ??
+      task?.assigneeId ??
+      nestedAssignee?.id ??
+      nestedAssignee?.user_id ??
+      null;
+
+    if (
+      rawAssignedId === null ||
+      rawAssignedId === undefined ||
+      rawAssignedId === ""
+    ) {
+      if (typeof task?.assignee === "string") {
+        const legacyAssignee = task.assignee.trim();
+
+        return legacyAssignee || "Unassigned";
+      }
+
+      return "Unassigned";
+    }
+
+    const assignedId =
+      typeof rawAssignedId === "object"
+        ? (rawAssignedId?.id ??
+          rawAssignedId?.user_id ??
+          rawAssignedId?.userId ??
+          rawAssignedId?.member_id ??
+          null)
+        : rawAssignedId;
+
+    if (assignedId === null || assignedId === undefined || assignedId === "") {
+      return "Unassigned";
+    }
+
+    const assignedMember = teamMembers.find((member) => {
+      const memberId = getMemberId(member);
+
+      return (
+        memberId !== null &&
+        memberId !== undefined &&
+        String(memberId) === String(assignedId)
+      );
+    });
+
+    if (assignedMember) {
+      return getMemberName(assignedMember);
+    }
+
+    if (typeof assignedId === "string" && Number.isNaN(Number(assignedId))) {
+      const normalizedAssignedValue = assignedId.trim().toLowerCase();
+
+      const matchingMember = teamMembers.find((member) => {
+        return [getMemberName(member), getMemberEmail(member)].some(
+          (value) =>
+            value &&
+            String(value).trim().toLowerCase() === normalizedAssignedValue,
+        );
+      });
+
+      if (matchingMember) {
+        return getMemberName(matchingMember);
+      }
+
+      return assignedId;
+    }
+
+    return `Assigned user #${assignedId}`;
+  }
+
+  /* =========================================================
+     OPEN FORWARD PROJECT MODAL
+     ========================================================= */
+
+  async function handleOpenForwardModal() {
+    if (!canForwardProject || loadingTeamLeaders) {
+      return;
+    }
+
+    setForwardError("");
+    setAvailableTeamLeaders([]);
+    setSelectedTeamLeaderId("");
+    setShowForwardModal(true);
+
+    try {
+      setLoadingTeamLeaders(true);
+
+      /*
+       * This endpoint should return the members eligible
+       * for this HR to assign to the Company project.
+       *
+       * The backend should enforce the HR reporting
+       * relationship and Company workspace restrictions.
+       */
+
+      const response = await apiRequest(
+        `/projects/${encodeURIComponent(projectId)}/eligible-members`,
+      );
+
+      const eligibleMembers = getResponseArray(
+        response,
+        "members",
+        "eligibleMembers",
+        "eligible_members",
+        "users",
+      );
+
+      /*
+       * Only active Team Leaders should appear here.
+       *
+       * When account status is not included in the response,
+       * the backend eligibility endpoint remains responsible
+       * for returning only eligible active accounts.
+       */
+
+      const teamLeaders = eligibleMembers.filter((member) => {
+        const role = getCandidateRole(member);
+        const status = getCandidateStatus(member);
+
+        const memberUserId = getCandidateUserId(member);
+
+        return (
+          role === "TEAM_LEADER" &&
+          memberUserId !== null &&
+          memberUserId !== undefined &&
+          memberUserId !== "" &&
+          (!status || status === "ACTIVE")
+        );
+      });
+
+      setAvailableTeamLeaders(teamLeaders);
+
+      if (teamLeaders.length > 0) {
+        setSelectedTeamLeaderId(String(getCandidateUserId(teamLeaders[0])));
+      } else {
+        setForwardError(
+          "No eligible active Team Leaders are available for this project.",
+        );
+      }
+    } catch (loadError) {
+      console.error("Eligible Team Leader loading error:", loadError);
+
+      setForwardError(
+        loadError.message ||
+          "Unable to load eligible Team Leaders. Please try again.",
+      );
+    } finally {
+      setLoadingTeamLeaders(false);
+    }
+  }
+
+  /* =========================================================
+     FORWARD PROJECT TO TEAM LEADER
+     ========================================================= */
+
+  async function handleForwardProject(event) {
+    event.preventDefault();
+
+    if (!canForwardProject) {
+      setForwardError("You do not have permission to forward this project.");
+      return;
+    }
+
+    const selectedId = Number(selectedTeamLeaderId);
+
+    if (!Number.isInteger(selectedId) || selectedId <= 0) {
+      setForwardError("Please select a valid Team Leader.");
+      return;
+    }
+
+    const selectedLeader = availableTeamLeaders.find(
+      (member) => String(getCandidateUserId(member)) === String(selectedId),
     );
+
+    if (!selectedLeader) {
+      setForwardError("The selected Team Leader is not available.");
+      return;
+    }
+
+    try {
+      setForwardingProject(true);
+      setForwardError("");
+      setError("");
+
+      /*
+       * Add the selected Team Leader to the project with
+       * the TEAM_LEADER project role.
+       *
+       * The backend must validate:
+       * - The requester is the project's assigned/creator HR.
+       * - The target is an eligible Company Team Leader.
+       * - Both belong to the correct Company workspace.
+       */
+
+      await apiRequest(`/projects/${encodeURIComponent(projectId)}/members`, {
+        method: "POST",
+        body: JSON.stringify({
+          userId: selectedId,
+          role: "TEAM_LEADER",
+        }),
+      });
+
+      /*
+       * Keep the HR project page updated immediately.
+       * The page will also reload the assignment from the
+       * project members endpoint when reopened.
+       */
+
+      setForwardedTeamLeader(selectedLeader);
+      setShowForwardModal(false);
+      setSelectedTeamLeaderId("");
+      setAvailableTeamLeaders([]);
+      setForwardError("");
+    } catch (forwardErrorValue) {
+      console.error("Project forwarding error:", forwardErrorValue);
+
+      setForwardError(
+        forwardErrorValue.message ||
+          "Failed to forward the project. Please try again.",
+      );
+    } finally {
+      setForwardingProject(false);
+    }
+  }
+
+  /* =========================================================
+     CLOSE FORWARD MODAL
+     ========================================================= */
+
+  function handleCloseForwardModal() {
+    if (forwardingProject) {
+      return;
+    }
+
+    setShowForwardModal(false);
+    setForwardError("");
+    setSelectedTeamLeaderId("");
+    setAvailableTeamLeaders([]);
   }
 
   /* =========================================================
@@ -718,24 +1399,68 @@ function ProjectOverview() {
         </div>
 
         <div className="project-hero-actions">
-          <button
-            type="button"
-            className="project-action primary"
-            onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
-          >
-            <Plus size={16} />
-            Create Task
-          </button>
+          {/* -----------------------------------------------
+              CREATE TASK
+
+              Individual:
+              Original Create Task action is preserved.
+
+              Company:
+              Display depends on the Company role and
+              project creator permissions.
+          ----------------------------------------------- */}
+
+          {canCreateProjectTask && (
+            <button
+              type="button"
+              className="project-action primary"
+              onClick={() => navigate(`/projects/${projectId}/tasks/create`)}
+            >
+              <Plus size={16} />
+              Create Task
+            </button>
+          )}
+
+          {/* -----------------------------------------------
+              COMPANY HR — FORWARD TO TEAM LEADER
+
+              This action is only available for eligible
+              independent Company projects.
+          ----------------------------------------------- */}
+
+          {canForwardProject && (
+            <button
+              type="button"
+              className="project-action secondary"
+              onClick={handleOpenForwardModal}
+              disabled={
+                loading || Boolean(forwardedTeamLeader) || loadingTeamLeaders
+              }
+              title={
+                forwardedTeamLeader
+                  ? `Forwarded to ${forwardedTeamLeaderName}`
+                  : "Forward this project to an eligible Team Leader"
+              }
+            >
+              <UserPlus size={16} />
+
+              {forwardedTeamLeader
+                ? `Forwarded to ${forwardedTeamLeaderName}`
+                : loadingTeamLeaders
+                  ? "Loading Team Leaders..."
+                  : "Forward to Team Leader"}
+            </button>
+          )}
 
           <button
             type="button"
             className="project-action secondary"
             onClick={() => {
-              if (project?.team_id) {
-                navigate(`/teams/${project.team_id}`);
+              if (projectTeamId) {
+                navigate(`/teams/${projectTeamId}`);
               }
             }}
-            disabled={!project?.team_id}
+            disabled={!hasProjectTeam}
           >
             <UserPlus size={16} />
             Invite Team
@@ -887,46 +1612,51 @@ function ProjectOverview() {
               </div>
             ) : (
               <div className="active-task-list">
-                {activeTasks.slice(0, 6).map((task) => (
-                  <button
-                    type="button"
-                    className="active-task-row"
-                    key={task.id}
-                    onClick={() =>
-                      navigate(`/projects/${projectId}/tasks/${task.id}`)
-                    }
-                  >
-                    <div className="task-row-check">
-                      <span />
-                    </div>
+                {activeTasks.slice(0, 6).map((task, index) => {
+                  const taskId = task.id ?? task.task_id ?? index;
+                  const assigneeName = getTaskAssignee(task);
 
-                    <div className="task-row-name">
-                      {task.title || task.name || "Untitled Task"}
-                    </div>
-
-                    <div className="task-row-assignee">
-                      <div className="task-mini-avatar">
-                        {getMemberInitials({
-                          name: getTaskAssignee(task),
-                        })}
+                  return (
+                    <button
+                      type="button"
+                      className="active-task-row"
+                      key={taskId}
+                      onClick={() =>
+                        navigate(`/projects/${projectId}/tasks/${taskId}`)
+                      }
+                    >
+                      <div className="task-row-check">
+                        <span />
                       </div>
 
-                      <span>{getTaskAssignee(task)}</span>
-                    </div>
+                      <div className="task-row-name">
+                        {task.title || task.name || "Untitled Task"}
+                      </div>
 
-                    <span
-                      className={`task-status-pill ${getTaskStatusClass(
-                        task.status,
-                      )}`}
-                    >
-                      {getTaskStatusLabel(task.status)}
-                    </span>
+                      <div className="task-row-assignee">
+                        <div className="task-mini-avatar">
+                          {getMemberInitials({
+                            name: assigneeName,
+                          })}
+                        </div>
 
-                    <span className="task-row-deadline">
-                      {formatTaskDeadline(task.deadline || task.due_date)}
-                    </span>
-                  </button>
-                ))}
+                        <span>{assigneeName}</span>
+                      </div>
+
+                      <span
+                        className={`task-status-pill ${getTaskStatusClass(
+                          task.status,
+                        )}`}
+                      >
+                        {getTaskStatusLabel(task.status)}
+                      </span>
+
+                      <span className="task-row-deadline">
+                        {formatTaskDeadline(task.deadline || task.due_date)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -945,11 +1675,11 @@ function ProjectOverview() {
                 type="button"
                 className="panel-icon-button"
                 onClick={() => {
-                  if (project?.team_id) {
-                    navigate(`/teams/${project.team_id}`);
+                  if (projectTeamId) {
+                    navigate(`/teams/${projectTeamId}`);
                   }
                 }}
-                disabled={!project?.team_id}
+                disabled={!hasProjectTeam}
               >
                 <MoreHorizontal size={17} />
               </button>
@@ -962,10 +1692,10 @@ function ProjectOverview() {
               </div>
             ) : (
               <div className="team-member-list">
-                {teamMembers.slice(0, 6).map((member) => (
+                {teamMembers.slice(0, 6).map((member, index) => (
                   <div
                     className="team-member-item"
-                    key={member.id || member.user_id || getMemberName(member)}
+                    key={getMemberId(member) ?? getMemberName(member) ?? index}
                   >
                     <div className="team-member-avatar">
                       {getMemberInitials(member)}
@@ -985,7 +1715,7 @@ function ProjectOverview() {
               <button
                 type="button"
                 className="team-more-button"
-                onClick={() => navigate(`/teams/${project?.team_id}`)}
+                onClick={() => navigate(`/teams/${projectTeamId}`)}
               >
                 +{teamMembers.length - 6} more
               </button>
@@ -1017,7 +1747,7 @@ function ProjectOverview() {
                   return (
                     <div
                       className="activity-item"
-                      key={task.id || `${taskName}-${index}`}
+                      key={task.id || task.task_id || `${taskName}-${index}`}
                     >
                       <span className={`activity-dot activity-${index % 3}`} />
 
@@ -1602,6 +2332,297 @@ function ProjectOverview() {
           )}
         </div>
       </section>
+
+      {/* =====================================================
+          FORWARD PROJECT MODAL
+          ===================================================== */}
+
+      {showForwardModal && (
+        <div
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !forwardingProject) {
+              handleCloseForwardModal();
+            }
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            background: "rgba(5, 10, 22, 0.78)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="forward-project-title"
+            style={{
+              width: "100%",
+              maxWidth: "480px",
+              padding: "28px",
+              border: "1px solid rgba(148, 163, 184, 0.2)",
+              borderRadius: "18px",
+              background: "#111827",
+              color: "#f8fafc",
+              boxShadow: "0 24px 80px rgba(0, 0, 0, 0.45)",
+            }}
+          >
+            {/* MODAL HEADER */}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "16px",
+                marginBottom: "22px",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    color: "#60a5fa",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    letterSpacing: "1.5px",
+                  }}
+                >
+                  PROJECT RESPONSIBILITY
+                </span>
+
+                <h2
+                  id="forward-project-title"
+                  style={{
+                    margin: 0,
+                    fontSize: "21px",
+                    fontWeight: 650,
+                  }}
+                >
+                  Forward to Team Leader
+                </h2>
+
+                <p
+                  style={{
+                    margin: "9px 0 0",
+                    color: "#94a3b8",
+                    fontSize: "13px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Select an eligible Team Leader to take responsibility for this
+                  project.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseForwardModal}
+                disabled={forwardingProject}
+                aria-label="Close"
+                style={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: "34px",
+                  height: "34px",
+                  flexShrink: 0,
+                  border: "1px solid rgba(148, 163, 184, 0.2)",
+                  borderRadius: "9px",
+                  background: "rgba(148, 163, 184, 0.08)",
+                  color: "#cbd5e1",
+                  cursor: forwardingProject ? "not-allowed" : "pointer",
+                }}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            {/* MODAL BODY */}
+
+            <form onSubmit={handleForwardProject}>
+              <div style={{ marginBottom: "18px" }}>
+                <label
+                  htmlFor="forward-team-leader"
+                  style={{
+                    display: "block",
+                    marginBottom: "9px",
+                    color: "#cbd5e1",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Select Team Leader
+                </label>
+
+                {loadingTeamLeaders ? (
+                  <div
+                    style={{
+                      padding: "16px",
+                      border: "1px solid rgba(148, 163, 184, 0.18)",
+                      borderRadius: "10px",
+                      color: "#94a3b8",
+                      fontSize: "13px",
+                    }}
+                  >
+                    Loading eligible Team Leaders...
+                  </div>
+                ) : availableTeamLeaders.length > 0 ? (
+                  <select
+                    id="forward-team-leader"
+                    value={selectedTeamLeaderId}
+                    onChange={(event) =>
+                      setSelectedTeamLeaderId(event.target.value)
+                    }
+                    disabled={forwardingProject}
+                    required
+                    style={{
+                      width: "100%",
+                      minHeight: "46px",
+                      padding: "0 13px",
+                      border: "1px solid rgba(148, 163, 184, 0.24)",
+                      borderRadius: "10px",
+                      outline: "none",
+                      background: "#1e293b",
+                      color: "#f8fafc",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <option value="">Choose a Team Leader</option>
+
+                    {availableTeamLeaders.map((leader) => {
+                      const leaderId = getCandidateUserId(leader);
+
+                      return (
+                        <option key={leaderId} value={String(leaderId)}>
+                          {getCandidateName(leader)}
+                          {leader.email ? ` — ${leader.email}` : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                ) : (
+                  <div
+                    style={{
+                      padding: "14px",
+                      border: "1px solid rgba(148, 163, 184, 0.18)",
+                      borderRadius: "10px",
+                      color: "#94a3b8",
+                      fontSize: "13px",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    No eligible Team Leaders are currently available.
+                  </div>
+                )}
+              </div>
+
+              {/* FORWARD ERROR */}
+
+              {forwardError && (
+                <div
+                  role="alert"
+                  style={{
+                    marginBottom: "18px",
+                    padding: "12px 13px",
+                    border: "1px solid rgba(248, 113, 113, 0.25)",
+                    borderRadius: "9px",
+                    background: "rgba(127, 29, 29, 0.18)",
+                    color: "#fca5a5",
+                    fontSize: "12px",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {forwardError}
+                </div>
+              )}
+
+              {/* MODAL ACTIONS */}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  marginTop: "22px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleCloseForwardModal}
+                  disabled={forwardingProject}
+                  style={{
+                    minHeight: "40px",
+                    padding: "0 16px",
+                    border: "1px solid rgba(148, 163, 184, 0.25)",
+                    borderRadius: "9px",
+                    background: "transparent",
+                    color: "#cbd5e1",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: forwardingProject ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    forwardingProject ||
+                    loadingTeamLeaders ||
+                    availableTeamLeaders.length === 0 ||
+                    !selectedTeamLeaderId
+                  }
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    minHeight: "40px",
+                    padding: "0 17px",
+                    border: "none",
+                    borderRadius: "9px",
+                    background:
+                      forwardingProject ||
+                      loadingTeamLeaders ||
+                      availableTeamLeaders.length === 0 ||
+                      !selectedTeamLeaderId
+                        ? "#334155"
+                        : "linear-gradient(135deg, #2563eb, #4f46e5)",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontWeight: 650,
+                    cursor:
+                      forwardingProject ||
+                      loadingTeamLeaders ||
+                      availableTeamLeaders.length === 0 ||
+                      !selectedTeamLeaderId
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      forwardingProject ||
+                      loadingTeamLeaders ||
+                      availableTeamLeaders.length === 0 ||
+                      !selectedTeamLeaderId
+                        ? 0.65
+                        : 1,
+                  }}
+                >
+                  <UserPlus size={15} />
+
+                  {forwardingProject ? "Forwarding..." : "Confirm Forward"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

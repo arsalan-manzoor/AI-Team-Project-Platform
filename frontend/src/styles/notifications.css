@@ -1502,3 +1502,83 @@
     transition: none;
   }
 }
+/* ======================================================
+   NOTIFICATION ERROR MESSAGE — CLOSE BUTTON
+   ====================================================== */
+
+.notifications-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.notifications-error > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification-error-close {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin-left: auto;
+
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.2);
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.notification-error-close:hover {
+  color: #ffffff;
+  background: rgba(220, 38, 38, 0.3);
+  border-color: rgba(248, 113, 113, 0.5);
+  transform: scale(1.04);
+}
+
+.notification-error-close:active {
+  transform: scale(0.96);
+}
+
+.notification-error-close:focus-visible {
+  outline: 2px solid #fca5a5;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .notifications-error {
+    gap: 8px;
+  }
+
+  .notification-error-close {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-error-close {
+    transition: none;
+  }
+}

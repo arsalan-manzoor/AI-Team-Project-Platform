@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
+
 import {
   Eye,
   EyeOff,
@@ -13,8 +14,12 @@ import {
   ListChecks,
   ShieldCheck,
   UserCog,
+  UserPlus,
 } from "lucide-react";
+
 import { apiRequest, setAuthToken } from "../services/api";
+import { logout, setAuthPortal } from "../services/authService";
+
 import zyraLogo from "../assets/zyra-logo.jpg";
 import "../styles/signup.css";
 
@@ -25,10 +30,11 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("USER");
 
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationStep, setVerificationStep] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const [createdWorkspaceName, setCreatedWorkspaceName] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -37,28 +43,24 @@ function Signup() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ======================================================
+  // EMAIL SIGNUP — REQUEST VERIFICATION CODE
+  // ======================================================
+
   async function handleSignup(event) {
     event.preventDefault();
-
     setError("");
 
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
-    const cleanRole = role.trim().toUpperCase();
 
-    if (
-      !cleanName ||
-      !cleanEmail ||
-      !password ||
-      !confirmPassword ||
-      !cleanRole
-    ) {
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
 
     if (cleanName.length < 2) {
-      setError("Please enter your real full name.");
+      setError("Please enter your full name.");
       return;
     }
 
@@ -72,15 +74,11 @@ function Signup() {
       return;
     }
 
-    const allowedRoles = ["ADMIN", "HR", "TEAM_LEADER", "USER"];
-
-    if (!allowedRoles.includes(cleanRole)) {
-      setError("Please select a valid account role.");
-      return;
-    }
-
     try {
       setLoading(true);
+
+      // The backend assigns TEAM_LEADER automatically.
+      // Public signup never sends a user-selected role.
 
       await apiRequest("/users", {
         method: "POST",
@@ -88,30 +86,28 @@ function Signup() {
           name: cleanName,
           email: cleanEmail,
           password,
-          role: cleanRole,
         }),
       });
 
+      setEmail(cleanEmail);
       setVerificationStep(true);
-    } catch (error) {
-      setError(error.message || "Unable to start signup.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to start signup.");
     } finally {
       setLoading(false);
     }
   }
 
+  // ======================================================
+  // EMAIL VERIFICATION — CREATE INDIVIDUAL WORKSPACE
+  // ======================================================
+
   async function handleVerification(event) {
     event.preventDefault();
-
     setError("");
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = verificationCode.trim();
-
-    if (!cleanCode) {
-      setError("Please enter the verification code.");
-      return;
-    }
 
     if (!/^\d{6}$/.test(cleanCode)) {
       setError("Please enter the 6-digit verification code.");
@@ -121,7 +117,7 @@ function Signup() {
     try {
       setLoading(true);
 
-      await apiRequest("/users/verify", {
+      const data = await apiRequest("/users/verify", {
         method: "POST",
         body: JSON.stringify({
           email: cleanEmail,
@@ -129,13 +125,50 @@ function Signup() {
         }),
       });
 
-      navigate("/login");
-    } catch (error) {
-      setError(error.message || "Unable to verify your email.");
+      setCreatedWorkspaceName(
+        data?.workspace?.name || `${name.trim()}'s Individual Workspace`,
+      );
+
+      setAccountCreated(true);
+    } catch (requestError) {
+      setError(requestError.message || "Unable to verify your email.");
     } finally {
       setLoading(false);
     }
   }
+
+  // ======================================================
+  // DASHBOARD ROUTING
+  // ======================================================
+
+  function getIndividualDashboardPath(role) {
+    const normalizedRole = String(role || "").trim().toUpperCase();
+
+    const individualRoutes = {
+      TEAM_LEADER: "/dashboard/individual/team-leader",
+      USER: "/dashboard/individual/user",
+    };
+
+    return individualRoutes[normalizedRole] || null;
+  }
+
+  // ======================================================
+  // GOOGLE SIGNUP
+  //
+  // authMode: SIGNUP
+  //
+  // 1. Verify Google identity.
+  // 2. Request Individual account registration.
+  // 3. Save the returned JWT.
+  // 4. Verify Individual portal access.
+  // 5. Retrieve actual Individual workspace membership.
+  // 6. Save workspace and role.
+  // 7. Navigate to the correct Individual dashboard.
+  //
+  // Existing accounts are handled by the backend.
+  // Company accounts cannot create Individual accounts
+  // through this Google signup flow.
+  // ======================================================
 
   async function handleGoogleSuccess(credentialResponse) {
     setError("");
@@ -143,40 +176,269 @@ function Signup() {
     const idToken = credentialResponse?.credential;
 
     if (!idToken) {
-      setError("Google Sign-In did not return a valid credential.");
+      setError("Google Sign-Up did not return a valid credential.");
       return;
     }
 
+    let authenticated = false;
+
     try {
       setGoogleLoading(true);
+
+      // ======================================================
+      // STEP 1: REGISTER / AUTHENTICATE THROUGH GOOGLE
+      // ======================================================
 
       const data = await apiRequest("/auth/google", {
         method: "POST",
         body: JSON.stringify({
           idToken,
+          workspaceType: "INDIVIDUAL",
+          authMode: "SIGNUP",
         }),
       });
 
       if (!data?.token) {
-        throw new Error("Google Sign-In did not return a login token.");
+        throw new Error(
+          "Google Sign-Up did not return an authentication token.",
+        );
       }
 
-      setAuthToken(data.token);
+      // ======================================================
+      // STEP 2: SAVE AUTHENTICATION TOKEN
+      // ======================================================
 
-      navigate("/dashboard");
-    } catch (error) {
+      setAuthToken(data.token);
+      authenticated = true;
+
+      // Google Sign-Up belongs to the Individual portal.
+
+      setAuthPortal("INDIVIDUAL");
+
+      // ======================================================
+      // STEP 3: VERIFY INDIVIDUAL PORTAL ACCESS
+      // ======================================================
+
+      const portalAccess = await apiRequest(
+        "/workspaces/my-portal-access",
+      );
+
+      const availablePortals = Array.isArray(
+        portalAccess?.available_portals,
+      )
+        ? portalAccess.available_portals.map((portal) =>
+            String(portal).trim().toUpperCase(),
+          )
+        : [];
+
+      if (!availablePortals.includes("INDIVIDUAL")) {
+        throw new Error(
+          "Individual Workspace access could not be verified. Please contact the administrator.",
+        );
+      }
+
+      // ======================================================
+      // STEP 4: CHECK INITIAL PASSWORD REQUIREMENT
+      // ======================================================
+
+      const mustChangePassword =
+        portalAccess?.must_change_password === true ||
+        data?.must_change_password === true ||
+        data?.user?.must_change_password === true;
+
+      if (mustChangePassword) {
+        localStorage.removeItem("zyra_active_workspace_id");
+
+        sessionStorage.setItem(
+          "zyra_last_dashboard_path",
+          "/dashboard",
+        );
+
+        navigate("/profile?section=password", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      // ======================================================
+      // STEP 5: CHECK INDIVIDUAL MEMBERSHIP
+      // ======================================================
+
+      const memberships = Array.isArray(portalAccess?.memberships)
+        ? portalAccess.memberships.map((type) =>
+            String(type).trim().toUpperCase(),
+          )
+        : [];
+
+      const hasIndividualMembership =
+        memberships.includes("INDIVIDUAL");
+
+      const pendingInvitations = Array.isArray(
+        portalAccess?.pending_invitations,
+      )
+        ? portalAccess.pending_invitations.map((type) =>
+            String(type).trim().toUpperCase(),
+          )
+        : [];
+
+      const hasIndividualInvitation =
+        pendingInvitations.includes("INDIVIDUAL");
+
+      if (!hasIndividualMembership && hasIndividualInvitation) {
+        localStorage.removeItem("zyra_active_workspace_id");
+
+        sessionStorage.setItem(
+          "zyra_last_dashboard_path",
+          "/dashboard",
+        );
+
+        navigate("/dashboard", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      if (!hasIndividualMembership) {
+        throw new Error(
+          "Your Individual Workspace membership could not be verified.",
+        );
+      }
+
+      // ======================================================
+      // STEP 6: FETCH ACTUAL WORKSPACE MEMBERSHIPS
+      // ======================================================
+
+      const workspaceData = await apiRequest("/workspaces/mine");
+
+      const workspaces = Array.isArray(workspaceData?.workspaces)
+        ? workspaceData.workspaces
+        : Array.isArray(workspaceData)
+          ? workspaceData
+          : [];
+
+      // Individual Signup must never select a Company workspace.
+
+      const individualWorkspaces = workspaces
+        .map((workspace) => {
+          const workspaceType = String(
+            workspace?.type || workspace?.workspace_type || "",
+          )
+            .trim()
+            .toUpperCase();
+
+          const role = String(
+            workspace?.role || workspace?.workspace_role || "",
+          )
+            .trim()
+            .toUpperCase();
+
+          return {
+            ...workspace,
+            normalizedType: workspaceType,
+            normalizedRole: role,
+            dashboardPath:
+              workspaceType === "INDIVIDUAL"
+                ? getIndividualDashboardPath(role)
+                : null,
+          };
+        })
+        .filter(
+          (workspace) =>
+            workspace.normalizedType === "INDIVIDUAL" &&
+            Boolean(workspace.dashboardPath),
+        );
+
+      // ======================================================
+      // STEP 7: SELECT INDIVIDUAL WORKSPACE
+      // ======================================================
+
+      const savedWorkspaceId = localStorage.getItem(
+        "zyra_active_workspace_id",
+      );
+
+      let selectedWorkspace = individualWorkspaces.find(
+        (workspace) =>
+          String(workspace.id) === String(savedWorkspaceId),
+      );
+
+      if (!selectedWorkspace) {
+        selectedWorkspace = individualWorkspaces[0] || null;
+      }
+
+      if (!selectedWorkspace) {
+        throw new Error(
+          "Your Individual Workspace was authenticated, but no supported Individual membership was found. Please contact the administrator.",
+        );
+      }
+
+      // ======================================================
+      // STEP 8: SAVE WORKSPACE AND ROLE
+      // ======================================================
+
+      localStorage.setItem(
+        "zyra_active_workspace_id",
+        String(selectedWorkspace.id),
+      );
+
+      localStorage.setItem(
+        `zyra_active_workspace_role_${selectedWorkspace.id}`,
+        selectedWorkspace.normalizedRole,
+      );
+
+      // ======================================================
+      // STEP 9: SAVE DASHBOARD DESTINATION
+      // ======================================================
+
+      sessionStorage.setItem(
+        "zyra_last_dashboard_path",
+        selectedWorkspace.dashboardPath,
+      );
+
+      // ======================================================
+      // STEP 10: NAVIGATE TO INDIVIDUAL DASHBOARD
+      // ======================================================
+
+      navigate(selectedWorkspace.dashboardPath, {
+        replace: true,
+      });
+    } catch (requestError) {
+      console.error(
+        "Google Sign-Up or dashboard routing error:",
+        requestError,
+      );
+
+      // Clear authentication if subsequent verification fails.
+
+      if (authenticated) {
+        logout();
+      }
+
       setError(
-        error.message || "Unable to continue with Google. Please try again.",
+        requestError.message ||
+          "Unable to continue with Google. Please try again.",
       );
     } finally {
       setGoogleLoading(false);
     }
   }
 
+  // ======================================================
+  // GOOGLE SIGNUP ERROR
+  // ======================================================
+
   function handleGoogleError() {
     setGoogleLoading(false);
-    setError("Google Sign-In was cancelled or could not be completed.");
+
+    setError(
+      "Google Sign-Up was cancelled or could not be completed.",
+    );
   }
+
+  // ======================================================
+  // RETURN TO SIGNUP
+  // ======================================================
 
   function handleBackToSignup() {
     setVerificationStep(false);
@@ -184,8 +446,27 @@ function Signup() {
     setError("");
   }
 
+  // ======================================================
+  // CONTINUE TO NORMAL LOGIN AFTER EMAIL VERIFICATION
+  // ======================================================
+
+  function goToLogin() {
+    navigate("/login", {
+      state: {
+        signupSuccess: true,
+        email: email.trim().toLowerCase(),
+      },
+    });
+  }
+
+  // ======================================================
+  // RENDER
+  // ======================================================
+
   return (
     <div className="signup-page">
+      {/* BACKGROUND */}
+
       <div className="signup-background" aria-hidden="true">
         <div className="signup-gradient signup-gradient-one" />
         <div className="signup-gradient signup-gradient-two" />
@@ -205,10 +486,18 @@ function Signup() {
         </div>
       </div>
 
+      {/* MAIN SIGNUP LAYOUT */}
+
       <main className="signup-shell">
+        {/* LEFT: INDIVIDUAL WORKSPACE STORY */}
+
         <section className="signup-visual">
           <Link to="/" className="signup-visual-brand">
-            <img src={zyraLogo} alt="ZYRA" className="signup-visual-logo" />
+            <img
+              src={zyraLogo}
+              alt="ZYRA"
+              className="signup-visual-logo"
+            />
 
             <div className="signup-visual-brand-text">
               <strong>ZYRA</strong>
@@ -219,18 +508,19 @@ function Signup() {
           <div className="signup-visual-content">
             <div className="signup-visual-heading">
               <span className="signup-visual-eyebrow">
-                INTELLIGENT WORKSPACE
+                YOUR INDIVIDUAL WORKSPACE
               </span>
 
               <h1>
-                Build together.
+                Your work.
                 <br />
-                <span>Move smarter.</span>
+                <span>Your team. Your lead.</span>
               </h1>
 
               <p>
-                Projects, teams, tasks and AI intelligence connected in one
-                workspace.
+                Start with your own workspace. You're automatically the Team
+                Leader, with the freedom to create Users and build your team as
+                your work grows.
               </p>
             </div>
 
@@ -267,7 +557,7 @@ function Signup() {
               </div>
 
               <div className="signup-network-node signup-node-four">
-                <Sparkles size={21} />
+                <UserPlus size={21} />
               </div>
 
               <div className="signup-network-node signup-node-five">
@@ -287,8 +577,8 @@ function Signup() {
                 </div>
 
                 <div>
-                  <strong>Project created</strong>
-                  <span>AI-Powered Workspace</span>
+                  <strong>Workspace created</strong>
+                  <span>Your space, ready to go</span>
                 </div>
 
                 <i />
@@ -296,12 +586,12 @@ function Signup() {
 
               <div className="signup-float-card signup-float-team">
                 <div className="signup-float-icon">
-                  <Users size={17} />
+                  <ShieldCheck size={17} />
                 </div>
 
                 <div>
-                  <strong>Team connected</strong>
-                  <span>Everyone aligned</span>
+                  <strong>Team Leader</strong>
+                  <span>You're in control</span>
                 </div>
 
                 <i />
@@ -309,12 +599,12 @@ function Signup() {
 
               <div className="signup-float-card signup-float-task">
                 <div className="signup-float-icon">
-                  <CheckCircle2 size={17} />
+                  <UserPlus size={17} />
                 </div>
 
                 <div>
-                  <strong>Task completed</strong>
-                  <span>Progress updated</span>
+                  <strong>Create Users</strong>
+                  <span>Build your team when ready</span>
                 </div>
 
                 <i />
@@ -326,8 +616,8 @@ function Signup() {
                 </div>
 
                 <div>
-                  <strong>AI assistant</strong>
-                  <span>Helping you build faster</span>
+                  <strong>Work smarter</strong>
+                  <span>Projects, tasks and AI</span>
                 </div>
 
                 <i />
@@ -338,12 +628,14 @@ function Signup() {
               <div className="signup-footer-line" />
 
               <div>
-                <strong>Plan. Collaborate. Build. Evolve.</strong>
-                <span>The intelligent workspace for modern teams.</span>
+                <strong>Start as Team Leader. Grow with ZYRA.</strong>
+                <span>Your workspace grows with you.</span>
               </div>
             </div>
           </div>
         </section>
+
+        {/* RIGHT: SIGNUP / VERIFICATION / SUCCESS */}
 
         <section className="signup-auth">
           <div className="signup-card">
@@ -358,24 +650,33 @@ function Signup() {
               </div>
             </div>
 
+            {/* VIEW 1: SIGNUP FORM */}
+
             {!verificationStep ? (
               <>
                 <div className="signup-card-header">
-                  <span className="signup-eyebrow">CREATE YOUR ACCOUNT</span>
+                  <span className="signup-eyebrow">
+                    INDIVIDUAL WORKSPACE
+                  </span>
 
-                  <h2>Get Started</h2>
+                  <h2>Create your space.</h2>
 
                   <p>
-                    Join ZYRA and start building your projects with a smarter
-                    workspace.
+                    One account gives you your own workspace. ZYRA assigns you
+                    the Team Leader role automatically, so you can create Users
+                    after signing in.
                   </p>
                 </div>
+
+                {/* GOOGLE SIGNUP */}
 
                 <div className="google-signup-wrapper">
                   <button
                     type="button"
                     className="google-signup-button"
                     disabled={loading || googleLoading}
+                    tabIndex={-1}
+                    aria-hidden="true"
                   >
                     <span className="google-icon">
                       <img
@@ -408,6 +709,8 @@ function Signup() {
                   <span>or continue with email</span>
                 </div>
 
+                {/* EMAIL SIGNUP FORM */}
+
                 <form onSubmit={handleSignup} className="signup-form">
                   <div className="signup-field">
                     <label htmlFor="signup-name">Full Name</label>
@@ -435,26 +738,6 @@ function Signup() {
                       autoComplete="email"
                       disabled={loading || googleLoading}
                     />
-                  </div>
-
-                  <div className="signup-field">
-                    <label htmlFor="signup-role">Account Role</label>
-
-                    <div className="signup-role-wrapper">
-                      <UserCog size={18} className="signup-role-icon" />
-
-                      <select
-                        id="signup-role"
-                        value={role}
-                        onChange={(event) => setRole(event.target.value)}
-                        disabled={loading || googleLoading}
-                      >
-                        <option value="USER">User</option>
-                        <option value="TEAM_LEADER">Team Leader</option>
-                        <option value="HR">HR</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
-                    </div>
                   </div>
 
                   <div className="signup-field">
@@ -529,6 +812,19 @@ function Signup() {
                     </div>
                   </div>
 
+                  <div className="signup-workflow-note">
+                    <UserCog size={17} />
+
+                    <div>
+                      <strong>Your role is assigned automatically</strong>
+
+                      <span>
+                        You'll be the Team Leader. Create and manage Users
+                        from inside your Individual Workspace.
+                      </span>
+                    </div>
+                  </div>
+
                   {error && (
                     <div className="signup-error" role="alert">
                       {error}
@@ -541,7 +837,9 @@ function Signup() {
                     disabled={loading || googleLoading}
                   >
                     <span>
-                      {loading ? "Sending verification..." : "Create Account"}
+                      {loading
+                        ? "Sending verification..."
+                        : "Send verification code"}
                     </span>
 
                     {!loading && <ArrowRight size={18} />}
@@ -553,26 +851,94 @@ function Signup() {
                   <Link to="/login">Sign in</Link>
                 </div>
               </>
+            ) : accountCreated ? (
+              /* VIEW 3: SIGNUP SUCCESS */
+
+              <>
+                <div className="signup-verification-icon signup-success-icon">
+                  <CheckCircle2 size={27} />
+                </div>
+
+                <div className="signup-card-header">
+                  <span className="signup-eyebrow">SETUP COMPLETE</span>
+
+                  <h2>Your workspace is ready.</h2>
+
+                  <p>
+                    Your email is verified and your Individual Workspace has
+                    been created. You're its Team Leader.
+                  </p>
+                </div>
+
+                <div className="signup-success-workspace">
+                  <div className="signup-success-workspace-icon">
+                    <FolderKanban size={20} />
+                  </div>
+
+                  <div>
+                    <span>YOUR WORKSPACE</span>
+
+                    <strong>{createdWorkspaceName}</strong>
+
+                    <small>
+                      <CheckCircle2 size={13} />
+                      Team Leader access enabled
+                    </small>
+                  </div>
+                </div>
+
+                <div className="signup-workflow-note signup-success-note">
+                  <UserPlus size={17} />
+
+                  <div>
+                    <strong>Next: create your Users</strong>
+
+                    <span>
+                      Sign in to open your workspace and add people when
+                      you're ready.
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="signup-submit-button signup-success-continue"
+                  onClick={goToLogin}
+                >
+                  <span>Continue to sign in</span>
+                  <ArrowRight size={18} />
+                </button>
+              </>
             ) : (
+              /* VIEW 2: EMAIL VERIFICATION */
+
               <>
                 <div className="signup-verification-icon">
                   <Mail size={25} />
                 </div>
 
                 <div className="signup-card-header">
-                  <span className="signup-eyebrow">VERIFY YOUR EMAIL</span>
+                  <span className="signup-eyebrow">
+                    STEP 1 OF 2 · VERIFY EMAIL
+                  </span>
 
-                  <h2>Check your inbox</h2>
+                  <h2>Check your inbox.</h2>
 
                   <p>
                     We sent a 6-digit verification code to{" "}
-                    <strong>{email}</strong>.
+                    <strong>{email}</strong>. Once verified, ZYRA will create
+                    your Individual Workspace and assign you as Team Leader.
                   </p>
                 </div>
 
-                <form onSubmit={handleVerification} className="signup-form">
+                <form
+                  onSubmit={handleVerification}
+                  className="signup-form"
+                >
                   <div className="signup-field">
-                    <label htmlFor="verification-code">Verification Code</label>
+                    <label htmlFor="verification-code">
+                      Verification Code
+                    </label>
 
                     <input
                       id="verification-code"
@@ -603,7 +969,11 @@ function Signup() {
                     className="signup-submit-button"
                     disabled={loading}
                   >
-                    <span>{loading ? "Verifying..." : "Confirm Code"}</span>
+                    <span>
+                      {loading
+                        ? "Verifying and creating workspace..."
+                        : "Verify & create workspace"}
+                    </span>
 
                     {!loading && <CheckCircle2 size={18} />}
                   </button>
@@ -629,7 +999,6 @@ function Signup() {
 
             <div className="signup-card-footer">
               <ShieldCheck size={13} />
-
               <span>Your account information is securely protected.</span>
             </div>
           </div>

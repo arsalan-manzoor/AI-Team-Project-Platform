@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000/api/users";
+const API_BASE_URL = "http://10.244.98.140:5000/api/users";
 
 export async function getCurrentUser() {
   const response = await fetch(`${API_BASE_URL}/me`);

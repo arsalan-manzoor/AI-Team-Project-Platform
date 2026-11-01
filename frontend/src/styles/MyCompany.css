@@ -1,0 +1,87 @@
+.my-company-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px);
+  color: #e8eefb;
+}
+
+.my-company-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.my-company-heading-icon {
+  display: grid;
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.09);
+  border: 1px solid rgba(103, 232, 249, 0.24);
+  border-radius: 16px;
+}
+
+.my-company-heading-copy {
+  min-width: 0;
+}
+
+.my-company-eyebrow {
+  margin: 0 0 5px;
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.my-company-heading-copy h1 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.my-company-description {
+  margin: 8px 0 0;
+  color: #9caec8;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.my-company-settings {
+  width: 100%;
+  min-width: 0;
+}
+
+.my-company-message {
+  padding: 20px;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .my-company-page {
+    padding: 18px 14px;
+  }
+
+  .my-company-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .my-company-heading-icon {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+  }
+}

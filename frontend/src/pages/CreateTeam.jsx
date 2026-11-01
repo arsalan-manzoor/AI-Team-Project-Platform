@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Users, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useWorkspace } from "../context/WorkspaceContext";
 
 import { createTeam } from "../services/teamService";
 
 function CreateTeam() {
   const navigate = useNavigate();
+  const { workspaceId, workspaceType, workspaceRole, activeWorkspace, loading: workspaceLoading } = useWorkspace();
 
   const [team, setTeam] = useState({
     name: "",
@@ -20,13 +22,53 @@ function CreateTeam() {
 
     setError("");
 
+    const normalizedWorkspaceType = String(workspaceType || "")
+      .trim()
+      .toUpperCase();
+
+    const normalizedWorkspaceRoles = [
+      workspaceRole,
+      ...(Array.isArray(activeWorkspace?.roles) ? activeWorkspace.roles : []),
+    ]
+      .map((role) => String(role || "").trim().toUpperCase())
+      .filter(Boolean);
+
+    const hasTeamLeaderRoleForWorkspace =
+      normalizedWorkspaceRoles.includes("TEAM_LEADER");
+
+    if (["INDIVIDUAL", "PROJECT", "COMPANY"].includes(normalizedWorkspaceType)) {
+      if (
+        !workspaceId ||
+        !Number.isInteger(Number(workspaceId)) ||
+        Number(workspaceId) <= 0
+      ) {
+        setError(
+          `No valid ${normalizedWorkspaceType.toLowerCase()} workspace was found. Please refresh and try again.`,
+        );
+        return;
+      }
+
+      if (!hasTeamLeaderRoleForWorkspace) {
+        setError(
+          "Only a Workspace Team Leader can create teams in this workspace.",
+        );
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
-      await createTeam({
+      const teamData = {
         name: team.name.trim(),
         description: team.description.trim(),
-      });
+      };
+
+      if (workspaceId) {
+        teamData.workspaceId = Number(workspaceId);
+      }
+
+      await createTeam(teamData);
 
       alert("Team created successfully!");
 
@@ -37,6 +79,39 @@ function CreateTeam() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (workspaceLoading) {
+    return (
+      <div className="zyra-create-page">
+        <div className="teams-empty">
+          <h3>Loading workspace...</h3>
+          <p>Checking your team-management permissions.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (workspaceType === "COMPANY" && String(workspaceRole || "").toUpperCase() !== "TEAM_LEADER") {
+    return (
+      <div className="zyra-create-page">
+        <div className="teams-empty">
+          <div className="teams-empty-icon">
+            <Users size={28} />
+          </div>
+          <h3>Team creation restricted</h3>
+          <p>Only a Company Team Leader can create teams in this workspace.</p>
+          <button
+            type="button"
+            className="back-page-btn"
+            onClick={() => navigate("/teams")}
+          >
+            <ArrowLeft size={16} />
+            Back to Teams
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

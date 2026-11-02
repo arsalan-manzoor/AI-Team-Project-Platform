@@ -1,0 +1,804 @@
+const path = require("path");
+
+require("dotenv").config({
+    path: path.resolve(__dirname, "../.env")
+});
+
+const modelAdapter = require("../src/ai/modelAdapter");
+const { runAIRequest } = require("../src/ai/aiOrchestrator");
+
+const cases = [
+    {
+        name: "authorized_project_access",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_project",
+                    arguments: {
+                        project_id: 2
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                content: "Project data retrieved"
+            }
+        ],
+        expected_content: "Project data retrieved",
+        expected_tool_data: true
+    },
+
+    {
+        name: "unauthorized_project_access",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_project",
+                    arguments: {
+                        project_id: 1
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                content:
+                    "No authorized information is available for the requested item."
+            }
+        ],
+        expected_content:
+            "No authorized information is available for the requested item."
+    },
+
+    {
+        name: "multi_tool_mixed_authorization",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_calls: [
+                    {
+                        name: "get_project",
+                        arguments: {
+                            project_id: 1
+                        }
+                    },
+                    {
+                        name: "get_project",
+                        arguments: {
+                            project_id: 2
+                        }
+                    }
+                ],
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                content: "Authorized project data retrieved"
+            }
+        ],
+        expected_content:
+            "Authorized project data retrieved",
+        expected_mixed_authorization: true
+    },
+
+    {
+        name: "authorized_project_list",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                content: "Project list retrieved"
+            }
+        ],
+        expected_content: "Project list retrieved"
+    },
+
+    {
+        name: "missing_required_project_id",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_project",
+                    arguments: {}
+                }
+            }
+        ],
+        expected_error:
+            "Missing required AI tool argument: project_id"
+    },
+
+    {
+        name: "invalid_project_id_type",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_project",
+                    arguments: {
+                        project_id: "abc"
+                    }
+                }
+            }
+        ],
+        expected_error:
+            'AI tool argument "project_id" must be a valid integer'
+    },
+
+    {
+        name: "invalid_user_id",
+        user_id: null,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                }
+            }
+        ],
+        expected_error:
+            "Authenticated user ID must be a valid integer"
+    },
+
+    {
+        name: "unknown_tool",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "delete_everything",
+                    arguments: {}
+                }
+            }
+        ],
+        expected_error: "Unknown AI tool"
+    },
+
+    {
+        name: "normal_response",
+        user_id: 6,
+        model_responses: [
+            {
+                content: "Normal AI response"
+            }
+        ],
+        expected_content: "Normal AI response"
+    },
+
+    {
+        name: "invalid_tool_call_structure",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    arguments: {
+                        project_id: 2
+                    }
+                }
+            }
+        ],
+        expected_error: "Unknown AI tool"
+    },
+
+    {
+        name: "tool_execution_round_limit",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            },
+            {
+                tool_call: {
+                    name: "get_projects",
+                    arguments: {}
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_error:
+            "AI tool execution exceeded the maximum allowed rounds"
+    },
+
+    {
+        name: "null_model_response",
+        user_id: 6,
+        model_responses: [
+            null
+        ],
+        expected_error:
+            "AI model returned an invalid response"
+    },
+
+    {
+        name: "invalid_model_response_type",
+        user_id: 6,
+        model_responses: [
+            "invalid response"
+        ],
+        expected_error:
+            "AI model returned an invalid response"
+    },
+
+    {
+        name: "update_task_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "update_task",
+                    arguments: {
+                        task_id: 2,
+                        title: "Updated task title",
+                        description: "Updated task description",
+                        assigned_to: 6,
+                        status: "in_progress",
+                        priority: "high",
+                        deadline: "2026-10-15"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "update_task",
+            arguments: {
+                task_id: 2,
+                title: "Updated task title",
+                description: "Updated task description",
+                assigned_to: 6,
+                status: "in_progress",
+                priority: "high",
+                deadline: "2026-10-15"
+            }
+        }
+    },
+
+    {
+        name: "create_comment_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_comment",
+                    arguments: {
+                        content: "Test comment from AI orchestrator",
+                        project_id: 6
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_comment",
+            arguments: {
+                content: "Test comment from AI orchestrator",
+                project_id: 6
+            }
+        }
+    },
+
+    {
+        name: "create_task_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_task",
+                    arguments: {
+                        title: "AI-created task",
+                        description:
+                            "Created through AI confirmation flow",
+                        project_id: 6,
+                        assigned_to: 6,
+                        status: "pending",
+                        priority: "medium",
+                        deadline: "2026-10-20"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_task",
+            arguments: {
+                title: "AI-created task",
+                description:
+                    "Created through AI confirmation flow",
+                project_id: 6,
+                assigned_to: 6,
+                status: "pending",
+                priority: "medium",
+                deadline: "2026-10-20"
+            }
+        }
+    },
+
+    {
+        name: "create_project_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_project",
+                    arguments: {
+                        name: "AI-created project",
+                        description:
+                            "Created through AI confirmation flow",
+                        team_id: 5
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_project",
+            arguments: {
+                name: "AI-created project",
+                description:
+                    "Created through AI confirmation flow",
+                team_id: 5
+            }
+        }
+    },
+
+    {
+        name: "delete_task_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "delete_task",
+                    arguments: {
+                        task_id: 2
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "delete_task",
+            arguments: {
+                task_id: 2
+            }
+        }
+    },
+
+    {
+        name: "delete_project_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "delete_project",
+                    arguments: {
+                        project_id: 2
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "delete_project",
+            arguments: {
+                project_id: 2
+            }
+        }
+    },
+
+    {
+        name: "create_milestone_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "create_milestone",
+                    arguments: {
+                        name: "AI milestone",
+                        description:
+                            "Created through AI confirmation flow",
+                        project_id: 6,
+                        deadline: "2026-10-25",
+                        status: "pending"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "create_milestone",
+            arguments: {
+                name: "AI milestone",
+                description:
+                    "Created through AI confirmation flow",
+                project_id: 6,
+                deadline: "2026-10-25",
+                status: "pending"
+            }
+        }
+    },
+
+    {
+        name: "bulk_update_tasks_requires_confirmation",
+        user_id: 6,
+        model_responses: [
+            {
+                tool_call: {
+                    name: "bulk_update_tasks",
+                    arguments: {
+                        task_ids: [2, 3],
+                        status: "in_progress",
+                        priority: "high",
+                        deadline: "2026-10-26"
+                    }
+                },
+                assistant_message: {
+                    role: "assistant",
+                    content: ""
+                }
+            }
+        ],
+        expected_confirmation: {
+            tool_name: "bulk_update_tasks",
+            arguments: {
+                task_ids: [2, 3],
+                status: "in_progress",
+                priority: "high",
+                deadline: "2026-10-26"
+            }
+        }
+    }
+];
+
+function normalizeContent(value) {
+    return String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+async function runCase(testCase) {
+    let responseIndex = 0;
+    let mixedAuthorizationVerified = false;
+
+    modelAdapter.generateResponse = async function ({
+        messages
+    }) {
+        if (
+            testCase.expected_tool_data !== undefined &&
+            responseIndex === 1
+        ) {
+            const toolMessage =
+                messages[messages.length - 1];
+
+            if (
+                !toolMessage ||
+                toolMessage.role !== "tool"
+            ) {
+                throw new Error(
+                    "Expected tool result message was not added to the conversation"
+                );
+            }
+
+            let toolResult;
+
+            try {
+                toolResult = JSON.parse(toolMessage.content);
+            } catch {
+                throw new Error(
+                    "Tool result message contains invalid JSON"
+                );
+            }
+
+            const hasToolData =
+                toolResult &&
+                Object.prototype.hasOwnProperty.call(
+                    toolResult,
+                    "data"
+                )
+                    ? toolResult.data !== null
+                    : toolResult !== null;
+
+            if (hasToolData !== testCase.expected_tool_data) {
+                throw new Error(
+                    "Unexpected tool result authorization state"
+                );
+            }
+        }
+
+        if (
+            testCase.expected_mixed_authorization &&
+            responseIndex === 1
+        ) {
+            const toolMessages = messages.filter(
+                (message) => message.role === "tool"
+            );
+
+            if (toolMessages.length !== 2) {
+                throw new Error(
+                    "Expected both read-tool results to reach the model"
+                );
+            }
+
+            const results = toolMessages.map((message) => {
+                try {
+                    return JSON.parse(message.content);
+                } catch {
+                    throw new Error(
+                        "Tool result message contains invalid JSON"
+                    );
+                }
+            });
+
+            const unauthorizedResult = results.find(
+                (result) =>
+                    result &&
+                    typeof result === "object" &&
+                    result.available === false
+            );
+
+            if (!unauthorizedResult) {
+                throw new Error(
+                    "Expected one sanitized unauthorized result"
+                );
+            }
+
+            const authorizedResult = results.find(
+                (result) =>
+                    result &&
+                    typeof result === "object" &&
+                    result.available !== false
+            );
+
+            if (!authorizedResult) {
+                throw new Error(
+                    "Authorized result was not preserved"
+                );
+            }
+
+            const unauthorizedText =
+                JSON.stringify(unauthorizedResult);
+
+            if (
+                unauthorizedText.includes("project_id") ||
+                unauthorizedText.includes("project_name")
+            ) {
+                throw new Error(
+                    "Unauthorized result exposed restricted details"
+                );
+            }
+
+            mixedAuthorizationVerified = true;
+        }
+
+        const response =
+            testCase.model_responses[responseIndex];
+
+        responseIndex++;
+
+        return response;
+    };
+
+    try {
+        const result = await runAIRequest({
+            messages: [
+                {
+                    role: "user",
+                    content: "Test AI tool call"
+                }
+            ],
+            userId: testCase.user_id
+        });
+
+        if (testCase.expected_confirmation) {
+            const expected = testCase.expected_confirmation;
+
+            const passed =
+                result &&
+                result.requires_confirmation === true &&
+                result.tool_name === expected.tool_name &&
+                JSON.stringify(result.tool_arguments) ===
+                    JSON.stringify(expected.arguments) &&
+                typeof result.confirmation_id === "string" &&
+                result.confirmation_id.length > 0;
+
+            console.log(
+                (passed ? "PASS" : "FAIL") +
+                ": " +
+                testCase.name
+            );
+
+            if (!passed) {
+                console.log(
+                    "  Received:",
+                    JSON.stringify(result, null, 2)
+                );
+            }
+
+            return passed;
+        }
+
+        if (testCase.expected_content) {
+            const actualContent =
+                normalizeContent(result.content);
+
+            const expectedContent =
+                normalizeContent(testCase.expected_content);
+
+            let passed = actualContent === expectedContent;
+
+            if (
+                testCase.expected_mixed_authorization &&
+                !mixedAuthorizationVerified
+            ) {
+                passed = false;
+            }
+
+            console.log(
+                (passed ? "PASS" : "FAIL") +
+                ": " +
+                testCase.name
+            );
+
+            if (!passed) {
+                console.log("  Expected: " + expectedContent);
+                console.log("  Received: " + actualContent);
+            }
+
+            return passed;
+        }
+
+        if (testCase.expected_error) {
+            console.log("FAIL: " + testCase.name);
+            console.log("  Reason: expected validation error");
+
+            return false;
+        }
+
+        return false;
+    } catch (error) {
+        if (testCase.expected_error) {
+            const passed =
+                error.message === testCase.expected_error;
+
+            console.log(
+                (passed ? "PASS" : "FAIL") +
+                ": " +
+                testCase.name
+            );
+
+            if (!passed) {
+                console.log("  Reason: " + error.message);
+            }
+
+            return passed;
+        }
+
+        console.log("FAIL: " + testCase.name);
+        console.log("  Reason: " + error.message);
+
+        return false;
+    }
+}
+
+async function runEvaluation() {
+    let passed = 0;
+
+    const requestedCase =
+        process.env.ORCHESTRATOR_CASE;
+
+    const selectedCases = requestedCase
+        ? cases.filter(
+            (testCase) => testCase.name === requestedCase
+        )
+        : cases;
+
+    if (selectedCases.length === 0) {
+        console.error(
+            "No orchestrator test case found with name: " +
+            requestedCase
+        );
+
+        process.exitCode = 1;
+        return;
+    }
+
+    for (const testCase of selectedCases) {
+        if (await runCase(testCase)) {
+            passed++;
+        }
+    }
+
+    console.log("");
+
+    console.log(
+        "Orchestrator evaluation: " +
+        passed +
+        "/" +
+        selectedCases.length +
+        " cases passed"
+    );
+
+    if (passed !== selectedCases.length) {
+        process.exitCode = 1;
+    }
+}
+
+runEvaluation();

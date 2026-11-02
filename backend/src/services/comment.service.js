@@ -1,112 +1,197 @@
-const pool = require("../config/db");
+﻿const pool = require("../config/db");
 
-async function createComment({
-    content,
-    taskId,
-    projectId,
-    userId
-}) {
-    if (!content || typeof content !== "string") {
-        throw new Error(
-            "Comment content is required"
-        );
-    }
+function serviceError(message, status = 403) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
 
-    if (!Number.isInteger(userId)) {
-        throw new Error(
-            "Authenticated user ID must be a valid integer"
-        );
-    }
+/*
+ * Resolve project and workspace information.
+ * Supports independent Company projects and team projects.
+ */
+async function getProjectContext(projectId) {
+  const result = await pool.query(
+    `
+        SELECT
+            p.id,
+            p.team_id,
 
-    const hasTaskId =
-        taskId !== undefined &&
-        taskId !== null;
+            COALESCE(
+                p.workspace_id,
+                t.workspace_id
+            ) AS workspace_id
 
-    const hasProjectId =
-        projectId !== undefined &&
-        projectId !== null;
+        FROM projects p
 
-    if (
-        !hasTaskId &&
-        !hasProjectId
-    ) {
-        throw new Error(
-            "Task ID or project ID is required"
-        );
-    }
+        LEFT JOIN teams t
+          ON t.id = p.team_id
 
-    if (
-        hasTaskId &&
-        hasProjectId
-    ) {
-        throw new Error(
-            "Provide either a task ID or project ID, not both"
-        );
-    }
+        WHERE p.id = $1
+        LIMIT 1
+        `,
+    [projectId],
+  );
 
-    // Check task access
-    if (hasTaskId) {
-        const taskResult = await pool.query(
-            `SELECT tasks.id
-             FROM tasks
-             JOIN projects
-                ON tasks.project_id = projects.id
-             JOIN team_members
-                ON projects.team_id = team_members.team_id
-             WHERE tasks.id = $1
-               AND team_members.user_id = $2`,
-            [
-                taskId,
-                userId
-            ]
-        );
+  return result.rows[0] || null;
+}
 
-        if (taskResult.rows.length === 0) {
-            throw new Error(
-                "Task not found or you are not a team member"
-            );
-        }
-    }
+/*
+ * Check whether the user belongs to the project's
+ * workspace or legacy team.
+ */
+async function verifyProjectMembership(project, userId) {
+  if (!project) {
+    return false;
+  }
 
-    // Check project access
-    if (hasProjectId) {
-        const projectResult = await pool.query(
-            `SELECT projects.id
-             FROM projects
-             JOIN team_members
-                ON projects.team_id = team_members.team_id
-             WHERE projects.id = $1
-               AND team_members.user_id = $2`,
-            [
-                projectId,
-                userId
-            ]
-        );
-
-        if (projectResult.rows.length === 0) {
-            throw new Error(
-                "Project not found or you are not a team member"
-            );
-        }
-    }
-
+  if (project.workspace_id) {
     const result = await pool.query(
-        `INSERT INTO comments
-            (content, user_id, task_id, project_id)
-         VALUES
-            ($1, $2, $3, $4)
-         RETURNING *`,
-        [
-            content,
-            userId,
-            hasTaskId ? taskId : null,
-            hasProjectId ? projectId : null
-        ]
+      `
+            SELECT 1
+            FROM workspace_members
+            WHERE workspace_id = $1
+              AND user_id = $2
+            LIMIT 1
+            `,
+      [project.workspace_id, userId],
     );
 
-    return result.rows[0];
+    return result.rows.length > 0;
+  }
+
+  if (project.team_id) {
+    const result = await pool.query(
+      `
+            SELECT 1
+            FROM team_members
+            WHERE team_id = $1
+              AND user_id = $2
+            LIMIT 1
+            `,
+      [project.team_id, userId],
+    );
+
+    return result.rows.length > 0;
+  }
+
+  return false;
+}
+
+async function createComment({ content, taskId, projectId, userId }) {
+  const normalizedUserId = Number(userId);
+
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    throw serviceError("Authenticated user ID must be a valid integer", 401);
+  }
+
+  if (typeof content !== "string" || !content.trim()) {
+    throw serviceError("Comment content is required", 400);
+  }
+
+  const hasTaskId = taskId !== undefined && taskId !== null && taskId !== "";
+
+  const hasProjectId =
+    projectId !== undefined && projectId !== null && projectId !== "";
+
+  if (!hasTaskId && !hasProjectId) {
+    throw serviceError("Task ID or project ID is required", 400);
+  }
+
+  if (hasTaskId && hasProjectId) {
+    throw serviceError("Provide either a task ID or project ID, not both", 400);
+  }
+
+  let normalizedProjectId;
+
+  /*
+   * COMMENT ON TASK
+   */
+  if (hasTaskId) {
+    const normalizedTaskId = Number(taskId);
+
+    if (!Number.isInteger(normalizedTaskId) || normalizedTaskId <= 0) {
+      throw serviceError("Invalid task ID", 400);
+    }
+
+    const taskResult = await pool.query(
+      `
+            SELECT project_id
+            FROM tasks
+            WHERE id = $1
+            LIMIT 1
+            `,
+      [normalizedTaskId],
+    );
+
+    if (taskResult.rows.length === 0) {
+      throw serviceError("Task not found or you are not a team member", 404);
+    }
+
+    normalizedProjectId = Number(taskResult.rows[0].project_id);
+  }
+
+  /*
+   * COMMENT ON PROJECT
+   */
+  if (hasProjectId) {
+    normalizedProjectId = Number(projectId);
+
+    if (!Number.isInteger(normalizedProjectId) || normalizedProjectId <= 0) {
+      throw serviceError("Invalid project ID", 400);
+    }
+  }
+
+  /*
+   * Verify workspace/team membership.
+   */
+  const project = await getProjectContext(normalizedProjectId);
+
+  if (!project) {
+    throw serviceError(
+      hasTaskId
+        ? "Task not found or you are not a team member"
+        : "Project not found or you are not a team member",
+      404,
+    );
+  }
+
+  const hasAccess = await verifyProjectMembership(project, normalizedUserId);
+
+  if (!hasAccess) {
+    throw serviceError(
+      hasTaskId
+        ? "Task not found or you are not a team member"
+        : "Project not found or you are not a team member",
+      project.workspace_id ? 403 : 404,
+    );
+  }
+
+  /*
+   * Insert comment.
+   */
+  const result = await pool.query(
+    `
+        INSERT INTO comments (
+            content,
+            user_id,
+            task_id,
+            project_id
+        )
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+        `,
+    [
+      content.trim(),
+      normalizedUserId,
+      hasTaskId ? Number(taskId) : null,
+      hasProjectId ? normalizedProjectId : null,
+    ],
+  );
+
+  return result.rows[0];
 }
 
 module.exports = {
-    createComment
+  createComment,
 };

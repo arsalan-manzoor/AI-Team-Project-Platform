@@ -1,0 +1,1077 @@
+/* =========================================================
+   ZYRA — WORKSPACE INVITATIONS
+   Dark Navy + Violet Accent
+   Accent: #8172F6
+   ========================================================= */
+
+.zyra-invitations-page {
+  --zi-bg: #0b0f19;
+  --zi-panel: #111827;
+  --zi-panel-raised: #151d2c;
+  --zi-panel-hover: #182236;
+  --zi-border: #252e40;
+  --zi-text: #f1f3fa;
+  --zi-secondary: #c5ccda;
+  --zi-muted: #8994a9;
+  --zi-subtle: #65718a;
+  --zi-accent: #8172f6;
+  --zi-accent-light: #a59bff;
+  --zi-accent-soft: rgba(129, 114, 246, 0.11);
+  --zi-accent-border: rgba(129, 114, 246, 0.24);
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+
+  padding: 24px 26px 18px;
+
+  color: var(--zi-text);
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  font-size: 13px;
+  line-height: 1.55;
+
+  background:
+    radial-gradient(
+      ellipse at 90% 0%,
+      rgba(129, 114, 246, 0.055),
+      transparent 36%
+    ),
+    transparent;
+
+  box-sizing: border-box;
+}
+
+.zyra-invitations-page *,
+.zyra-invitations-page *::before,
+.zyra-invitations-page *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.zi-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+
+  margin-bottom: 24px;
+}
+
+.zi-heading-content {
+  min-width: 0;
+}
+
+.zi-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 8px;
+
+  color: var(--zi-accent-light);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.zi-eyebrow-dot,
+.zi-footer-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+
+  background: var(--zi-accent);
+
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(129, 114, 246, 0.28);
+}
+
+.zi-heading-content h1 {
+  margin: 0;
+
+  color: var(--zi-text);
+
+  font-size: clamp(25px, 2.3vw, 34px);
+  font-weight: 760;
+  letter-spacing: -1.1px;
+  line-height: 1.2;
+}
+
+.zi-heading-content h1 > span {
+  color: var(--zi-accent-light);
+}
+
+.zi-heading-content > p {
+  margin: 8px 0 0;
+
+  color: var(--zi-muted);
+
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.zi-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 40px;
+  flex-shrink: 0;
+
+  padding: 0 14px;
+
+  color: var(--zi-secondary);
+  background: rgba(255, 255, 255, 0.025);
+
+  border: 1px solid var(--zi-border);
+  border-radius: 9px;
+
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.zi-refresh-button:hover:not(:disabled) {
+  color: var(--zi-accent-light);
+  background: var(--zi-accent-soft);
+  border-color: var(--zi-accent-border);
+}
+
+.zi-refresh-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.zi-refresh-spinning {
+  animation: zi-spin 850ms linear infinite;
+}
+
+@keyframes zi-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   SUMMARY CARD
+   ========================================================= */
+
+.zi-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  min-width: 0;
+
+  padding: 18px 20px;
+  margin-bottom: 30px;
+
+  background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgba(129, 114, 246, 0.13),
+      transparent 49%
+    ),
+    var(--zi-panel);
+
+  border: 1px solid var(--zi-accent-border);
+  border-radius: 13px;
+}
+
+.zi-summary-icon {
+  display: grid;
+  place-items: center;
+
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+
+  color: var(--zi-accent-light);
+  background: var(--zi-accent-soft);
+
+  border: 1px solid var(--zi-accent-border);
+  border-radius: 12px;
+}
+
+.zi-summary-copy {
+  min-width: 0;
+}
+
+.zi-summary-copy > span {
+  display: block;
+
+  margin-bottom: 2px;
+
+  color: var(--zi-muted);
+
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 1px;
+}
+
+.zi-summary-copy > strong {
+  display: block;
+
+  color: var(--zi-text);
+
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.7px;
+  line-height: 1.3;
+}
+
+.zi-summary-copy > p {
+  margin: 3px 0 0;
+
+  color: var(--zi-muted);
+
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.zi-summary-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  flex-shrink: 0;
+
+  margin-left: auto;
+  padding: 7px 10px;
+
+  color: var(--zi-accent-light);
+  background: rgba(129, 114, 246, 0.07);
+
+  border: 1px solid rgba(129, 114, 246, 0.16);
+  border-radius: 7px;
+
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.7px;
+}
+
+.zi-summary-status-dot {
+  width: 6px;
+  height: 6px;
+
+  background: var(--zi-accent);
+  border-radius: 50%;
+}
+
+/* =========================================================
+   SECTION HEADING
+   ========================================================= */
+
+.zi-invitation-section {
+  min-width: 0;
+}
+
+.zi-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+
+  margin-bottom: 16px;
+}
+
+.zi-section-eyebrow {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--zi-accent-light);
+
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.15px;
+}
+
+.zi-section-heading h2 {
+  margin: 0;
+
+  color: var(--zi-text);
+
+  font-size: 19px;
+  font-weight: 730;
+  letter-spacing: -0.4px;
+}
+
+.zi-count-badge {
+  flex-shrink: 0;
+
+  padding: 6px 10px;
+
+  color: var(--zi-secondary);
+  background: rgba(255, 255, 255, 0.025);
+
+  border: 1px solid var(--zi-border);
+  border-radius: 7px;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   INVITATION LIST
+   ========================================================= */
+
+.zi-invitation-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 15px;
+
+  min-width: 0;
+}
+
+.zi-invitation-card {
+  min-width: 0;
+  padding: 19px;
+
+  background:
+    linear-gradient(145deg, rgba(129, 114, 246, 0.035), transparent 47%),
+    var(--zi-panel);
+
+  border: 1px solid var(--zi-border);
+  border-radius: 13px;
+
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.zi-invitation-card:hover {
+  background:
+    linear-gradient(145deg, rgba(129, 114, 246, 0.065), transparent 47%),
+    var(--zi-panel-raised);
+
+  border-color: rgba(129, 114, 246, 0.28);
+
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.zi-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zi-workspace-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  min-width: 0;
+}
+
+.zi-workspace-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 43px;
+  height: 43px;
+
+  color: var(--zi-accent-light);
+  background: var(--zi-accent-soft);
+
+  border: 1px solid var(--zi-accent-border);
+  border-radius: 11px;
+}
+
+.zi-workspace-heading {
+  min-width: 0;
+}
+
+.zi-card-eyebrow {
+  display: block;
+
+  margin: 1px 0 4px;
+
+  color: var(--zi-accent-light);
+
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.75px;
+}
+
+.zi-workspace-heading h3 {
+  overflow-wrap: anywhere;
+
+  margin: 0;
+
+  color: var(--zi-text);
+
+  font-size: 15px;
+  font-weight: 730;
+  letter-spacing: -0.3px;
+  line-height: 1.45;
+}
+
+.zi-workspace-heading > p {
+  overflow-wrap: anywhere;
+
+  margin: 4px 0 0;
+
+  color: var(--zi-muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.zi-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  flex-shrink: 0;
+
+  padding: 6px 8px;
+
+  color: var(--zi-accent-light);
+  background: rgba(129, 114, 246, 0.08);
+
+  border: 1px solid rgba(129, 114, 246, 0.18);
+  border-radius: 6px;
+
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.zi-pending-badge > span {
+  width: 5px;
+  height: 5px;
+
+  background: var(--zi-accent);
+  border-radius: 50%;
+}
+
+.zi-card-divider {
+  height: 1px;
+  margin: 17px 0;
+
+  background: var(--zi-border);
+}
+
+/* =========================================================
+   INVITATION DETAILS
+   ========================================================= */
+
+.zi-invitation-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px 14px;
+
+  min-width: 0;
+}
+
+.zi-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-width: 0;
+}
+
+.zi-detail-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 33px;
+  height: 33px;
+
+  color: var(--zi-muted);
+  background: rgba(255, 255, 255, 0.025);
+
+  border: 1px solid rgba(148, 163, 184, 0.09);
+  border-radius: 8px;
+}
+
+.zi-detail-item > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.zi-detail-item > div:last-child > span {
+  color: var(--zi-muted);
+
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+}
+
+.zi-detail-item > div:last-child > strong {
+  overflow-wrap: anywhere;
+
+  color: var(--zi-secondary);
+
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   CARD FOOTER
+   ========================================================= */
+
+.zi-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 13px;
+
+  margin-top: 20px;
+  padding-top: 15px;
+
+  border-top: 1px solid rgba(148, 163, 184, 0.09);
+}
+
+.zi-card-security {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  min-width: 0;
+
+  color: var(--zi-muted);
+
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.zi-card-security svg {
+  flex-shrink: 0;
+  color: var(--zi-accent-light);
+}
+
+.zi-review-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 39px;
+
+  padding: 0 12px;
+
+  color: #ffffff;
+  background: linear-gradient(110deg, #8172f6 0%, #7666e8 100%);
+
+  border: 1px solid rgba(165, 155, 255, 0.22);
+  border-radius: 8px;
+
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    filter 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.zi-review-button:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+
+  box-shadow: 0 5px 17px rgba(129, 114, 246, 0.19);
+}
+
+.zi-review-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   ERROR MESSAGE
+   ========================================================= */
+
+.zi-error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+
+  margin-bottom: 22px;
+  padding: 15px;
+
+  color: #ffc5c5;
+  background: rgba(239, 68, 68, 0.055);
+
+  border: 1px solid rgba(239, 68, 68, 0.23);
+  border-radius: 10px;
+}
+
+.zi-error-message > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.zi-error-message > div {
+  min-width: 0;
+}
+
+.zi-error-message strong {
+  display: block;
+  font-size: 12px;
+}
+
+.zi-error-message p {
+  margin: 5px 0 9px;
+
+  color: #c6a7ae;
+
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.zi-error-message button {
+  padding: 0;
+
+  color: var(--zi-accent-light);
+  background: transparent;
+
+  border: 0;
+
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+
+  cursor: pointer;
+}
+
+/* =========================================================
+   LOADING AND EMPTY STATES
+   ========================================================= */
+
+.zi-state-card {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+
+  min-height: 235px;
+
+  padding: 30px 22px;
+
+  text-align: center;
+
+  background: rgba(17, 24, 39, 0.75);
+
+  border: 1px dashed rgba(148, 163, 184, 0.17);
+  border-radius: 13px;
+}
+
+.zi-loading-icon,
+.zi-empty-icon {
+  display: grid;
+  place-items: center;
+
+  width: 57px;
+  height: 57px;
+
+  margin-bottom: 16px;
+
+  color: var(--zi-accent-light);
+  background: var(--zi-accent-soft);
+
+  border: 1px solid var(--zi-accent-border);
+  border-radius: 15px;
+}
+
+.zi-loading-icon > svg {
+  animation: zi-spin 1.5s linear infinite;
+}
+
+.zi-state-card h3 {
+  margin: 0;
+
+  color: var(--zi-text);
+
+  font-size: 15px;
+  font-weight: 720;
+}
+
+.zi-state-card > p {
+  max-width: 390px;
+
+  margin: 8px 0 0;
+
+  color: var(--zi-muted);
+
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.zi-empty-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 37px;
+
+  margin-top: 17px;
+  padding: 0 12px;
+
+  color: var(--zi-accent-light);
+  background: var(--zi-accent-soft);
+
+  border: 1px solid var(--zi-accent-border);
+  border-radius: 8px;
+
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.zi-empty-refresh:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* =========================================================
+   PAGE FOOTER
+   ========================================================= */
+
+.zi-page-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  margin-top: 30px;
+  padding-top: 13px;
+
+  border-top: 1px solid rgba(148, 163, 184, 0.09);
+
+  color: var(--zi-subtle);
+  font-size: 9px;
+}
+
+.zi-page-footer > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  color: var(--zi-muted);
+
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.8px;
+}
+
+.zi-footer-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.zi-footer-divider {
+  color: var(--zi-subtle);
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1050px) {
+  .zyra-invitations-page {
+    padding: 21px 19px 16px;
+  }
+
+  .zi-invitation-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .zi-invitation-card {
+    padding: 18px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .zyra-invitations-page {
+    padding: 17px 13px;
+  }
+
+  .zi-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+
+    margin-bottom: 20px;
+  }
+
+  .zi-refresh-button {
+    width: 100%;
+  }
+
+  .zi-summary-card {
+    align-items: flex-start;
+    gap: 11px;
+
+    padding: 14px;
+    margin-bottom: 24px;
+  }
+
+  .zi-summary-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .zi-summary-copy > strong {
+    font-size: 21px;
+  }
+
+  .zi-summary-status {
+    display: none;
+  }
+
+  .zi-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .zi-invitation-card {
+    padding: 14px;
+  }
+
+  .zi-card-top {
+    flex-direction: column;
+  }
+
+  .zi-pending-badge {
+    align-self: flex-start;
+  }
+
+  .zi-invitation-details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 15px;
+  }
+
+  .zi-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .zi-review-button {
+    width: 100%;
+    min-height: 43px;
+  }
+
+  .zi-page-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .zyra-invitations-page *,
+  .zyra-invitations-page *::before,
+  .zyra-invitations-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+/* ========================================================
+   INVITATION ACTION BUTTONS
+======================================================== */
+
+.zi-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.zi-accept-button,
+.zi-decline-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 42px;
+  padding: 10px 15px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+
+  white-space: nowrap;
+  cursor: pointer;
+
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+
+.zi-accept-button {
+  color: #ffffff;
+  background: #7164e8;
+  border-color: #8172f6;
+}
+
+.zi-accept-button:hover:not(:disabled) {
+  background: #8073f6;
+  border-color: #9388ff;
+  transform: translateY(-1px);
+}
+
+.zi-decline-button {
+  color: #e5e7eb;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.zi-decline-button:hover:not(:disabled) {
+  color: #ffb4b4;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.zi-accept-button:disabled,
+.zi-decline-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.zi-accept-button:focus-visible,
+.zi-decline-button:focus-visible {
+  outline: 2px solid #9388ff;
+  outline-offset: 3px;
+}
+
+/* ========================================================
+   SUCCESS MESSAGE
+======================================================== */
+
+.zi-success-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  margin: 20px 0;
+  padding: 16px 18px;
+
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  border-radius: 12px;
+}
+
+.zi-success-message > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.zi-success-message strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.zi-success-message p {
+  margin: 0;
+  color: #c0d8d0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ========================================================
+   FOOTER LAYOUT
+======================================================== */
+
+.zi-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.zi-card-security {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.zi-card-security svg {
+  flex-shrink: 0;
+}
+
+/* ========================================================
+   RESPONSIVE ACTION BUTTONS
+======================================================== */
+
+@media (max-width: 640px) {
+  .zi-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .zi-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    width: 100%;
+  }
+
+  .zi-accept-button,
+  .zi-decline-button {
+    width: 100%;
+    padding-right: 8px;
+    padding-left: 8px;
+    white-space: normal;
+  }
+}

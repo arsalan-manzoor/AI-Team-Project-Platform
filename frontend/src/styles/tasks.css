@@ -1,0 +1,1375 @@
+/* =========================================================
+   ZYRA — MY TASKS
+   High-contrast dark productivity workspace
+========================================================= */
+
+.zyra-tasks {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(100vh - 76px);
+  padding: 30px 34px 50px;
+
+  color: #f1f5f9;
+
+  background:
+    radial-gradient(circle at 8% 4%, rgba(59, 130, 246, 0.11), transparent 24%),
+    radial-gradient(
+      circle at 92% 12%,
+      rgba(99, 102, 241, 0.1),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at 50% 100%,
+      rgba(34, 211, 238, 0.045),
+      transparent 28%
+    ),
+    #080b0f;
+}
+
+/* =========================================================
+   ANIMATED TECH BACKGROUND
+========================================================= */
+
+.zyra-tasks::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+
+  background-size: 42px 42px;
+
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgba(0, 0, 0, 0.72) 65%,
+    transparent 100%
+  );
+
+  animation: taskGridMove 18s linear infinite;
+}
+
+@keyframes taskGridMove {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(42px, 42px, 0);
+  }
+}
+
+.zyra-tasks::after {
+  content: "";
+  position: absolute;
+  top: -290px;
+  right: -180px;
+  z-index: -3;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle,
+    rgba(34, 211, 238, 0.11),
+    rgba(59, 130, 246, 0.04) 42%,
+    transparent 72%
+  );
+
+  filter: blur(35px);
+  animation: taskOrb 10s ease-in-out infinite alternate;
+}
+
+@keyframes taskOrb {
+  from {
+    transform: translate3d(0, 0, 0) scale(0.95);
+  }
+
+  to {
+    transform: translate3d(-55px, 45px, 0) scale(1.08);
+  }
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.zyra-tasks .tasks-header {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 25px;
+
+  margin-bottom: 25px;
+}
+
+.zyra-tasks .tasks-header-main {
+  min-width: 0;
+}
+
+.zyra-tasks .tasks-eyebrow {
+  margin: 0 0 8px;
+
+  color: #67e8f9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.zyra-tasks .tasks-title-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.zyra-tasks .tasks-header h2 {
+  margin: 0;
+
+  color: #ffffff;
+  font-size: clamp(32px, 3vw, 43px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+
+.zyra-tasks .tasks-title-divider {
+  width: 1px;
+  height: 29px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(148, 163, 184, 0.45),
+    transparent
+  );
+}
+
+.zyra-tasks .tasks-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zyra-tasks .tasks-welcome strong {
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.zyra-tasks .tasks-welcome span {
+  color: #c0ccdc;
+  font-size: 11px;
+}
+
+.zyra-tasks .tasks-subtitle {
+  max-width: 650px;
+  margin: 10px 0 0;
+
+  color: #c0ccdc;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.zyra-tasks .tasks-header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  padding: 9px 12px;
+
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 8px;
+
+  background: rgba(34, 211, 238, 0.08);
+
+  color: #a5f3fc;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.zyra-tasks .tasks-live-dot,
+.zyra-tasks .section-live-dot {
+  display: inline-block;
+  flex-shrink: 0;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+  background: #22d3ee;
+
+  box-shadow:
+    0 0 7px rgba(34, 211, 238, 0.85),
+    0 0 14px rgba(34, 211, 238, 0.35);
+
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* =========================================================
+   ERROR MESSAGE
+========================================================= */
+
+.zyra-tasks .dashboard-error {
+  position: relative;
+  z-index: 5;
+
+  margin-bottom: 18px;
+  padding: 13px 16px;
+
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 10px;
+
+  background: rgba(127, 29, 29, 0.2);
+
+  color: #fecaca;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   SUMMARY CARDS
+========================================================= */
+
+.zyra-tasks .tasks-summary {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.zyra-tasks .task-summary-card {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+  min-height: 86px;
+  padding: 15px;
+
+  border: 1px solid #303b4a;
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.018)
+    ),
+    #10161f;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 28px rgba(0, 0, 0, 0.18);
+
+  backdrop-filter: blur(15px);
+  overflow: hidden;
+
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.zyra-tasks .task-summary-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 13px;
+  bottom: 13px;
+  width: 3px;
+
+  border-radius: 999px;
+
+  background: linear-gradient(to bottom, #22d3ee, #6366f1);
+}
+
+.zyra-tasks .task-summary-card::after {
+  content: "";
+  position: absolute;
+  top: -45px;
+  right: -35px;
+
+  width: 120px;
+  height: 120px;
+
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.065);
+  filter: blur(22px);
+  pointer-events: none;
+}
+
+.zyra-tasks .task-summary-card:hover {
+  transform: translateY(-3px);
+
+  border-color: rgba(96, 165, 250, 0.42);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 17px 34px rgba(0, 0, 0, 0.23),
+    0 0 22px rgba(59, 130, 246, 0.06);
+}
+
+.zyra-tasks .task-summary-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 10px;
+
+  background: rgba(34, 211, 238, 0.1);
+  color: #67e8f9;
+
+  box-shadow: 0 0 17px rgba(34, 211, 238, 0.055);
+}
+
+.zyra-tasks .task-summary-card:nth-child(2) .task-summary-icon {
+  color: #93c5fd;
+  background: rgba(96, 165, 250, 0.1);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.zyra-tasks .task-summary-card:nth-child(3) .task-summary-icon {
+  color: #6ee7b7;
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.zyra-tasks .task-summary-card:nth-child(4) .task-summary-icon {
+  color: #fda4af;
+  background: rgba(251, 113, 133, 0.1);
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.zyra-tasks .task-summary-content {
+  min-width: 0;
+}
+
+.zyra-tasks .task-summary-content span {
+  display: block;
+  margin-bottom: 5px;
+
+  color: #c0ccdc;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.zyra-tasks .task-summary-content strong {
+  display: block;
+
+  color: #ffffff;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.zyra-tasks .task-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding-left: 8px;
+
+  color: #a7b6ca;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+}
+
+/* =========================================================
+   MAIN WORKSPACE
+========================================================= */
+
+.zyra-tasks .tasks-workspace {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  align-items: stretch;
+  gap: 15px;
+
+  margin-bottom: 15px;
+}
+
+.zyra-tasks .tasks-panel,
+.zyra-tasks .task-status-panel,
+.zyra-tasks .tasks-recent-panel {
+  position: relative;
+
+  min-width: 0;
+
+  border: 1px solid #283340;
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.012)
+    ),
+    rgba(10, 15, 21, 0.94);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 17px 45px rgba(0, 0, 0, 0.2);
+
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.zyra-tasks .tasks-panel::before,
+.zyra-tasks .task-status-panel::before,
+.zyra-tasks .tasks-recent-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34, 211, 238, 0.4),
+    rgba(99, 102, 241, 0.25),
+    transparent
+  );
+}
+
+/* =========================================================
+   ACTIVE WORK HEADER
+========================================================= */
+
+.zyra-tasks .tasks-panel-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+
+  padding: 19px;
+
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.zyra-tasks .tasks-section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-bottom: 6px;
+
+  color: #b4c5dd;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.zyra-tasks .tasks-panel-header h3,
+.zyra-tasks .task-status-header h3,
+.zyra-tasks .tasks-recent-header h3 {
+  margin: 0;
+
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.zyra-tasks .task-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+
+  padding: 4px;
+
+  border: 1px solid #303b49;
+  border-radius: 9px;
+
+  background: #0b1017;
+}
+
+.zyra-tasks .task-filter {
+  padding: 8px 11px;
+
+  border: 1px solid transparent;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #c0ccdc;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.zyra-tasks .task-filter:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.zyra-tasks .task-filter.active {
+  border-color: rgba(34, 211, 238, 0.28);
+
+  background: rgba(34, 211, 238, 0.13);
+
+  color: #a5f3fc;
+
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.04);
+}
+
+/* =========================================================
+   TASK GRID
+========================================================= */
+
+.zyra-tasks .task-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+
+  padding: 18px;
+}
+
+.zyra-tasks .task-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 170px;
+  padding: 15px;
+
+  border: 1px solid #303b49;
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.012)
+    ),
+    #111820;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 7px 20px rgba(0, 0, 0, 0.13);
+
+  overflow: hidden;
+  cursor: pointer;
+
+  animation: taskCardEnter 0.45s ease both;
+
+  transition:
+    transform 0.23s ease,
+    border-color 0.23s ease,
+    box-shadow 0.23s ease,
+    background 0.23s ease;
+}
+
+.zyra-tasks .task-card:nth-child(1) {
+  animation-delay: 0.02s;
+}
+
+.zyra-tasks .task-card:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.zyra-tasks .task-card:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+.zyra-tasks .task-card:nth-child(4) {
+  animation-delay: 0.11s;
+}
+
+.zyra-tasks .task-card:nth-child(5) {
+  animation-delay: 0.14s;
+}
+
+.zyra-tasks .task-card:nth-child(6) {
+  animation-delay: 0.17s;
+}
+
+@keyframes taskCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.zyra-tasks .task-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+
+  background: #818cf8;
+  opacity: 0.85;
+
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.zyra-tasks .task-card-in-progress::before {
+  background: #22d3ee;
+}
+
+.zyra-tasks .task-card-completed::before {
+  background: #34d399;
+}
+
+.zyra-tasks .task-card-overdue::before {
+  background: #fb7185;
+}
+
+.zyra-tasks .task-card-pending::before {
+  background: #a5b4fc;
+}
+
+.zyra-tasks .task-card:hover {
+  transform: translateY(-3px);
+
+  border-color: rgba(34, 211, 238, 0.4);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(34, 211, 238, 0.045),
+      rgba(255, 255, 255, 0.012)
+    ),
+    #141d27;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 15px 28px rgba(0, 0, 0, 0.24),
+    0 0 22px rgba(34, 211, 238, 0.035);
+}
+
+.zyra-tasks .task-card:hover::before {
+  width: 4px;
+  opacity: 1;
+}
+
+/* =========================================================
+   TASK CARD CONTENT
+========================================================= */
+
+.zyra-tasks .task-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.zyra-tasks .task-project-tag {
+  display: inline-flex;
+  max-width: 150px;
+  padding: 5px 7px;
+
+  border: 1px solid rgba(129, 140, 248, 0.32);
+  border-radius: 5px;
+
+  background: rgba(99, 102, 241, 0.12);
+
+  color: #c4b5fd;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zyra-tasks .task-card-menu {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 30px;
+  height: 30px;
+  padding: 0;
+
+  border: 1px solid #394657;
+  border-radius: 7px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  color: #dbeafe;
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.zyra-tasks .task-card-menu:hover {
+  color: #ffffff;
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(34, 211, 238, 0.12);
+  transform: translateX(2px);
+}
+
+.zyra-tasks .task-card-body {
+  margin-top: 15px;
+}
+
+.zyra-tasks .task-card-body h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+
+  margin: 0 0 7px;
+
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 750;
+  letter-spacing: -0.012em;
+  overflow-wrap: anywhere;
+}
+
+.zyra-tasks .task-card-body p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+
+  margin: 0;
+
+  color: #c0ccdc;
+  font-size: 12px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.zyra-tasks .task-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-top: auto;
+  padding-top: 15px;
+}
+
+.zyra-tasks .task-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 5px 8px;
+
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.zyra-tasks .status-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  background: currentColor;
+
+  box-shadow: 0 0 7px currentColor;
+}
+
+.zyra-tasks .task-status-pill.in-progress {
+  color: #a5f3fc;
+  border-color: rgba(34, 211, 238, 0.3);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.zyra-tasks .task-status-pill.completed {
+  color: #a7f3d0;
+  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.zyra-tasks .task-status-pill.overdue {
+  color: #fecdd3;
+  border-color: rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.1);
+}
+
+.zyra-tasks .task-status-pill.pending {
+  color: #ddd6fe;
+  border-color: rgba(165, 180, 252, 0.35);
+  background: rgba(129, 140, 248, 0.12);
+}
+
+.zyra-tasks .task-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  color: #c0ccdc;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+/* =========================================================
+   TASK STATUS SIDE PANEL
+========================================================= */
+
+.zyra-tasks .task-status-panel {
+  padding: 19px;
+}
+
+.zyra-tasks .task-status-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  padding-bottom: 15px;
+
+  border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+
+  color: #c0ccdc;
+}
+
+.zyra-tasks .task-status-header .tasks-section-label {
+  margin-bottom: 5px;
+}
+
+.zyra-tasks .task-status-header h3 {
+  color: #ffffff;
+}
+
+.zyra-tasks .task-status-total {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 9px;
+
+  padding: 20px 0;
+}
+
+.zyra-tasks .task-status-total strong {
+  color: #ffffff;
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.zyra-tasks .task-status-total span {
+  color: #c0ccdc;
+  font-size: 11px;
+}
+
+.zyra-tasks .task-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.zyra-tasks .task-status-row {
+  position: relative;
+}
+
+.zyra-tasks .task-status-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 7px;
+}
+
+.zyra-tasks .task-status-row-top span {
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.zyra-tasks .task-status-row-top strong {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.zyra-tasks .task-status-track {
+  width: 100%;
+  height: 6px;
+
+  border-radius: 999px;
+  background: #283240;
+
+  overflow: hidden;
+}
+
+.zyra-tasks .task-status-bar {
+  display: block;
+  height: 100%;
+  min-width: 0;
+
+  border-radius: inherit;
+
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zyra-tasks .task-status-bar.active {
+  background: linear-gradient(90deg, #22d3ee, #3b82f6);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+}
+
+.zyra-tasks .task-status-bar.pending {
+  background: linear-gradient(90deg, #8172f6, #b4a7ff);
+}
+
+.zyra-tasks .task-status-bar.completed {
+  background: linear-gradient(90deg, #10b981, #6ee7b7);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+}
+
+.zyra-tasks .task-status-bar.overdue {
+  background: linear-gradient(90deg, #f43f5e, #fda4af);
+  box-shadow: 0 0 10px rgba(251, 113, 133, 0.2);
+}
+
+.zyra-tasks .task-status-percentage {
+  display: block;
+  margin-top: 5px;
+
+  color: #a9bad0;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.zyra-tasks .tasks-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 300px;
+  padding: 35px 25px;
+
+  text-align: center;
+}
+
+.zyra-tasks .tasks-empty-icon {
+  display: grid;
+  place-items: center;
+
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 14px;
+
+  background: rgba(34, 211, 238, 0.1);
+
+  color: #67e8f9;
+
+  box-shadow: 0 0 28px rgba(34, 211, 238, 0.055);
+
+  animation: emptyFloat 3s ease-in-out infinite;
+}
+
+@keyframes emptyFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.zyra-tasks .tasks-empty h3 {
+  margin: 0 0 8px;
+
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.zyra-tasks .tasks-empty p {
+  max-width: 440px;
+  margin: 0;
+
+  color: #c0ccdc;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+/* =========================================================
+   RECENT TASK QUEUE
+========================================================= */
+
+.zyra-tasks .tasks-recent-panel {
+  position: relative;
+  z-index: 2;
+
+  padding: 19px;
+}
+
+.zyra-tasks .tasks-recent-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+
+  margin-bottom: 15px;
+}
+
+.zyra-tasks .tasks-recent-header h3 {
+  color: #ffffff;
+}
+
+.zyra-tasks .tasks-recent-count {
+  color: #c0ccdc;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.zyra-tasks .tasks-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.zyra-tasks .recent-task-card {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 0;
+
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+
+  border: 1px solid #303b49;
+  border-radius: 10px;
+
+  background: #131a23;
+
+  color: #f1f5f9;
+  text-align: left;
+
+  cursor: pointer;
+  overflow: hidden;
+
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+.zyra-tasks .recent-task-card:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(34, 211, 238, 0.4);
+  background: #18222e;
+}
+
+.zyra-tasks .recent-task-accent {
+  width: 3px;
+  min-width: 3px;
+
+  align-self: stretch;
+  margin-right: 12px;
+
+  border-radius: 999px;
+  background: #a5b4fc;
+}
+
+.zyra-tasks .recent-task-card.in-progress .recent-task-accent {
+  background: #22d3ee;
+}
+
+.zyra-tasks .recent-task-card.completed .recent-task-accent {
+  background: #34d399;
+}
+
+.zyra-tasks .recent-task-card.overdue .recent-task-accent {
+  background: #fb7185;
+}
+
+.zyra-tasks .recent-task-card.pending .recent-task-accent {
+  background: #a5b4fc;
+}
+
+.zyra-tasks .recent-task-project {
+  display: block;
+  margin-bottom: 5px;
+
+  color: #b4c5ff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.zyra-tasks .recent-task-card h4 {
+  margin: 0 0 6px;
+
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.zyra-tasks .recent-task-status {
+  color: #c0ccdc;
+  font-size: 11px;
+}
+
+.zyra-tasks .recent-task-card > svg {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: #c0ccdc;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.zyra-tasks .recent-task-card:hover > svg {
+  color: #67e8f9;
+  transform: translateX(3px);
+}
+
+/* =========================================================
+   GENERAL ACCESSIBILITY
+========================================================= */
+
+.zyra-tasks button:focus-visible {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   RESPONSIVE LAYOUT
+========================================================= */
+
+@media (max-width: 1180px) {
+  .zyra-tasks .tasks-workspace {
+    grid-template-columns: minmax(0, 1fr) 250px;
+  }
+
+  .zyra-tasks .task-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .zyra-tasks .task-summary-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .zyra-tasks {
+    padding: 26px 22px 42px;
+  }
+
+  .zyra-tasks .tasks-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .zyra-tasks .task-status-panel {
+    min-height: auto;
+  }
+
+  .zyra-tasks .task-status-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .zyra-tasks .tasks-recent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .zyra-tasks {
+    padding: 24px 18px 38px;
+  }
+
+  .zyra-tasks .tasks-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .zyra-tasks .tasks-header > div:last-child {
+    justify-content: flex-start !important;
+    width: 100%;
+  }
+
+  .zyra-tasks .tasks-header-status {
+    align-self: center;
+  }
+
+  .zyra-tasks .tasks-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .zyra-tasks .tasks-title-divider {
+    display: none;
+  }
+
+  .zyra-tasks .tasks-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .zyra-tasks .tasks-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .zyra-tasks .task-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 13px;
+  }
+
+  .zyra-tasks .task-filter-group {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .zyra-tasks .task-filter {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .zyra-tasks .task-status-list {
+    grid-template-columns: 1fr;
+  }
+
+  .zyra-tasks .tasks-recent-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .zyra-tasks {
+    padding: 22px 14px 32px;
+  }
+
+  .zyra-tasks .tasks-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .zyra-tasks .task-summary-meta {
+    display: flex;
+  }
+
+  .zyra-tasks .tasks-header h2 {
+    font-size: 31px;
+  }
+
+  .zyra-tasks .task-list {
+    grid-template-columns: 1fr;
+  }
+
+  .zyra-tasks .task-card {
+    min-height: 155px;
+  }
+
+  .zyra-tasks .tasks-recent-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .zyra-tasks::before,
+  .zyra-tasks::after,
+  .zyra-tasks .tasks-live-dot,
+  .zyra-tasks .section-live-dot,
+  .zyra-tasks .tasks-empty-icon,
+  .zyra-tasks .task-card {
+    animation: none;
+  }
+
+  .zyra-tasks .task-summary-card,
+  .zyra-tasks .task-card,
+  .zyra-tasks .recent-task-card,
+  .zyra-tasks .task-card-menu,
+  .zyra-tasks .task-filter {
+    transition: none;
+  }
+}

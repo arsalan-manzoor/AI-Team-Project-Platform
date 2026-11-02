@@ -1,0 +1,882 @@
+.zyra-employee-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 34px);
+  color: #e7eefb;
+}
+.zyra-employee-page * {
+  box-sizing: border-box;
+}
+.zyra-employee-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.zyra-employee-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+.zyra-employee-title-icon,
+.zyra-employee-summary-icon {
+  display: grid;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.09);
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  border-radius: 15px;
+}
+.zyra-employee-title h1 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.2;
+}
+.zyra-employee-eyebrow {
+  margin: 0 0 7px;
+  color: #67e8f9;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+.zyra-employee-subtitle {
+  margin: 8px 0 0;
+  color: #9aabc4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.zyra-employee-refresh,
+.zyra-employee-primary-button,
+.zyra-employee-mode-switch button,
+.zyra-password-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+.zyra-employee-refresh {
+  min-height: 40px;
+  padding: 9px 13px;
+  color: #c7d4e9;
+  background: #111b2d;
+  border: 1px solid #293850;
+}
+.zyra-employee-refresh:hover:not(:disabled) {
+  border-color: #4b6a87;
+  background: #17243a;
+}
+.zyra-employee-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 17px 19px;
+  background: linear-gradient(
+    120deg,
+    rgba(15, 29, 48, 0.96),
+    rgba(19, 25, 49, 0.9)
+  );
+  border: 1px solid rgba(112, 141, 177, 0.2);
+  border-radius: 15px;
+}
+.zyra-employee-summary-icon {
+  flex-basis: 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+.zyra-employee-summary > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+.zyra-employee-summary span {
+  color: #9aabc4;
+  font-size: 12px;
+}
+.zyra-employee-summary strong {
+  color: #f8fafc;
+  font-size: 22px;
+}
+.zyra-employee-summary > p {
+  margin: 0 0 0 auto;
+  color: #9aabc4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.zyra-employee-panel,
+.zyra-created-account {
+  min-width: 0;
+  margin-bottom: 22px;
+  padding: clamp(17px, 2.4vw, 25px);
+  background: rgba(12, 20, 35, 0.9);
+  border: 1px solid rgba(112, 141, 177, 0.2);
+  border-radius: 17px;
+}
+.zyra-employee-panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 17px;
+  margin-bottom: 22px;
+}
+.zyra-employee-panel-heading h2,
+.zyra-created-account h2 {
+  margin: 0;
+  color: #f1f5fb;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.zyra-employee-panel-heading p,
+.zyra-created-account-heading p {
+  margin: 7px 0 0;
+  color: #9aabc4;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.zyra-employee-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px;
+  background: #09111f;
+  border: 1px solid #26334a;
+  border-radius: 12px;
+}
+.zyra-employee-mode-switch button {
+  min-height: 36px;
+  padding: 8px 11px;
+  color: #9aabc4;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.zyra-employee-mode-switch button.active {
+  color: #d9fbff;
+  background: rgba(8, 145, 178, 0.17);
+  border-color: rgba(34, 211, 238, 0.3);
+}
+.zyra-employee-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.zyra-employee-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+.zyra-employee-field > span,
+.zyra-initial-password > label {
+  color: #cbd7e9;
+  font-size: 12px;
+  font-weight: 650;
+}
+.zyra-employee-field input,
+.zyra-employee-field select,
+.zyra-password-controls input,
+.zyra-employee-search input {
+  width: 100%;
+  min-width: 0;
+  color: #e8effb;
+  background: #080f1d;
+  border: 1px solid #2b3b52;
+  border-radius: 10px;
+  outline: none;
+}
+.zyra-employee-field input,
+.zyra-employee-field select {
+  min-height: 45px;
+  padding: 11px 12px;
+  font-size: 13px;
+}
+.zyra-employee-field input:focus,
+.zyra-employee-field select:focus,
+.zyra-password-controls input:focus,
+.zyra-employee-search:focus-within {
+  border-color: #22b8d1;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.08);
+}
+.zyra-employee-field input::placeholder,
+.zyra-employee-search input::placeholder {
+  color: #667891;
+}
+.zyra-employee-field option {
+  color: #e8effb;
+  background: #0b1424;
+}
+.zyra-employee-field small {
+  color: #8093ad;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.zyra-employee-form-footer {
+  grid-column: 1/-1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(112, 141, 177, 0.15);
+}
+.zyra-employee-form-footer p {
+  flex: 1 1 300px;
+  margin: 0;
+  color: #8497b0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.zyra-employee-primary-button {
+  min-height: 42px;
+  padding: 11px 15px;
+  color: #06131b;
+  background: #67e8f9;
+  border: 1px solid #67e8f9;
+}
+.zyra-employee-primary-button:hover:not(:disabled) {
+  background: #a5f3fc;
+  border-color: #a5f3fc;
+}
+.zyra-employee-primary-button:disabled,
+.zyra-employee-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.zyra-employee-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 17px;
+  padding: 13px 14px;
+  border-radius: 11px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.zyra-employee-alert > span {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-line;
+}
+.zyra-employee-alert button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.zyra-employee-alert-error {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.2);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+}
+.zyra-employee-alert-success {
+  color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.2);
+  border: 1px solid rgba(74, 222, 128, 0.24);
+}
+.zyra-created-account {
+  border-color: rgba(74, 222, 128, 0.25);
+}
+.zyra-created-account-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.zyra-created-account-heading > div {
+  flex: 1;
+  min-width: 180px;
+}
+.zyra-created-account-icon {
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 12px;
+}
+.zyra-state-pill {
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 750;
+}
+.zyra-state-sent {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.12);
+}
+.zyra-state-pending {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.12);
+}
+.zyra-credential-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 12px 13px;
+  color: #fde68a;
+  background: rgba(161, 98, 7, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.16);
+  border-radius: 10px;
+}
+.zyra-credential-warning svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.zyra-credential-warning p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.zyra-initial-password {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.zyra-password-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.zyra-password-controls input {
+  flex: 1 1 220px;
+  min-height: 41px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.zyra-password-controls button {
+  min-height: 41px;
+  padding: 9px 12px;
+  color: #d5e0f0;
+  background: #142137;
+  border: 1px solid #30425b;
+}
+.zyra-password-controls button:hover:not(:disabled) {
+  background: #1c2d46;
+}
+.zyra-initial-password > small {
+  color: #86efac;
+  font-size: 11px;
+}
+.zyra-retry-invitation {
+  margin-top: 15px;
+}
+.zyra-credential-dismiss {
+  margin-top: 12px;
+  padding: 5px 0;
+  color: #a5b4ca;
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.zyra-created-account-footnote {
+  margin: 10px 0 0;
+  color: #8194ae;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.zyra-directory-heading {
+  align-items: center;
+}
+.zyra-directory-total {
+  display: grid;
+  min-width: 70px;
+  gap: 3px;
+  justify-items: end;
+}
+.zyra-directory-total strong {
+  color: #f8fafc;
+  font-size: 25px;
+}
+.zyra-directory-total span {
+  color: #8da0ba;
+  font-size: 10px;
+}
+.zyra-employee-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-bottom: 17px;
+  padding: 0 12px;
+  color: #7f93ad;
+  background: #080f1d;
+  border: 1px solid #293a51;
+  border-radius: 10px;
+}
+.zyra-employee-search input {
+  min-height: 42px;
+  padding: 9px 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-size: 12px;
+}
+.zyra-employee-search button {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #9badc5;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.zyra-employee-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(112, 141, 177, 0.17);
+  border-radius: 12px;
+}
+.zyra-employee-table {
+  width: 100%;
+  min-width: 590px;
+  border-collapse: collapse;
+  text-align: left;
+}
+.zyra-employee-table th {
+  padding: 13px 15px;
+  color: #879bb7;
+  background: rgba(16, 28, 46, 0.85);
+  border-bottom: 1px solid rgba(112, 141, 177, 0.17);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.zyra-employee-table td {
+  padding: 14px 15px;
+  border-bottom: 1px solid rgba(112, 141, 177, 0.11);
+  color: #d5deec;
+  font-size: 12px;
+}
+.zyra-employee-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.zyra-directory-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+.zyra-directory-avatar {
+  display: grid;
+  flex: 0 0 37px;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  color: #b9f5fc;
+  background: rgba(34, 211, 238, 0.09);
+  border: 1px solid rgba(103, 232, 249, 0.19);
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 750;
+}
+.zyra-directory-member > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.zyra-directory-member strong {
+  color: #e8eef9;
+  font-size: 12px;
+  font-weight: 650;
+}
+.zyra-directory-member small {
+  overflow-wrap: anywhere;
+  color: #8598b2;
+  font-size: 10px;
+}
+.zyra-employee-role,
+.zyra-employee-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.zyra-employee-role {
+  padding: 6px 9px;
+  color: #cbd5e1;
+  background: rgba(100, 116, 139, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 8px;
+}
+.zyra-role-admin {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.11);
+}
+.zyra-role-hr {
+  color: #f9a8d4;
+  background: rgba(236, 72, 153, 0.1);
+}
+.zyra-role-team_leader {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.1);
+}
+.zyra-role-user {
+  color: #a5f3fc;
+  background: rgba(6, 182, 212, 0.1);
+}
+.zyra-employee-status i {
+  width: 6px;
+  height: 6px;
+  background: #94a3b8;
+  border-radius: 50%;
+}
+.zyra-status-active i {
+  background: #4ade80;
+}
+.zyra-status-suspended i {
+  background: #fb7185;
+}
+.zyra-member-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  color: #fda4af;
+  background: rgba(127, 29, 29, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.zyra-member-remove:hover:not(:disabled) {
+  background: rgba(127, 29, 29, 0.27);
+}
+.zyra-member-remove:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.zyra-member-protected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #8d9eb5;
+  font-size: 10px;
+}
+.zyra-employee-empty {
+  padding: 28px 16px !important;
+  color: #91a3bc !important;
+  text-align: center;
+}
+.zyra-employee-directory-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 13px;
+  padding: 11px 12px;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.16);
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 9px;
+  font-size: 11px;
+}
+.zyra-employee-directory-error span {
+  flex: 1;
+  min-width: 150px;
+}
+.zyra-employee-directory-error button {
+  padding: 6px 10px;
+  color: #fecaca;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.zyra-directory-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 15px;
+  color: #8093ad;
+}
+.zyra-directory-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #67e8f9;
+}
+.zyra-directory-note p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.zyra-employee-state {
+  padding: 20px;
+  color: #cbd5e1;
+  background: #101a2c;
+  border: 1px solid #293a51;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+@media (prefers-reduced-motion: reduce) {
+  .zyra-employee-refresh,
+  .zyra-employee-primary-button,
+  .zyra-employee-mode-switch button,
+  .zyra-password-controls button {
+    transition: none;
+  }
+}
+@media (max-width: 760px) {
+  .zyra-employee-page {
+    padding: 17px 12px;
+  }
+  .zyra-employee-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .zyra-employee-form-footer {
+    align-items: stretch;
+  }
+  .zyra-employee-form-footer .zyra-employee-primary-button {
+    width: 100%;
+  }
+}
+@media (max-width: 480px) {
+  .zyra-employee-header {
+    align-items: stretch;
+  }
+  .zyra-employee-title {
+    align-items: flex-start;
+    gap: 11px;
+  }
+  .zyra-employee-title-icon {
+    flex-basis: 43px;
+    width: 43px;
+    height: 43px;
+    border-radius: 12px;
+  }
+  .zyra-employee-refresh {
+    width: 100%;
+  }
+  .zyra-employee-summary > p {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .zyra-employee-mode-switch {
+    width: 100%;
+  }
+  .zyra-employee-mode-switch button {
+    flex: 1;
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+  .zyra-created-account-heading > div {
+    flex-basis: calc(100% - 60px);
+  }
+  .zyra-state-pill {
+    margin-left: 54px;
+  }
+}
+
+/* Employee account activation and suspension controls */
+.zyra-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 130px;
+}
+
+.zyra-member-suspend,
+.zyra-member-activate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.zyra-member-suspend {
+  color: #fde68a;
+  background: rgba(161, 98, 7, 0.13);
+  border-color: rgba(250, 204, 21, 0.22);
+}
+
+.zyra-member-suspend:hover:not(:disabled) {
+  background: rgba(161, 98, 7, 0.25);
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+.zyra-member-activate {
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, 0.15);
+  border-color: rgba(74, 222, 128, 0.23);
+}
+
+.zyra-member-activate:hover:not(:disabled) {
+  background: rgba(22, 101, 52, 0.3);
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.zyra-member-suspend:disabled,
+.zyra-member-activate:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zyra-member-suspend,
+  .zyra-member-activate {
+    transition: none;
+  }
+}
+
+/* Initial password visibility toggle */
+.zyra-password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.zyra-password-input-wrap > input {
+  padding-right: 45px;
+}
+
+.zyra-password-toggle {
+  position: absolute;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #96a9c1;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.zyra-password-toggle:hover {
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.09);
+}
+
+.zyra-password-toggle:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 1px;
+}
+.zyra-create-team-leader-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 20px 0;
+  padding: 18px 20px;
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 14px;
+  background: rgba(45, 212, 191, 0.06);
+}
+
+.zyra-create-team-leader-prompt strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-primary, #f1f5f9);
+}
+
+.zyra-create-team-leader-prompt p {
+  margin: 0;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.zyra-create-team-leader-prompt button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .zyra-create-team-leader-prompt {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .zyra-create-team-leader-prompt button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+.zyra-create-team-leader-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 20px 0;
+  padding: 18px 20px;
+  border: 1px solid rgba(45, 212, 191, 0.25);
+  border-radius: 14px;
+  background: rgba(45, 212, 191, 0.06);
+}
+
+.zyra-create-team-leader-prompt strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-primary, #f1f5f9);
+}
+
+.zyra-create-team-leader-prompt p {
+  margin: 0;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.zyra-create-team-leader-prompt button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .zyra-create-team-leader-prompt {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .zyra-create-team-leader-prompt button {
+    width: 100%;
+    justify-content: center;
+  }
+}
